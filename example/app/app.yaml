@@ -1,0 +1,119 @@
+id: root
+use: example-cli <command>
+version: 1.4.0
+summary: A fictional workspace manager that showcases the go-cli library
+description: |
+  example-cli manages a local "vault" of items and the remotes they synchronize
+  with.
+
+  It is not a real tool; it exists to exercise the go-cli library end to end,
+  demonstrating grouped commands, nested subcommands, positional-argument arity,
+  flags with and without values, flag constraints, and crash handling.
+examples:
+  - example-cli init --path ./vault
+  - example-cli add "Buy milk" --priority 2 --tag chores --tag home
+  - example-cli remote add origin https://example.test --token s3cret
+issue-url: https://github.com/bitwizeshift/go-cli/issues
+
+commands:
+  default:
+    - id: init
+      use: init [--path <dir>] [--force]
+      summary: Initializes a new vault
+      description: |
+        Creates a new, empty vault in the target directory.
+
+        An existing vault is left untouched unless --force is given, in which
+        case it is recreated from scratch and its contents are discarded.
+      arity: 0
+
+    - id: status
+      use: status
+      summary: Reports the state of the current vault
+      description: |
+        Summarizes whether a vault is initialized, how many items it holds, and
+        which remotes are configured.
+      arity: 0
+
+    - id: panic
+      use: panic
+      summary: Deliberately crashes to demonstrate panic handling
+      description: |
+        Triggers a runtime panic so you can see how the library renders a crash
+        report, complete with a link for filing an issue.
+      arity: 0
+      hidden: true
+
+  Item Commands:
+    - id: item-add
+      use: add <name>
+      aliases: [new]
+      summary: Adds an item to the vault
+      description: |
+        Adds a new item with the given name.
+
+        Items may be tagged and prioritized. A pinned item is always listed
+        first, so it cannot also carry a numeric priority.
+      arity: 1
+
+    - id: item-list
+      use: list
+      aliases: [ls]
+      summary: Lists the items in the vault
+      description: |
+        Prints the items in the vault.
+
+        Only open items are shown by default. Use --all to include completed
+        items, or --status to filter by a single status.
+      arity: 0
+
+    - id: item-remove
+      use: remove <name>
+      aliases: [rm]
+      summary: Removes an item from the vault
+      description: |
+        Permanently removes the named item. The confirmation prompt can be
+        skipped with --yes.
+      arity: 1
+
+  Configuration Commands:
+    - id: config
+      use: config <command>
+      summary: Reads and writes vault configuration
+      description: |
+        Inspects and modifies the key/value settings stored alongside the vault.
+      commands:
+        default:
+          - id: config-get
+            use: get <key>
+            summary: Prints a single configuration value
+            arity: 1
+          - id: config-set
+            use: set <key> <value>
+            summary: Assigns a configuration value
+            arity: 2
+          - id: config-list
+            use: list
+            summary: Prints every configuration value
+            arity: 0
+
+    - id: remote
+      use: remote <command>
+      summary: Manages the remotes a vault synchronizes with
+      description: |
+        Registers, lists, and removes the named remotes that a vault can push to
+        and pull from.
+      commands:
+        default:
+          - id: remote-add
+            use: add <name> <url>
+            summary: Registers a new remote
+            arity: 2
+          - id: remote-list
+            use: list
+            summary: Lists the configured remotes
+            arity: 0
+          - id: remote-remove
+            use: remove <name>
+            summary: Removes a remote
+            arity: 1
