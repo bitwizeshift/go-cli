@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=../../command.schema.json
+id: root
+use: progress-demo <command>
+version: 1.0.0
+summary: Showcases the go-cli progress package
+description: |
+  progress-demo renders each of the progress package's bar and spinner styles.
+
+  It is not a real tool; it exists to exercise the progress package end to end.
+  Every command accepts --steps to control how far the indicator advances and
+  --delay to pace the animation.
+examples:
+  - progress-demo bar-block --steps 40
+  - progress-demo spin-dot --delay 80
+issue-url: https://github.com/bitwizeshift/go-cli/issues
+
+commands:
+  Bars:
+    - id: bar-ascii
+      use: bar-ascii [--steps <n>] [--delay <ms>]
+      summary: A portable ASCII bar
+      arity: 0
+
+    - id: bar-arrow
+      use: bar-arrow [--steps <n>] [--delay <ms>]
+      summary: A bar with an arrow head
+      arity: 0
+
+    - id: bar-shaded
+      use: bar-shaded [--steps <n>] [--delay <ms>]
+      summary: A shaded Unicode bar
+      arity: 0
+
+    - id: bar-block
+      use: bar-block [--steps <n>] [--delay <ms>]
+      summary: A smooth, sub-cell Unicode block bar
+      arity: 0
+
+    - id: bar-smooth
+      use: bar-smooth [--steps <n>] [--delay <ms>]
+      summary: A sub-cell block bar growing over a shaded background
+      arity: 0
+
+    - id: bar-line
+      use: bar-line [--steps <n>] [--delay <ms>]
+      summary: A heavy line growing over a light one
+      arity: 0
+
+    - id: bar-dot
+      use: bar-dot [--steps <n>] [--delay <ms>]
+      summary: Filled markers over hollow ones
+      arity: 0
+
+  Spinners:
+    - id: spin-line
+      use: spin-line [--steps <n>] [--delay <ms>]
+      summary: A portable ASCII spinner
+      arity: 0
+
+    - id: spin-dot
+      use: spin-dot [--steps <n>] [--delay <ms>]
+      summary: A braille spinner
+      arity: 0
+
+    - id: spin-circle
+      use: spin-circle [--steps <n>] [--delay <ms>]
+      summary: A quartered-circle spinner
+      arity: 0
+
+    - id: spin-moon
+      use: spin-moon [--steps <n>] [--delay <ms>]
+      summary: A moon-phase spinner
+      arity: 0
+
+    - id: spin-arrow
+      use: spin-arrow [--steps <n>] [--delay <ms>]
+      summary: A rotating-arrow spinner
+      arity: 0
+
+    - id: spin-pulse
+      use: spin-pulse [--steps <n>] [--delay <ms>]
+      summary: A growing-and-shrinking bar spinner
+      arity: 0
+
+    - id: spin-square
+      use: spin-square [--steps <n>] [--delay <ms>]
+      summary: A quartered-square spinner
+      arity: 0
+
+  Combined:
+    - id: all
+      use: all [--steps <n>] [--delay <ms>]
+      summary: Renders every bar and spinner together, in sync and aligned
+      description: |
+        Draws every bar and spinner style at once in a single in-place block,
+        each row indented and prefixed with its identifier and aligned into a
+        grid, advancing all indicators together on each update.
+      arity: 0
