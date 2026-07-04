@@ -1,0 +1,29 @@
+example-cli
+
+example-cli is a lightweight command-line application used
+to demonstrate the custom help renderer, including coloured
+sections, wrapped prose, and flags and commands organised
+into named groups.
+
+USAGE
+  example-cli <command> [flags]
+
+EXAMPLES
+  example-cli init
+  example-cli sync origin main --remote https://vault.example.org
+
+ITEM COMMANDS
+  add          Add an item to the vault and write the
+               updated contents to disk
+  init         Initialize a new vault in the current
+               directory
+
+REMOTE COMMANDS
+  sync         Synchronize the vault with a remote
+
+ADDITIONAL COMMANDS
+  completion   Generate the autocompletion script for the
+               specified shell
+
+Use example-cli [command] --help for more information about
+a command.

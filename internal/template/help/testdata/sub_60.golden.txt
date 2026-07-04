@@ -1,0 +1,37 @@
+example-cli sync
+
+Synchronize the vault with a remote registry, resolving and
+caching each referenced item and, unless told otherwise, its
+transitive dependencies.
+
+USAGE
+  example-cli sync <remote> <ref> [flags]
+
+EXAMPLES
+  example-cli sync origin main
+  example-cli sync origin v1.2.0 --force --timeout 1m
+
+CONNECTION FLAGS
+  -T, --auth-token string   auth token used to authenticate
+                            with the remote
+  -f, --force               overwrite any item already
+                            present in the vault
+  -p, --parallel int        number of transfers to run at
+                            once
+  -r, --remote string       base URL of the remote to
+                            synchronize with
+  -t, --timeout duration    maximum time to wait for the
+                            sync to finish
+
+OUTPUT FLAGS
+      --exclude-dependencies   skip synchronizing the
+                               transitive dependencies of
+                               the item
+      --log string             file to write sync progress
+                               logs to
+      --no-progress            disable the interactive
+                               progress bar
+      --state-dir string       directory in which sync state
+                               is stored
+  -v, --verbose                print additional diagnostic
+                               output while running

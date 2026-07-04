@@ -1,0 +1,7 @@
+{{- $width := text.MaxWidth build.FieldNames -}}
+{{ palette.Title .Name }} (version {{ build.Version }})
+
+{{ palette.Heading "BUILD DETAILS" }}
+{{- range build.Fields }}
+  {{ palette.Label (text.Pad $width .Name) }} {{ palette.Value .Value }}
+{{- end }}

@@ -1,0 +1,27 @@
+{{ palette.Title .Name }}
+
+{{ if .Description -}}
+{{ text.Wrap .Columns .Description }}
+
+{{ end -}}
+{{ if .Usage -}}
+{{ palette.Heading "USAGE" }}
+{{ text.Indent 2 .Usage }}
+
+{{ end -}}
+{{ if .Examples -}}
+{{ palette.Heading "EXAMPLES" }}
+{{ text.IndentLines 2 .Examples }}
+
+{{ end -}}
+{{ range .CommandGroups -}}
+{{ template "commands.tmpl" . }}
+
+{{ end -}}
+{{ range .FlagGroups -}}
+{{ template "flags.tmpl" . }}
+
+{{ end -}}
+{{ if .Hint.Show -}}
+{{ hint .Hint.Path }}
+{{ end -}}

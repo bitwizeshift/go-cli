@@ -1,0 +1,9 @@
+widget (version v1.2.3)
+
+BUILD DETAILS
+  Target       darwin/arm64
+  Build Tags   netgo
+  Go Version   go1.24.0
+  VCS          git
+  VCS Revision 0123456789abcdef0123456789abcdef01234567
+  VCS Time     2024-08-05T20:18:23Z

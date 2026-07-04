@@ -1,0 +1,7 @@
+goroutine 1 [running]:
+main.explode(...)
+	/app/cmd/example-cli/main.go:42 +0x1d
+main.run(0xc0000b6000)
+	/app/cmd/example-cli/main.go:28 +0x94
+main.main()
+	/app/cmd/example-cli/main.go:17 +0x64

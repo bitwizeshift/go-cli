@@ -1,0 +1,18 @@
+error: the application terminated unexpectedly
+
+Reason: runtime error: index out of range [3] with length 3
+
+ | goroutine 1 [running]:
+ | main.explode(...)
+ | 	/app/cmd/example-cli/main.go:42 +0x1d
+ | main.run(0xc0000b6000)
+ | 	/app/cmd/example-cli/main.go:28 +0x94
+ | main.main()
+ | 	/app/cmd/example-cli/main.go:17 +0x64
+
+This is likely a bug. Please help us fix it by reporting this crash at:
+
+    https://github.com/bitwizeshift/go-cli/issues/new
+
+Include the stack trace above and a short description of what you were
+doing when it happened.
