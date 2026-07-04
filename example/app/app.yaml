@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../command.schema.json
 id: root
 use: example-cli <command>
 version: 1.4.0

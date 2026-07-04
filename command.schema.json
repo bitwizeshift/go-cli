@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/bitwizeshift/go-cli/command.schema.json",
+  "title": "go-cli command specification",
+  "description": "Declarative specification of a cobra command hierarchy consumed by the go-cli library.",
+  "allOf": [
+    {
+      "$ref": "#/$defs/command"
+    }
+  ],
+  "properties": {
+    "id": true,
+    "use": true,
+    "aliases": true,
+    "examples": true,
+    "summary": true,
+    "description": true,
+    "version": true,
+    "hidden": true,
+    "deprecated": true,
+    "arity": true,
+    "commands": true,
+    "issue-url": {
+      "type": "string",
+      "description": "URL users are directed to for filing bugs, propagated to every command in the hierarchy.",
+      "format": "uri"
+    }
+  },
+  "unevaluatedProperties": false,
+  "$defs": {
+    "command": {
+      "type": "object",
+      "required": [
+        "id",
+        "use"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier used to bind a runner to this command."
+        },
+        "use": {
+          "type": "string",
+          "description": "Usage string, e.g. \"add <name>\" or \"config <command>\"."
+        },
+        "aliases": {
+          "type": "array",
+          "description": "Alternative names the command can be invoked by.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "description": "Example invocations shown in help output.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short, one-line description of the command."
+        },
+        "description": {
+          "type": "string",
+          "description": "Long-form description of the command."
+        },
+        "version": {
+          "type": "string",
+          "description": "Version reported for this command."
+        },
+        "hidden": {
+          "type": "boolean",
+          "description": "Whether the command is hidden from help output."
+        },
+        "deprecated": {
+          "type": "string",
+          "description": "Deprecation message shown when the command is used. A non-empty value marks the command deprecated."
+        },
+        "arity": {
+          "description": "Permitted positional-argument counts. A comma-separated list of terms, where each term is an exact count (\"3\"), a comparison (\">3\", \">=3\", \"<3\", \"<=3\"), or a range with an exclusive (\"1..3\") or inclusive (\"1..=3\") upper bound. Terms may touch but must not overlap.",
+          "type": [
+            "string",
+            "integer"
+          ],
+          "minimum": 0,
+          "pattern": "^\\s*([0-9]+(\\.\\.=?[0-9]+)?|[<>]=?[0-9]+)(\\s*,\\s*([0-9]+(\\.\\.=?[0-9]+)?|[<>]=?[0-9]+))*\\s*$"
+        },
+        "commands": {
+          "$ref": "#/$defs/groupCommands"
+        }
+      }
+    },
+    "groupCommands": {
+      "type": "object",
+      "description": "Named groups of subcommands. The reserved group \"default\" holds commands that belong to no group; any other key names a titled group.",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/command"
+        }
+      }
+    }
+  }
+}
