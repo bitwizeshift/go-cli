@@ -1,0 +1,7 @@
+# Normalize line endings to LF for all text files on every platform.
+#
+# Git auto-detects text vs. binary; detected-text files are stored and checked
+# out with LF regardless of a contributor's core.autocrlf setting. This keeps
+# embedded templates and golden testdata byte-identical across Linux, macOS, and
+# Windows so the renderer golden tests remain deterministic.
+* text=auto eol=lf
