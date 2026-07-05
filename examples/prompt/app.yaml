@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=../../command.schema.json
+id: root
+use: prompt-demo <command>
+version: 1.0.0
+summary: Showcases the go-cli prompt package
+description: |
+  prompt-demo reads interactive input using the go-cli prompt package.
+
+  It is not a real tool; it exists to exercise each kind of input the prompt
+  package offers — plain lines, yes/no confirmations, masked secrets, and typed
+  values — one per subcommand.
+examples:
+  - prompt-demo line
+  - prompt-demo secret
+  - prompt-demo value duration
+issue-url: https://github.com/bitwizeshift/go-cli/issues
+
+commands:
+  default:
+    - id: line
+      use: line
+      summary: Reads a plain line of input
+      description: |
+        Prompts for your name and echoes it back.
+      arity: 0
+
+    - id: confirm
+      use: confirm
+      summary: Reads a yes/no answer
+      description: |
+        Prompts for confirmation and prints the parsed boolean.
+      arity: 0
+
+    - id: secret
+      use: secret
+      summary: Reads a masked secret
+      description: |
+        Prompts for a password, echoing '*' per character. Requires an
+        interactive terminal and errors otherwise.
+      arity: 0
+
+    - id: value
+      use: value <type>
+      summary: Reads a typed value
+      description: |
+        Prompts for a value and unmarshals the entered line into the chosen type,
+        reporting a parse error for malformed input.
+      commands:
+        default:
+          - id: value-string
+            use: string
+            summary: Reads a string
+            arity: 0
+          - id: value-int
+            use: int
+            summary: Reads an integer
+            arity: 0
+          - id: value-float
+            use: float
+            summary: Reads a floating-point number
+            arity: 0
+          - id: value-bool
+            use: bool
+            summary: Reads a boolean
+            arity: 0
+          - id: value-duration
+            use: duration
+            summary: Reads a duration
+            arity: 0
