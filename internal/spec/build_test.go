@@ -14,14 +14,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// flaggedRunner is a [spec.Runner] that registers a single flag, used to verify
-// that [spec.Build] registers a bound runner's flags.
+// flaggedRunner is a [spec.Runner] that registers flags, used to verify that
+// [spec.Build] registers a bound runner's flags and their completions.
 type flaggedRunner struct {
 	verbose bool
+	format  string
 }
 
 func (fr *flaggedRunner) RegisterFlags(registry *flag.Registry) {
 	flag.Add(registry, "verbose", &fr.verbose)
+	flag.Add(registry, "format", &fr.format, flag.CompleteFrom("json", "yaml"))
 }
 
 func (fr *flaggedRunner) Run(context.Context, ...string) error {
@@ -156,11 +158,31 @@ func TestBuild_BoundRunner_RegistersFlags(t *testing.T) {
 	sut, err := spec.Build(reader, map[string]spec.Runner{"root": &flaggedRunner{}})
 
 	// Assert
-	if err != nil {
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("spec.Build(...) = _, %v, want nil", err)
 	}
-	if got, want := flagtest.LongFlags(sut.Flags()), []string{"verbose"}; !cmp.Equal(got, want) {
+	flags := flagtest.LongFlags(sut.Flags())
+	if got, want := flags, []string{"format", "verbose"}; !cmp.Equal(got, want) {
 		t.Errorf("flags = %v, want %v", got, want)
+	}
+}
+
+func TestBuild_BoundRunner_RegistersCompletions(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	reader := strings.NewReader("id: root\nuse: root\n")
+
+	// Act
+	sut, err := spec.Build(reader, map[string]spec.Runner{"root": &flaggedRunner{}})
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("spec.Build(...) got err %v, want %v", got, want)
+	}
+	_, registered := sut.GetFlagCompletionFunc("format")
+	if got, want := registered, true; got != want {
+		t.Errorf("GetFlagCompletionFunc(\"format\") registered = %t, want %t", got, want)
 	}
 }
 

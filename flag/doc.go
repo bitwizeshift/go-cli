@@ -4,6 +4,6 @@
 // Rather than exposing a distinct registration call per value type, the package
 // decodes flag values through [Unmarshal] so that any supported type -- and any
 // type that decodes itself -- can be bound to a flag with a single entrypoint.
-// It additionally layers on grouping, requirement constraints, and recursive
-// registration of flag-bearing values.
+// It additionally layers on grouping, requirement constraints, shell completion,
+// and recursive registration of flag-bearing values.
 package flag

@@ -78,6 +78,7 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner) *cobra.Command {
 		cmd.RunE = i.run(runner)
 		flag.Register(flag.NewRegistry(cmd.Flags()), runner)
 		annotation.ConfigureFlags(cmd)
+		annotation.RegisterFlagCompletions(cmd)
 	}
 	cmd.SetHelpFunc(template.DefaultRenderEngine.HelpFunc())
 	cmd.SetUsageFunc(template.DefaultRenderEngine.UsageFunc())

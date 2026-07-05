@@ -82,6 +82,9 @@ type config struct {
 
 	envs   []string
 	custom []DefaultFunc
+
+	// Shell completion.
+	completer completerFunc
 }
 
 // newConfig builds a config from options, defaulting the type name to
@@ -341,6 +344,9 @@ func registerFlag[T any](registry *Registry, val *value, name string, cfg *confi
 	}
 	for _, fn := range cfg.custom {
 		annotation.AddFuncFallback(f, fn)
+	}
+	if cfg.completer != nil {
+		annotation.AddCompletion(f, cfg.completer)
 	}
 	return f
 }
