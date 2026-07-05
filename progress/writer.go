@@ -8,7 +8,7 @@ import (
 )
 
 // Writer renders a [Renderer] in place on W, redrawing it on each
-// [Writer.Update]. When animation is disabled — the [ansi.Enabler] reports
+// [Writer.Update]. When animation is disabled — the [ansi.ColourEnabler] reports
 // false, as it does when W is not a terminal — intermediate frames are
 // suppressed and only the final state is emitted by [Writer.Done].
 type Writer struct {

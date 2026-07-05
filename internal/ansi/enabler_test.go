@@ -215,7 +215,7 @@ func TestConjunctiveEnabler_EnableColour(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		enablers []ansi.Enabler
+		enablers []ansi.ColourEnabler
 		want     bool
 	}{
 		{
@@ -224,15 +224,15 @@ func TestConjunctiveEnabler_EnableColour(t *testing.T) {
 			want:     false,
 		}, {
 			name:     "SingleTrue",
-			enablers: []ansi.Enabler{ansi.FixedEnabler(true)},
+			enablers: []ansi.ColourEnabler{ansi.FixedEnabler(true)},
 			want:     true,
 		}, {
 			name:     "SingleFalse",
-			enablers: []ansi.Enabler{ansi.FixedEnabler(false)},
+			enablers: []ansi.ColourEnabler{ansi.FixedEnabler(false)},
 			want:     false,
 		}, {
 			name: "MultipleAllTrue",
-			enablers: []ansi.Enabler{
+			enablers: []ansi.ColourEnabler{
 				ansi.FixedEnabler(true),
 				ansi.FixedEnabler(true),
 				ansi.FixedEnabler(true),
@@ -240,7 +240,7 @@ func TestConjunctiveEnabler_EnableColour(t *testing.T) {
 			want: true,
 		}, {
 			name: "MultipleFirstFalse",
-			enablers: []ansi.Enabler{
+			enablers: []ansi.ColourEnabler{
 				ansi.FixedEnabler(false),
 				ansi.FixedEnabler(true),
 				ansi.FixedEnabler(true),
@@ -248,7 +248,7 @@ func TestConjunctiveEnabler_EnableColour(t *testing.T) {
 			want: false,
 		}, {
 			name: "MultipleLastFalse",
-			enablers: []ansi.Enabler{
+			enablers: []ansi.ColourEnabler{
 				ansi.FixedEnabler(true),
 				ansi.FixedEnabler(true),
 				ansi.FixedEnabler(false),

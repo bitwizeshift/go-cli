@@ -21,7 +21,7 @@ import (
 
 // RenderEngine coordinates construction of the underlying Renderer objects
 type RenderEngine struct {
-	ColourEnabler ansi.Enabler
+	ColourEnabler ansi.ColourEnabler
 	Sizer         term.Sizer
 }
 
