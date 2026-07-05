@@ -76,7 +76,7 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner) *cobra.Command {
 	if runner := runners[i.ID]; runner != nil {
 		delete(runners, i.ID)
 		cmd.RunE = i.run(runner)
-		flag.Register(cmd.Flags(), runner)
+		flag.Register(flag.NewRegistry(cmd.Flags()), runner)
 		annotation.ConfigureFlags(cmd)
 	}
 	cmd.SetHelpFunc(template.DefaultRenderEngine.HelpFunc())

@@ -132,7 +132,7 @@ example-cli sync origin v1.2.0 --force --timeout 1m`,
 
 // registerFlags registers the sync command's flags across two named groups.
 func registerFlags(cmd *cobra.Command) {
-	fs := cmd.Flags()
+	fs := flag.NewRegistry(cmd.Flags())
 	var (
 		authToken string
 		force     bool

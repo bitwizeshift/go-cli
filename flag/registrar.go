@@ -3,17 +3,16 @@ package flag
 import (
 	"reflect"
 	"strings"
-
-	"github.com/spf13/pflag"
+	"unsafe"
 )
 
 // Registrar abstracts objects that have flags that need to be registered to
-// a [pflag.FlagSet].
+// a [Registry].
 //
 // Registrars are queried as part of the [Register] operation, which allows for
 // recursive and conditional registration of custom flag types.
 type Registrar interface {
-	RegisterFlags(fs *pflag.FlagSet)
+	RegisterFlags(fs *Registry)
 }
 
 // Register adds all flags associated to v into fs.
@@ -29,10 +28,10 @@ type Registrar interface {
 // If an object implements [Registrar] and contains fields of other types
 // that may be [Registrar] types, the object is responsible for manually
 // registering those fields.
-func Register(fs *pflag.FlagSet, v any) {
+func Register(registry *Registry, v any) {
 	rv := reflect.ValueOf(v)
 	rt := rv.Type()
-	register(fs, rv, rt)
+	register(registry, rv, rt)
 }
 
 type tags struct {
@@ -54,13 +53,19 @@ func parseTags(tag reflect.StructTag) tags {
 	return result
 }
 
-func register(fs *pflag.FlagSet, rv reflect.Value, rt reflect.Type) {
+func register(registry *Registry, rv reflect.Value, rt reflect.Type) {
 	if !rv.CanInterface() {
 		return
 	}
 	for {
 		if registrar, ok := rv.Interface().(Registrar); ok {
-			registrar.RegisterFlags(fs)
+			if id, ok := instanceID(rv); ok {
+				if _, seen := registry.visited[id]; seen {
+					return
+				}
+				registry.visited[id] = struct{}{}
+			}
+			registrar.RegisterFlags(registry)
 			return
 		}
 		kind := rt.Kind()
@@ -73,15 +78,28 @@ func register(fs *pflag.FlagSet, rv reflect.Value, rt reflect.Type) {
 
 	switch rt.Kind() {
 	case reflect.Struct:
-		registerStruct(fs, rv, rt)
+		registerStruct(registry, rv, rt)
 	case reflect.Slice, reflect.Array:
-		registerSlice(fs, rv)
+		registerSlice(registry, rv)
 	case reflect.Map:
-		registerMap(fs, rv)
+		registerMap(registry, rv)
 	}
 }
 
-func registerStruct(fs *pflag.FlagSet, rv reflect.Value, rt reflect.Type) {
+// instanceID returns the pointer identity of the [Registrar] value rv, peeling
+// interface wrappers first. It reports false for non-pointer registrars, which
+// have no shared identity and are always registered.
+func instanceID(rv reflect.Value) (unsafe.Pointer, bool) {
+	for rv.Kind() == reflect.Interface {
+		rv = rv.Elem()
+	}
+	if rv.Kind() == reflect.Pointer && !rv.IsNil() {
+		return rv.UnsafePointer(), true
+	}
+	return nil, false
+}
+
+func registerStruct(registry *Registry, rv reflect.Value, rt reflect.Type) {
 	for _, field := range reflect.VisibleFields(rt) {
 		tag := parseTags(field.Tag)
 		if tag.ignore {
@@ -89,26 +107,26 @@ func registerStruct(fs *pflag.FlagSet, rv reflect.Value, rt reflect.Type) {
 		}
 		fieldV := rv.FieldByIndex(field.Index)
 		fieldT := field.Type
-		register(fs, fieldV, fieldT)
+		register(registry, fieldV, fieldT)
 	}
 }
 
-func registerSlice(fs *pflag.FlagSet, rv reflect.Value) {
+func registerSlice(registry *Registry, rv reflect.Value) {
 	length := rv.Len()
 	for i := range length {
 		fieldV := rv.Index(i)
 		fieldT := fieldV.Type()
-		register(fs, fieldV, fieldT)
+		register(registry, fieldV, fieldT)
 	}
 }
 
-func registerMap(fs *pflag.FlagSet, rv reflect.Value) {
+func registerMap(registry *Registry, rv reflect.Value) {
 	if rv.IsNil() {
 		return
 	}
 	for _, key := range rv.MapKeys() {
-		register(fs, key, key.Type())
+		register(registry, key, key.Type())
 		value := rv.MapIndex(key)
-		register(fs, value, value.Type())
+		register(registry, value, value.Type())
 	}
 }

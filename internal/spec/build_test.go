@@ -12,7 +12,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 // flaggedRunner is a [spec.Runner] that registers a single flag, used to verify
@@ -21,8 +20,8 @@ type flaggedRunner struct {
 	verbose bool
 }
 
-func (fr *flaggedRunner) RegisterFlags(fs *pflag.FlagSet) {
-	flag.Add(fs, "verbose", &fr.verbose)
+func (fr *flaggedRunner) RegisterFlags(registry *flag.Registry) {
+	flag.Add(registry, "verbose", &fr.verbose)
 }
 
 func (fr *flaggedRunner) Run(context.Context, ...string) error {

@@ -1,6 +1,7 @@
 package flag_test
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/internal/annotation"
 )
 
 // opCode is a defined multi-word type used to exercise the default kebab-case
@@ -118,7 +120,7 @@ func TestAdd_String(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 			var dst string
 
 			// Act
@@ -170,7 +172,7 @@ func TestAdd_Int(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 			var dst int
 
 			// Act
@@ -220,7 +222,7 @@ func TestAdd_Bool(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 			var dst bool
 
 			// Act
@@ -268,7 +270,7 @@ func TestAdd_Slice(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 			var dst []int
 
 			// Act
@@ -313,7 +315,7 @@ func TestAdd_DefinedSlice(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 			var dst stringList
 
 			// Act
@@ -365,7 +367,7 @@ func TestAdd_Options(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 			var dst string
 
 			// Act
@@ -384,7 +386,7 @@ func TestAdd_TypeNameAndBareFlag(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 	var opDst opCode
 	var boolDst bool
 	var toggleDst toggle
@@ -410,7 +412,7 @@ func TestAdd_NilPointerRendersEmptyString(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 	var dst *int
 	f := flag.Add(fs, "n", &dst)
 
@@ -460,7 +462,7 @@ func TestAddCallback(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 			var seen []int
 			cb := func(v int) error {
 				seen = append(seen, v)
@@ -486,7 +488,7 @@ func TestAddCallback_BoolBareInvokesTrue(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 	var seen []bool
 	cb := func(v bool) error {
 		seen = append(seen, v)
@@ -514,7 +516,7 @@ func TestAddCallback_ErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 	cbErr := errors.New("callback failed")
 	cb := func(int) error { return cbErr }
 	f := flag.AddCallback(fs, "n", cb)
@@ -525,5 +527,127 @@ func TestAddCallback_ErrorPropagates(t *testing.T) {
 	// Assert
 	if got, want := err, cbErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("Set(...) error = %v, want %v", got, want)
+	}
+}
+
+func TestHidden(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []flag.Option
+		want    bool
+	}{
+		{
+			name:    "HiddenOptionMarksFlagHidden",
+			options: []flag.Option{flag.Hidden()},
+			want:    true,
+		},
+		{
+			name:    "DefaultLeavesFlagVisible",
+			options: nil,
+			want:    false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			var dst string
+
+			// Act
+			f := flag.Add(fs, "flag", &dst, tc.options...)
+
+			// Assert
+			if got, want := f.Hidden, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Add(...) hidden = %t, want %t", got, want)
+			}
+		})
+	}
+}
+
+func TestRequired(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []flag.Option
+		want    bool
+	}{
+		{
+			name:    "RequiredOptionMarksFlagRequired",
+			options: []flag.Option{flag.Required()},
+			want:    true,
+		},
+		{
+			name:    "DefaultLeavesFlagOptional",
+			options: nil,
+			want:    false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			var dst string
+
+			// Act
+			f := flag.Add(fs, "flag", &dst, tc.options...)
+
+			// Assert
+			if got, want := annotation.IsRequired(f), tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Add(...) required = %t, want %t", got, want)
+			}
+		})
+	}
+}
+
+func TestDefaultFromEnv(t *testing.T) {
+	// Arrange
+	pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := flag.NewRegistry(pfs)
+	var dst string
+	flag.Add(fs, "flag", &dst, flag.DefaultFromEnv("FLAG_ENV"))
+	t.Setenv("FLAG_ENV", "from-env")
+	ctx := context.Background()
+
+	// Act
+	err := annotation.SetFlagFallbacks(ctx, pfs)
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("SetFlagFallbacks(...) = %v, want %v", got, want)
+	}
+	if got, want := dst, "from-env"; !cmp.Equal(got, want) {
+		t.Errorf("flag value = %q, want %q", got, want)
+	}
+}
+
+func TestDefaultFromFunc(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs := flag.NewRegistry(pfs)
+	var dst string
+	fn := func(context.Context) (string, error) { return "from-func", nil }
+	flag.Add(fs, "flag", &dst, flag.DefaultFromFunc(fn))
+	ctx := context.Background()
+
+	// Act
+	err := annotation.SetFlagFallbacks(ctx, pfs)
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("SetFlagFallbacks(...) = %v, want %v", got, want)
+	}
+	if got, want := dst, "from-func"; !cmp.Equal(got, want) {
+		t.Errorf("flag value = %q, want %q", got, want)
 	}
 }

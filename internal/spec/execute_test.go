@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/spec/spectest"
 	"github.com/google/go-cmp/cmp"
@@ -114,6 +115,33 @@ func TestExecute_ParseError_ShowsUsageAdvisory(t *testing.T) {
 	}
 	if got, want := strings.Contains(stderr.String(), "unknown flag"), true; got != want {
 		t.Errorf("stderr contains flag error = %t, want %t", got, want)
+	}
+}
+
+func TestExecute_FallbackError_ShowsUsage(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	fallbackErr := errors.New("fallback failed")
+	sut := newRootCommand(t, spectest.OK())
+	sut.Flags().String("token", "", "")
+	annotation.AddFuncFallback(sut.Flags().Lookup("token"), func(context.Context) (string, error) {
+		return "", fallbackErr
+	})
+	var stderr strings.Builder
+	sut.SetOut(&stderr)
+	sut.SetErr(&stderr)
+	ctx := context.Background()
+
+	// Act
+	err := spec.Execute(ctx, sut)
+
+	// Assert
+	if got, want := err, spec.ErrUsage; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("spec.Execute(...) = %v, want %v", got, want)
+	}
+	if got, want := strings.Contains(stderr.String(), "--help"), true; got != want {
+		t.Errorf("stderr shows usage = %t, want %t", got, want)
 	}
 }
 

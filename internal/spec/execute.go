@@ -78,6 +78,12 @@ func (i *CommandInfo) run(runner Runner) func(cmd *cobra.Command, args []string)
 			}
 		}()
 
+		// Compute fallback defaults for flags that aren't set, and assign the
+		// values.
+		if e := annotation.SetFlagFallbacks(ctx, cmd.Flags()); e != nil {
+			return fmt.Errorf("%w: %w", ErrUsage, e)
+		}
+
 		if e := runner.Run(ctx, args...); e != nil {
 			return runnerError{err: e}
 		}

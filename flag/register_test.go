@@ -17,8 +17,9 @@ type boolFlag struct {
 	name string
 }
 
-func (b boolFlag) RegisterFlags(fs *pflag.FlagSet) {
-	fs.Bool(b.name, false, "")
+func (b boolFlag) RegisterFlags(registry *flag.Registry) {
+	var v bool
+	flag.Add(registry, b.name, &v)
 }
 
 var _ flag.Registrar = boolFlag{}
@@ -56,6 +57,34 @@ type mixed struct {
 	Skipped boolFlag `flag:"-"`
 	Count   int
 }
+
+// pair holds two [flag.Registrar] pointer fields, used to place the same
+// instance at more than one position within a tree.
+type pair struct {
+	First  *boolFlag
+	Second *boolFlag
+}
+
+// ifacePair holds two interface-typed fields, used to reach the same pointer
+// instance through interface values rather than concrete pointer fields.
+type ifacePair struct {
+	First  any
+	Second any
+}
+
+// manualParent is a [flag.Registrar] whose RegisterFlags re-enters registration
+// for the same child twice, exercising deduplication across the RegisterFlags
+// boundary.
+type manualParent struct {
+	Child *boolFlag
+}
+
+func (m *manualParent) RegisterFlags(registry *flag.Registry) {
+	flag.Register(registry, m.Child)
+	flag.Register(registry, m.Child)
+}
+
+var _ flag.Registrar = (*manualParent)(nil)
 
 func TestRegister(t *testing.T) {
 	t.Parallel()
@@ -136,13 +165,75 @@ func TestRegister(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pfs)
 
 			// Act
 			flag.Register(fs, tc.v)
 
 			// Assert
-			names := flagNames(fs)
+			names := flagNames(pfs)
+			opts := cmp.Options{cmpopts.SortSlices(strings.Compare), cmpopts.EquateEmpty()}
+			if got, want := names, tc.want; !cmp.Equal(got, want, opts...) {
+				t.Errorf("Register(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got, opts...))
+			}
+		})
+	}
+}
+
+func TestRegister_UniqueInstances(t *testing.T) {
+	t.Parallel()
+
+	shared := &boolFlag{name: "shared"}
+	manualChild := &boolFlag{name: "child"}
+	distinctA := &boolFlag{name: "a"}
+	distinctB := &boolFlag{name: "b"}
+
+	testCases := []struct {
+		name string
+		v    any
+		want []string
+	}{
+		{
+			name: "SamePointerInTwoStructFields",
+			v:    &pair{First: shared, Second: shared},
+			want: []string{"shared"},
+		},
+		{
+			name: "SamePointerTwiceInSlice",
+			v:    []*boolFlag{shared, shared},
+			want: []string{"shared"},
+		},
+		{
+			name: "SamePointerThroughInterfaceFields",
+			v:    &ifacePair{First: shared, Second: shared},
+			want: []string{"shared"},
+		},
+		{
+			name: "ManualReRegistrationDeduplicated",
+			v:    &manualParent{Child: manualChild},
+			want: []string{"child"},
+		},
+		{
+			name: "DistinctPointersBothRegister",
+			v:    &pair{First: distinctA, Second: distinctB},
+			want: []string{"a", "b"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			fs := flag.NewRegistry(pfs)
+
+			// Act
+			flag.Register(fs, tc.v)
+
+			// Assert
+			names := flagNames(pfs)
 			opts := cmp.Options{cmpopts.SortSlices(strings.Compare), cmpopts.EquateEmpty()}
 			if got, want := names, tc.want; !cmp.Equal(got, want, opts...) {
 				t.Errorf("Register(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got, opts...))

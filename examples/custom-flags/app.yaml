@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../../command.schema.json
+id: root
+use: flags-demo
+version: 1.0.0
+summary: A small example CLI using custom GitHub flags
+description: |
+  flags-demo acts as an example for custom flag.Registrar types in the go-cli
+  library.
+
+  The code defines various flags that have custom fallback behavior to both
+  environment variables, as well as custom functional behavior fallbacks.
+examples:
+  - flags-demo --github-owner owner --github-repo repo --github-pr 1234 --github-token s3cret
+  - GITHUB_REPO=owner/repo GITHUB_TOKEN=s3ecret flags-demo --github-pr 1234
+issue-url: https://github.com/bitwizeshift/go-cli/issues

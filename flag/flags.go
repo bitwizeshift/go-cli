@@ -1,11 +1,13 @@
 package flag
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/strcase"
 	"github.com/spf13/pflag"
 )
@@ -46,12 +48,23 @@ type option func(*config)
 
 func (o option) apply(c *config) { o(c) }
 
+// DefaultFunc is a function that can provide a flag default, only executed
+// if a flag was not set during the CLI invocation.
+type DefaultFunc func(ctx context.Context) (string, error)
+
 // config holds the resolved options for a single flag registration.
 type config struct {
 	shorthand string
 	usage     string
+	hidden    bool
+	required  bool
 	typeName  func(any) string
 	set       func(any, []byte) error
+
+	// Fallbacks
+
+	envs   []string
+	custom []DefaultFunc
 }
 
 // newConfig builds a config from options, defaulting the type name to
@@ -74,11 +87,39 @@ func Usage(usage string) Option {
 	return option(func(c *config) { c.usage = usage })
 }
 
+// Hidden marks the flag as hidden, omitting it from generated help and usage
+// output while leaving it functional when specified.
+func Hidden() Option {
+	return option(func(c *config) { c.hidden = true })
+}
+
+// Required marks the flag as required, so parsing fails when it is omitted. It
+// is shorthand for [MarkRequired] on the registered flag.
+func Required() Option {
+	return option(func(c *config) { c.required = true })
+}
+
 // Type overrides the reported flag type name, bypassing the default kebab-case
 // name derived from the Go type.
 func Type(name string) Option {
 	return option(func(c *config) {
 		c.typeName = func(any) string { return name }
+	})
+}
+
+// DefaultFromEnv adds an environment variable that will be sourced for a default
+// value for this flag.
+func DefaultFromEnv(name string) Option {
+	return option(func(c *config) {
+		c.envs = append(c.envs, name)
+	})
+}
+
+// DefaultFromFunc adds an [DefaultFunc] that will be executed for computing a
+// default flag value if this was not specified.
+func DefaultFromFunc(fn DefaultFunc) Option {
+	return option(func(c *config) {
+		c.custom = append(c.custom, fn)
 	})
 }
 
@@ -124,7 +165,7 @@ var _ pflag.Value = (*value)(nil)
 // accumulates across repeated occurrences, so --name a --name b is equivalent
 // to --name a,b; any other T reports [ErrAlreadySet] if specified more than
 // once.
-func Add[T any](fs *pflag.FlagSet, name string, v *T, options ...Option) *pflag.Flag {
+func Add[T any](registry *Registry, name string, v *T, options ...Option) *pflag.Flag {
 	cfg := newConfig(options...)
 	slice := isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Slice
 	changed := false
@@ -148,7 +189,7 @@ func Add[T any](fs *pflag.FlagSet, name string, v *T, options ...Option) *pflag.
 		str: func() string { return defaultString(v) },
 		typ: func() string { return cfg.typeName(v) },
 	}
-	return registerFlag[T](fs, val, name, cfg)
+	return registerFlag[T](registry, val, name, cfg)
 }
 
 // AddCallback registers a flag named name that, when set, decodes its value into
@@ -157,7 +198,7 @@ func Add[T any](fs *pflag.FlagSet, name string, v *T, options ...Option) *pflag.
 // AddCallback is the functional form of [Add] and honors the same [Option]
 // values. cb is invoked once per occurrence of the flag; a bool-kinded T allows
 // a bare --name to invoke cb with true.
-func AddCallback[T any](fs *pflag.FlagSet, name string, cb func(T) error, options ...Option) *pflag.Flag {
+func AddCallback[T any](registry *Registry, name string, cb func(T) error, options ...Option) *pflag.Flag {
 	cfg := newConfig(options...)
 	val := &value{
 		set: func(s string) error {
@@ -170,15 +211,25 @@ func AddCallback[T any](fs *pflag.FlagSet, name string, cb func(T) error, option
 		str: func() string { return "" },
 		typ: func() string { return cfg.typeName((*T)(nil)) },
 	}
-	return registerFlag[T](fs, val, name, cfg)
+	return registerFlag[T](registry, val, name, cfg)
 }
 
 // register adds val to fs under name, applying the bool bare-flag default for an
 // unnamed bool T.
-func registerFlag[T any](fs *pflag.FlagSet, val *value, name string, cfg *config) *pflag.Flag {
-	f := fs.VarPF(val, name, cfg.shorthand, cfg.usage)
+func registerFlag[T any](registry *Registry, val *value, name string, cfg *config) *pflag.Flag {
+	f := registry.flags.VarPF(val, name, cfg.shorthand, cfg.usage)
+	f.Hidden = cfg.hidden
+	if cfg.required {
+		annotation.MarkRequired(f)
+	}
 	if isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Bool {
 		f.NoOptDefVal = "true"
+	}
+	for _, env := range cfg.envs {
+		annotation.AddENVFallback(f, env)
+	}
+	for _, fn := range cfg.custom {
+		annotation.AddFuncFallback(f, fn)
 	}
 	return f
 }

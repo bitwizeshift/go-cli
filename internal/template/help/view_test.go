@@ -148,7 +148,7 @@ func commandWithGroups() *cobra.Command {
 
 func commandWithFlagGroups() *cobra.Command {
 	cmd := &cobra.Command{Use: "svc", Short: "svc", Run: noop}
-	fs := cmd.Flags()
+	fs := flag.NewRegistry(cmd.Flags())
 	var force bool
 	var zulu, yankee, beta, gamma string
 	forceFlag := flag.Add(fs, "force", &force, flag.Shorthand("f"), flag.Usage("force it"))

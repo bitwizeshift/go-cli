@@ -17,7 +17,6 @@ import (
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/internal/ansi"
 	"github.com/bitwizeshift/go-cli/progress"
-	"github.com/spf13/pflag"
 )
 
 //go:embed app.yaml
@@ -66,9 +65,15 @@ func newBarRunner(bar progress.Bar) *barRunner {
 	return &barRunner{bar: bar, steps: 20, delay: 50}
 }
 
-func (r *barRunner) RegisterFlags(fs *pflag.FlagSet) {
-	flag.Add(fs, "steps", &r.steps, flag.Shorthand("s"), flag.Usage("number of steps to fill the bar"))
-	flag.Add(fs, "delay", &r.delay, flag.Shorthand("d"), flag.Usage("pause between steps, in milliseconds"))
+func (r *barRunner) RegisterFlags(registry *flag.Registry) {
+	flag.Add(registry, "steps", &r.steps,
+		flag.Shorthand("s"),
+		flag.Usage("number of steps to fill the bar"),
+	)
+	flag.Add(registry, "delay", &r.delay,
+		flag.Shorthand("d"),
+		flag.Usage("pause between steps, in milliseconds"),
+	)
 }
 
 func (r *barRunner) Run(ctx context.Context, _ ...string) error {
@@ -107,9 +112,15 @@ func newSpinRunner(spinner progress.Spinner) *spinRunner {
 	return &spinRunner{spinner: spinner, steps: 30, delay: 80}
 }
 
-func (r *spinRunner) RegisterFlags(fs *pflag.FlagSet) {
-	flag.Add(fs, "steps", &r.steps, flag.Shorthand("s"), flag.Usage("number of frames to animate"))
-	flag.Add(fs, "delay", &r.delay, flag.Shorthand("d"), flag.Usage("pause between frames, in milliseconds"))
+func (r *spinRunner) RegisterFlags(registry *flag.Registry) {
+	flag.Add(registry, "steps", &r.steps,
+		flag.Shorthand("s"),
+		flag.Usage("number of frames to animate"),
+	)
+	flag.Add(registry, "delay", &r.delay,
+		flag.Shorthand("d"),
+		flag.Usage("pause between frames, in milliseconds"),
+	)
 }
 
 func (r *spinRunner) Run(ctx context.Context, _ ...string) error {
@@ -144,9 +155,15 @@ func newAllRunner() *allRunner {
 	return &allRunner{steps: 40, delay: 60}
 }
 
-func (r *allRunner) RegisterFlags(fs *pflag.FlagSet) {
-	flag.Add(fs, "steps", &r.steps, flag.Shorthand("s"), flag.Usage("number of steps to run"))
-	flag.Add(fs, "delay", &r.delay, flag.Shorthand("d"), flag.Usage("pause between updates, in milliseconds"))
+func (r *allRunner) RegisterFlags(registry *flag.Registry) {
+	flag.Add(registry, "steps", &r.steps,
+		flag.Shorthand("s"),
+		flag.Usage("number of steps to run"),
+	)
+	flag.Add(registry, "delay", &r.delay,
+		flag.Shorthand("d"),
+		flag.Usage("pause between updates, in milliseconds"),
+	)
 }
 
 func (r *allRunner) Run(ctx context.Context, _ ...string) error {
