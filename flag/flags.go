@@ -13,13 +13,22 @@ import (
 )
 
 // ErrAlreadySet indicates a non-accumulating flag was specified more than once.
-// Only unnamed slice flags (such as []string) accumulate across occurrences; any
-// other flag reports this error on its second occurrence.
+// Only unnamed slice flags (such as []string) accumulate across occurrences by
+// default; any other flag reports this error on its second occurrence unless it
+// was made repeatable with [Repeatable] or [RepeatableUpTo].
 var ErrAlreadySet = errors.New("flag already specified")
+
+// ErrTooManyOccurrences indicates a flag was specified more times than its
+// [RepeatableUpTo] cap allows.
+var ErrTooManyOccurrences = errors.New("flag specified too many times")
 
 // errDecoderType indicates that a decoder supplied via [UnmarshalWith] produces
 // a value whose type does not match the flag's destination.
 var errDecoderType = errors.New("decoder type does not match flag value")
+
+// errCallbackType indicates a flag's decoded value is not assignable or
+// convertible to a [Callback] function's parameter type.
+var errCallbackType = errors.New("flag value not convertible to callback argument")
 
 // typeToName converts the underlying object's value to a pflag "type" name
 // by converting the Go reflect-API's type-identifier to a kebab-case. This
@@ -38,8 +47,7 @@ func typeToName(v any) string {
 	return strings.Join(parts, "-")
 }
 
-// Option configures an optional property of a flag registered by [Add] or
-// [AddCallback].
+// Option configures an optional property of a flag registered by [Add].
 type Option interface {
 	apply(*config)
 }
@@ -60,6 +68,15 @@ type config struct {
 	required  bool
 	typeName  func(any) string
 	set       func(any, []byte) error
+
+	// Callbacks invoked with the decoded value each time the flag is set.
+	callbacks []reflect.Value
+
+	// Occurrence limits.
+
+	maxSet   bool // an occurrence option was applied
+	maxCount int  // when maxSet: 0 means unlimited, n > 0 caps at n
+	capped   bool // RepeatableUpTo was used, selecting ErrTooManyOccurrences
 
 	// Fallbacks
 
@@ -143,7 +160,104 @@ func UnmarshalWith[T any](unmarshal func(data []byte) (T, error)) Option {
 	})
 }
 
-// value is a closure-backed [pflag.Value] shared by [Add] and [AddCallback].
+// Repeatable allows the flag to be specified any number of times. A repeated
+// non-slice flag keeps the last value; a slice flag accumulates across
+// occurrences.
+func Repeatable() Option {
+	return option(func(c *config) {
+		c.maxSet = true
+		c.maxCount = 0
+	})
+}
+
+// RepeatableUpTo allows the flag to be specified up to n times, reporting
+// [ErrTooManyOccurrences] on any further occurrence. It panics if n is less
+// than one.
+func RepeatableUpTo(n int) Option {
+	if n < 1 {
+		panic("flag: RepeatableUpTo requires a positive count")
+	}
+	return option(func(c *config) {
+		c.maxSet = true
+		c.maxCount = n
+		c.capped = true
+	})
+}
+
+// Callback registers fn to be invoked with the flag's decoded value each time
+// the flag is set. fn must be a function of one of these shapes:
+//
+//	func()
+//	func(value)
+//	func() error
+//	func(value) error
+//
+// where value is any type the decoded flag value is assignable or convertible
+// to (for example func(any) on a string flag). A function returning a non-nil
+// error fails parsing with that error.
+//
+// Callback panics if fn is not a function of a supported shape. If the decoded
+// value cannot be converted to fn's parameter type, setting the flag reports an
+// error wrapping [errCallbackType].
+func Callback(fn any) Option {
+	validateCallbackShape(fn)
+	return option(func(c *config) {
+		c.callbacks = append(c.callbacks, reflect.ValueOf(fn))
+	})
+}
+
+// errorType is the [reflect.Type] of the error interface, used to validate
+// [Callback] result signatures.
+var errorType = reflect.TypeFor[error]()
+
+// validateCallbackShape panics unless fn is a function taking at most one
+// argument and returning either nothing or a single error.
+func validateCallbackShape(fn any) {
+	rt := reflect.TypeOf(fn)
+	if rt == nil || rt.Kind() != reflect.Func {
+		panic("flag: Callback requires a function")
+	}
+	if rt.IsVariadic() || rt.NumIn() > 1 {
+		panic("flag: Callback function must take at most one argument")
+	}
+	switch rt.NumOut() {
+	case 0:
+	case 1:
+		if !rt.Out(0).Implements(errorType) {
+			panic("flag: Callback function must return error or nothing")
+		}
+	default:
+		panic("flag: Callback function must return error or nothing")
+	}
+}
+
+// invokeCallback calls fn with arg, converting arg to fn's parameter type when
+// necessary. It returns [errCallbackType] if arg is not convertible, or any
+// error fn itself returns.
+func invokeCallback(fn reflect.Value, arg reflect.Value) error {
+	ft := fn.Type()
+	var in []reflect.Value
+	if ft.NumIn() == 1 {
+		p := ft.In(0)
+		switch {
+		case arg.Type().AssignableTo(p):
+		case arg.Type().ConvertibleTo(p):
+			arg = arg.Convert(p)
+		default:
+			return fmt.Errorf("callback: %w", errCallbackType)
+		}
+		in = []reflect.Value{arg}
+	}
+	out := fn.Call(in)
+	if len(out) == 1 {
+		if err, _ := out[0].Interface().(error); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// value is a closure-backed [pflag.Value] used by [Add].
 type value struct {
 	set func(string) error
 	str func() string
@@ -161,55 +275,52 @@ var _ pflag.Value = (*value)(nil)
 //
 // By default the flag is decoded with [Unmarshal] and reports a kebab-case type
 // name derived from T; both may be adjusted with [Option] values. A bool-kinded
-// T is registered so that a bare --name implies true. An unnamed slice T
-// accumulates across repeated occurrences, so --name a --name b is equivalent
-// to --name a,b; any other T reports [ErrAlreadySet] if specified more than
-// once.
+// T is registered so that a bare --name implies true.
+//
+// An unnamed slice T accumulates across repeated occurrences, so --name a --name
+// b is equivalent to --name a,b; any other T reports [ErrAlreadySet] if
+// specified more than once. [Repeatable] lifts that limit, and [RepeatableUpTo]
+// caps it, reporting [ErrTooManyOccurrences] beyond the cap; a repeated non-slice
+// flag keeps the last value. [Callback] options are invoked with the decoded
+// value on each occurrence.
 func Add[T any](registry *Registry, name string, v *T, options ...Option) *pflag.Flag {
 	cfg := newConfig(options...)
 	slice := isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Slice
-	changed := false
+	limit := 1
+	if slice {
+		limit = 0 // builtin slices accumulate without a limit by default
+	}
+	if cfg.maxSet {
+		limit = cfg.maxCount
+	}
+	count := 0
 	val := &value{
 		set: func(s string) error {
-			if changed && !slice {
+			if limit > 0 && count >= limit {
+				if cfg.capped {
+					return fmt.Errorf("%s: %w", name, ErrTooManyOccurrences)
+				}
 				return fmt.Errorf("%s: %w", name, ErrAlreadySet)
 			}
 			var tmp T
 			if err := cfg.set(&tmp, []byte(s)); err != nil {
 				return err
 			}
-			if slice && changed {
+			if slice && count > 0 {
 				appendInto(v, tmp)
 			} else {
 				*v = tmp
 			}
-			changed = true
+			for _, cb := range cfg.callbacks {
+				if err := invokeCallback(cb, reflect.ValueOf(tmp)); err != nil {
+					return err
+				}
+			}
+			count++
 			return nil
 		},
 		str: func() string { return defaultString(v) },
 		typ: func() string { return cfg.typeName(v) },
-	}
-	return registerFlag[T](registry, val, name, cfg)
-}
-
-// AddCallback registers a flag named name that, when set, decodes its value into
-// a T and invokes cb with it, returning the created [pflag.Flag].
-//
-// AddCallback is the functional form of [Add] and honors the same [Option]
-// values. cb is invoked once per occurrence of the flag; a bool-kinded T allows
-// a bare --name to invoke cb with true.
-func AddCallback[T any](registry *Registry, name string, cb func(T) error, options ...Option) *pflag.Flag {
-	cfg := newConfig(options...)
-	val := &value{
-		set: func(s string) error {
-			var out T
-			if err := cfg.set(&out, []byte(s)); err != nil {
-				return err
-			}
-			return cb(out)
-		},
-		str: func() string { return "" },
-		typ: func() string { return cfg.typeName((*T)(nil)) },
 	}
 	return registerFlag[T](registry, val, name, cfg)
 }

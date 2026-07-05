@@ -53,6 +53,17 @@ func setEach(v pflag.Value, values []string) error {
 	return nil
 }
 
+// requirePanic fails the test unless fn panics.
+func requirePanic(t *testing.T, fn func()) {
+	t.Helper()
+	defer func() {
+		if recover() == nil {
+			t.Errorf("expected a panic, got none")
+		}
+	}()
+	fn()
+}
+
 // flagInfo captures the observable properties of a registered flag for
 // full-structure comparison.
 type flagInfo struct {
@@ -425,35 +436,49 @@ func TestAdd_NilPointerRendersEmptyString(t *testing.T) {
 	}
 }
 
-func TestAddCallback(t *testing.T) {
+func TestCallback(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name    string
-		sets    []string
-		want    []int
-		wantErr error
+		name      string
+		options   []flag.Option
+		sets      []string
+		want      []int
+		wantValue int
+		wantErr   error
 	}{
 		{
-			name: "InvokedPerValue",
-			sets: []string{"5"},
-			want: []int{5},
+			name:      "InvokedPerValue",
+			sets:      []string{"5"},
+			want:      []int{5},
+			wantValue: 5,
 		},
 		{
-			name: "InvokedOncePerOccurrence",
-			sets: []string{"1", "2"},
-			want: []int{1, 2},
+			name:      "InvokedPerOccurrenceWhenRepeatable",
+			options:   []flag.Option{flag.Repeatable()},
+			sets:      []string{"1", "2"},
+			want:      []int{1, 2},
+			wantValue: 2,
 		},
 		{
-			name: "NotInvokedWhenAbsent",
-			sets: nil,
-			want: nil,
+			name:      "NotInvokedWhenAbsent",
+			sets:      nil,
+			want:      nil,
+			wantValue: 0,
 		},
 		{
-			name:    "DecodeErrorSkipsCallback",
-			sets:    []string{"abc"},
-			want:    nil,
-			wantErr: strconv.ErrSyntax,
+			name:      "DecodeErrorSkipsCallback",
+			sets:      []string{"abc"},
+			want:      nil,
+			wantValue: 0,
+			wantErr:   strconv.ErrSyntax,
+		},
+		{
+			name:      "SecondOccurrenceRejectedAfterFirstInvocation",
+			sets:      []string{"1", "2"},
+			want:      []int{1},
+			wantValue: 1,
+			wantErr:   flag.ErrAlreadySet,
 		},
 	}
 
@@ -464,11 +489,13 @@ func TestAddCallback(t *testing.T) {
 			// Arrange
 			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 			var seen []int
+			var dst int
 			cb := func(v int) error {
 				seen = append(seen, v)
 				return nil
 			}
-			f := flag.AddCallback(fs, "n", cb)
+			options := append([]flag.Option{flag.Callback(cb)}, tc.options...)
+			f := flag.Add(fs, "n", &dst, options...)
 
 			// Act
 			err := setEach(f.Value, tc.sets)
@@ -478,23 +505,110 @@ func TestAddCallback(t *testing.T) {
 				t.Fatalf("Set(...) error = %v, want %v", got, want)
 			}
 			if got, want := seen, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-				t.Errorf("AddCallback(...) invocations = %v, want %v", got, want)
+				t.Errorf("Callback(...) invocations = %v, want %v", got, want)
+			}
+			if got, want := dst, tc.wantValue; !cmp.Equal(got, want) {
+				t.Errorf("Add(...) value = %v, want %v", got, want)
 			}
 		})
 	}
 }
 
-func TestAddCallback_BoolBareInvokesTrue(t *testing.T) {
+func TestCallback_Shapes(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	var nullary, nullaryErr bool
+	var unary, unaryErr int
+	var d1, d2, d3, d4 int
+	fNullary := flag.Add(fs, "a", &d1, flag.Callback(func() { nullary = true }))
+	fUnary := flag.Add(fs, "b", &d2, flag.Callback(func(v int) { unary = v }))
+	fNullaryErr := flag.Add(fs, "c", &d3, flag.Callback(func() error { nullaryErr = true; return nil }))
+	fUnaryErr := flag.Add(fs, "d", &d4, flag.Callback(func(v int) error { unaryErr = v; return nil }))
+
+	// Act
+	err := errors.Join(
+		fNullary.Value.Set("1"),
+		fUnary.Value.Set("2"),
+		fNullaryErr.Value.Set("3"),
+		fUnaryErr.Value.Set("4"),
+	)
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Set(...) error = %v, want %v", got, want)
+	}
+	if got, want := nullary, true; got != want {
+		t.Errorf("func() callback invoked = %v, want %v", got, want)
+	}
+	if got, want := nullaryErr, true; got != want {
+		t.Errorf("func() error callback invoked = %v, want %v", got, want)
+	}
+	if got, want := unary, 2; got != want {
+		t.Errorf("func(value) callback value = %v, want %v", got, want)
+	}
+	if got, want := unaryErr, 4; got != want {
+		t.Errorf("func(value) error callback value = %v, want %v", got, want)
+	}
+}
+
+func TestCallback_ConvertibleArgument(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	var anyDst any
+	var wideDst int64
+	var s string
+	var n int
+	fAny := flag.Add(fs, "s", &s, flag.Callback(func(v any) { anyDst = v }))
+	fWide := flag.Add(fs, "n", &n, flag.Callback(func(v int64) { wideDst = v }))
+
+	// Act
+	err := errors.Join(fAny.Value.Set("hello"), fWide.Value.Set("42"))
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Set(...) error = %v, want %v", got, want)
+	}
+	if got, want := anyDst, any("hello"); !cmp.Equal(got, want) {
+		t.Errorf("func(any) callback value = %v, want %v", got, want)
+	}
+	if got, want := wideDst, int64(42); !cmp.Equal(got, want) {
+		t.Errorf("func(int64) callback value = %v, want %v", got, want)
+	}
+}
+
+func TestCallback_InconvertibleArgument(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	var s string
+	f := flag.Add(fs, "s", &s, flag.Callback(func(chan int) {}))
+
+	// Act
+	err := f.Value.Set("hello")
+
+	// Assert
+	if got, want := err, cmpopts.AnyError; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Set(...) error = %v, want %v", got, want)
+	}
+}
+
+func TestCallback_BoolBareInvokesTrue(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
 	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 	var seen []bool
+	var dst bool
 	cb := func(v bool) error {
 		seen = append(seen, v)
 		return nil
 	}
-	f := flag.AddCallback(fs, "verbose", cb)
+	f := flag.Add(fs, "verbose", &dst, flag.Callback(cb))
 
 	// Act
 	err := f.Value.Set("true")
@@ -505,21 +619,22 @@ func TestAddCallback_BoolBareInvokesTrue(t *testing.T) {
 		t.Fatalf("Set(...) error = %v, want %v", got, want)
 	}
 	if got, want := info, (flagInfo{Type: "bool", NoOpt: "true"}); !cmp.Equal(got, want) {
-		t.Errorf("AddCallback(...) flag = %+v, want %+v", got, want)
+		t.Errorf("Add(...) flag = %+v, want %+v", got, want)
 	}
 	if got, want := seen, []bool{true}; !cmp.Equal(got, want) {
-		t.Errorf("AddCallback(...) invocations = %v, want %v", got, want)
+		t.Errorf("Callback(...) invocations = %v, want %v", got, want)
 	}
 }
 
-func TestAddCallback_ErrorPropagates(t *testing.T) {
+func TestCallback_ErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
 	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
 	cbErr := errors.New("callback failed")
+	var dst int
 	cb := func(int) error { return cbErr }
-	f := flag.AddCallback(fs, "n", cb)
+	f := flag.Add(fs, "n", &dst, flag.Callback(cb))
 
 	// Act
 	err := f.Value.Set("5")
@@ -527,6 +642,198 @@ func TestAddCallback_ErrorPropagates(t *testing.T) {
 	// Assert
 	if got, want := err, cbErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("Set(...) error = %v, want %v", got, want)
+	}
+}
+
+func TestCallback_MalformedShapePanics(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		fn   any
+	}{
+		{
+			name: "Nil",
+			fn:   nil,
+		},
+		{
+			name: "NotAFunction",
+			fn:   42,
+		},
+		{
+			name: "TooManyArguments",
+			fn:   func(int, int) {},
+		},
+		{
+			name: "Variadic",
+			fn:   func(...int) {},
+		},
+		{
+			name: "NonErrorResult",
+			fn:   func() int { return 0 },
+		},
+		{
+			name: "TooManyResults",
+			fn:   func() (int, error) { return 0, nil },
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act & Assert
+			requirePanic(t, func() { flag.Callback(tc.fn) })
+		})
+	}
+}
+
+func TestRepeatable_ScalarKeepsLastValue(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	var dst string
+	f := flag.Add(fs, "v", &dst, flag.Repeatable())
+
+	// Act
+	err := setEach(f.Value, []string{"a", "b", "c"})
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Set(...) error = %v, want %v", got, want)
+	}
+	if got, want := dst, "c"; !cmp.Equal(got, want) {
+		t.Errorf("Add(...) value = %v, want %v", got, want)
+	}
+}
+
+func TestRepeatable_SliceAccumulates(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	var dst []int
+	f := flag.Add(fs, "n", &dst, flag.Repeatable())
+
+	// Act
+	err := setEach(f.Value, []string{"1", "2"})
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Set(...) error = %v, want %v", got, want)
+	}
+	if got, want := dst, []int{1, 2}; !cmp.Equal(got, want) {
+		t.Errorf("Add(...) value = %v, want %v", got, want)
+	}
+}
+
+func TestRepeatableUpTo(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		cap     int
+		sets    []string
+		want    string
+		wantErr error
+	}{
+		{
+			name: "WithinCap",
+			cap:  3,
+			sets: []string{"a", "b"},
+			want: "b",
+		},
+		{
+			name: "AtCap",
+			cap:  3,
+			sets: []string{"a", "b", "c"},
+			want: "c",
+		},
+		{
+			name:    "ExceedsCap",
+			cap:     3,
+			sets:    []string{"a", "b", "c", "d"},
+			want:    "c",
+			wantErr: flag.ErrTooManyOccurrences,
+		},
+		{
+			name:    "CapOfOneRejectsSecond",
+			cap:     1,
+			sets:    []string{"a", "b"},
+			want:    "a",
+			wantErr: flag.ErrTooManyOccurrences,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			var dst string
+			f := flag.Add(fs, "v", &dst, flag.RepeatableUpTo(tc.cap))
+
+			// Act
+			err := setEach(f.Value, tc.sets)
+
+			// Assert
+			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+				t.Fatalf("Set(...) error = %v, want %v", got, want)
+			}
+			if got, want := dst, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Add(...) value = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestRepeatableUpTo_CapsSliceOccurrences(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	var dst []int
+	f := flag.Add(fs, "n", &dst, flag.RepeatableUpTo(2))
+
+	// Act: each --n is one occurrence, so "1,2" contributes two elements but one
+	// occurrence; the third occurrence exceeds the cap.
+	err := setEach(f.Value, []string{"1,2", "3", "4"})
+
+	// Assert
+	if got, want := err, flag.ErrTooManyOccurrences; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Set(...) error = %v, want %v", got, want)
+	}
+	if got, want := dst, []int{1, 2, 3}; !cmp.Equal(got, want) {
+		t.Errorf("Add(...) value = %v, want %v", got, want)
+	}
+}
+
+func TestRepeatableUpTo_NonPositivePanics(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		cap  int
+	}{
+		{
+			name: "Zero",
+			cap:  0,
+		},
+		{
+			name: "Negative",
+			cap:  -1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act & Assert
+			requirePanic(t, func() { flag.RepeatableUpTo(tc.cap) })
+		})
 	}
 }
 
