@@ -1,2 +1,6 @@
+sub
+
+USAGE
+  app sub [flags]
 
 Run app sub --help for more details.

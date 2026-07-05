@@ -1,2 +1,6 @@
+app
+
+USAGE
+  app [flags]
 
 Run app --help for more details.
