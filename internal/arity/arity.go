@@ -50,19 +50,72 @@ func (i interval) contains(n int) bool {
 	return i.unbounded || n <= i.hi
 }
 
+// describe returns a human-readable phrase for the counts the interval permits,
+// such as "at least 2 arguments" or "between 1 and 3 arguments".
+func (i interval) describe() string {
+	switch {
+	case i.unbounded && i.lo == 0:
+		return "any number of arguments"
+	case i.unbounded:
+		return "at least " + i.arguments(i.lo)
+	case i.lo == 0 && i.hi == 0:
+		return "no arguments"
+	case i.lo == i.hi:
+		return "exactly " + i.arguments(i.lo)
+	case i.lo == 0:
+		return "at most " + i.arguments(i.hi)
+	default:
+		return fmt.Sprintf("between %d and %d arguments", i.lo, i.hi)
+	}
+}
+
+// arguments renders n with the correctly pluralized noun, such as "1 argument"
+// or "3 arguments".
+func (interval) arguments(n int) string {
+	if n == 1 {
+		return "1 argument"
+	}
+	return fmt.Sprintf("%d arguments", n)
+}
+
 // Arity describes the set of permitted argument counts parsed from a
 // specification.
 type Arity struct {
-	match func(int) bool
+	intervals []interval
 }
 
 // Contains reports whether n is a permitted argument count. The zero-value
 // [Arity] permits no counts.
 func (a Arity) Contains(n int) bool {
-	if a.match == nil {
-		return false
+	return slices.ContainsFunc(a.intervals, func(i interval) bool {
+		return i.contains(n)
+	})
+}
+
+// String returns a human-readable description of the permitted argument counts,
+// such as "at most 1 argument" or, for disjoint ranges, "exactly 1 argument, or
+// at least 3 arguments". The zero-value [Arity] returns an empty string.
+func (a Arity) String() string {
+	phrases := make([]string, len(a.intervals))
+	for i := range a.intervals {
+		phrases[i] = a.intervals[i].describe()
 	}
-	return a.match(n)
+	return a.joinAlternatives(phrases)
+}
+
+var _ fmt.Stringer = Arity{}
+
+// joinAlternatives renders phrases as a natural-language list, separating the
+// final phrase with "or".
+func (Arity) joinAlternatives(phrases []string) string {
+	switch len(phrases) {
+	case 0:
+		return ""
+	case 1:
+		return phrases[0]
+	default:
+		return strings.Join(phrases[:len(phrases)-1], ", ") + ", or " + phrases[len(phrases)-1]
+	}
 }
 
 // UnmarshalText parses an arity specification and configures the [Arity] to
@@ -80,11 +133,7 @@ func (a *Arity) UnmarshalText(text []byte) error {
 	if err != nil {
 		return err
 	}
-	a.match = func(n int) bool {
-		return slices.ContainsFunc(intervals, func(i interval) bool {
-			return i.contains(n)
-		})
-	}
+	a.intervals = intervals
 	return nil
 }
 
@@ -105,7 +154,7 @@ func (af *ArityFunc) UnmarshalText(text []byte) error {
 	}
 	*af = func(_ *cobra.Command, args []string) error {
 		if !a.Contains(len(args)) {
-			return fmt.Errorf("%w: got %d", ErrBadArity, len(args))
+			return &badArityError{arity: a, got: len(args)}
 		}
 		return nil
 	}
@@ -113,6 +162,25 @@ func (af *ArityFunc) UnmarshalText(text []byte) error {
 }
 
 var _ encoding.TextUnmarshaler = (*ArityFunc)(nil)
+
+// badArityError reports that a command received a number of positional
+// arguments outside the range permitted by its [Arity].
+type badArityError struct {
+	arity Arity
+	got   int
+}
+
+// Error describes the permitted argument counts alongside the number received.
+func (e *badArityError) Error() string {
+	return fmt.Sprintf("accepts %s, but received %d", e.arity, e.got)
+}
+
+// Unwrap returns [ErrBadArity].
+func (e *badArityError) Unwrap() error {
+	return ErrBadArity
+}
+
+var _ error = (*badArityError)(nil)
 
 // parse converts a specification into the sorted, non-overlapping intervals it
 // describes.

@@ -111,8 +111,12 @@ func (iar *itemAddRunner) RegisterFlags(registry *flag.Registry) {
 }
 
 func (iar *itemAddRunner) Run(_ context.Context, args ...string) error {
+	name := "untitled"
+	if len(args) > 0 {
+		name = args[0]
+	}
 	fmt.Printf("added %q (priority=%d, pinned=%t, tags=[%s])\n",
-		args[0], iar.priority, iar.pin, strings.Join(iar.tags, ", "))
+		name, iar.priority, iar.pin, strings.Join(iar.tags, ", "))
 	return nil
 }
 

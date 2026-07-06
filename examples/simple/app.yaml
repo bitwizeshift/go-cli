@@ -55,7 +55,7 @@ commands:
 
         Items may be tagged and prioritized. A pinned item is always listed
         first, so it cannot also carry a numeric priority.
-      arity: 1
+      arity: <=1
 
     - id: item-list
       use: list

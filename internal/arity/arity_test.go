@@ -2,6 +2,7 @@ package arity_test
 
 import (
 	"encoding"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -359,6 +360,95 @@ func TestArity_Contains_ZeroValue_ReturnsFalse(t *testing.T) {
 	}
 }
 
+func TestArity_String_ZeroValue_ReturnsEmpty(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	var sut arity.Arity
+
+	// Act
+	str := sut.String()
+
+	// Assert
+	if got, want := str, ""; !cmp.Equal(got, want) {
+		t.Errorf("Arity.String() = %q, want %q", got, want)
+	}
+}
+
+func TestArity_String(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		spec string
+		want string
+	}{
+		{
+			name: "exact plural",
+			spec: "3",
+			want: "exactly 3 arguments",
+		},
+		{
+			name: "exact singular",
+			spec: "1",
+			want: "exactly 1 argument",
+		},
+		{
+			name: "none",
+			spec: "0",
+			want: "no arguments",
+		},
+		{
+			name: "at most",
+			spec: "<=1",
+			want: "at most 1 argument",
+		},
+		{
+			name: "at least",
+			spec: ">=2",
+			want: "at least 2 arguments",
+		},
+		{
+			name: "between",
+			spec: "1..=3",
+			want: "between 1 and 3 arguments",
+		},
+		{
+			name: "any number",
+			spec: ">=0",
+			want: "any number of arguments",
+		},
+		{
+			name: "two alternatives",
+			spec: "<2, >3",
+			want: "at most 1 argument, or at least 4 arguments",
+		},
+		{
+			name: "three alternatives",
+			spec: "1, 3, >=5",
+			want: "exactly 1 argument, exactly 3 arguments, or at least 5 arguments",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			var sut arity.Arity
+			mustUnmarshal(t, &sut, tc.spec)
+
+			// Act
+			str := sut.String()
+
+			// Assert
+			if got, want := str, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Arity.String() = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestArityFunc_UnmarshalText(t *testing.T) {
 	t.Parallel()
 
@@ -440,6 +530,62 @@ func TestArityFunc(t *testing.T) {
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 				t.Fatalf("ArityFunc(%v) = %v, want %v", tc.args, got, want)
+			}
+		})
+	}
+}
+
+func TestBadArityError_Message(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		spec       string
+		args       []string
+		wantExpect string
+		wantGot    string
+	}{
+		{
+			name:       "above at most",
+			spec:       "<=1",
+			args:       []string{"a", "b"},
+			wantExpect: "at most 1 argument",
+			wantGot:    "received 2",
+		},
+		{
+			name:       "below exact",
+			spec:       "2",
+			args:       []string{"a"},
+			wantExpect: "exactly 2 arguments",
+			wantGot:    "received 1",
+		},
+		{
+			name:       "below range",
+			spec:       "1..=3",
+			args:       []string{},
+			wantExpect: "between 1 and 3 arguments",
+			wantGot:    "received 0",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			var sut arity.ArityFunc
+			mustUnmarshal(t, &sut, tc.spec)
+
+			// Act
+			err := sut(nil, tc.args)
+
+			// Assert
+			msg := err.Error()
+			if got, want := strings.Contains(msg, tc.wantExpect), true; !cmp.Equal(got, want) {
+				t.Errorf("ArityFunc(%v).Error() = %q, want containing %q", tc.args, msg, tc.wantExpect)
+			}
+			if got, want := strings.Contains(msg, tc.wantGot), true; !cmp.Equal(got, want) {
+				t.Errorf("ArityFunc(%v).Error() = %q, want containing %q", tc.args, msg, tc.wantGot)
 			}
 		})
 	}
