@@ -1,6 +1,7 @@
 package spec_test
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"testing"
@@ -184,6 +185,47 @@ func TestBuild_BoundRunner_RegistersCompletions(t *testing.T) {
 	if got, want := registered, true; got != want {
 		t.Errorf("GetFlagCompletionFunc(\"format\") registered = %t, want %t", got, want)
 	}
+}
+
+func TestBuild_UnboundCommand_RunsHelp(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	const input = `
+id: root
+use: root
+commands:
+  default:
+    - id: child
+      use: child
+      summary: a child command
+`
+	sut := build(t, input, map[string]spec.Runner{"root": spectest.OK()})
+	var out bytes.Buffer
+	sut.SetOut(&out)
+	sut.SetErr(&out)
+	sut.SetArgs([]string{"child"})
+
+	// Act
+	err := sut.Execute()
+
+	// Assert
+	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Execute(child) = %v, want nil", err)
+	}
+	if got, want := strings.Contains(out.String(), "root child"), true; !cmp.Equal(got, want) {
+		t.Errorf("Execute(child) output = %q, want help containing %q", out.String(), "root child")
+	}
+}
+
+// build decodes input into a command tree, failing the test on error.
+func build(t testing.TB, input string, runners map[string]spec.Runner) *cobra.Command {
+	t.Helper()
+	cmd, err := spec.Build(strings.NewReader(input), runners)
+	if err != nil {
+		t.Fatalf("spec.Build(...) = _, %v, want nil", err)
+	}
+	return cmd
 }
 
 // subcommand returns the child of parent named name, failing the test if absent.

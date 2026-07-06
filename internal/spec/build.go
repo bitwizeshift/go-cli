@@ -79,6 +79,8 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner) *cobra.Command {
 		flag.Register(flag.NewRegistry(cmd.Flags()), runner)
 		annotation.ConfigureFlags(cmd)
 		annotation.RegisterFlagCompletions(cmd)
+	} else {
+		cmd.RunE = i.showHelp
 	}
 	cmd.SetHelpFunc(template.DefaultRenderEngine.HelpFunc())
 	cmd.SetUsageFunc(template.DefaultRenderEngine.UsageFunc())
@@ -88,6 +90,13 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner) *cobra.Command {
 		i.addGroup(cmd, group, runners)
 	}
 	return cmd
+}
+
+// showHelp is the default action for a command with no bound runner. Printing
+// the command's help keeps the command runnable, and therefore visible in help
+// listings, rather than an inert node cobra hides.
+func (*CommandInfo) showHelp(cmd *cobra.Command, _ []string) error {
+	return cmd.Help()
 }
 
 // addGroup adds the commands of group to cmd. A group named [DefaultGroup] is
