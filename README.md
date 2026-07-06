@@ -19,18 +19,20 @@ applications.
 
 ## Features
 
-* 🚦 **Highly testable surface-area**: Your command execution becomes a simple
-  [`cli.Runner`] that can use dependency-injected factories.
+* 🚦 **Highly testable surface-area**: Your flags become testable factories that
+  implement [`flag.Registrar`] and return high-level objects, and your commands
+  become a simple [`cli.Runner`] that can use dependency-injected factories.
 
-* 📄 **Configurable commands using YAML**: No more inline `string`s for `Short`
-  or `Long`; write it in a `.yaml` file so that it's easy to read and maintain.
+* 📄 **Configurable commands using YAML**: No more overlong inline `string`s for
+  `Short` or `Long`; write it in a `.yaml` file so that it's easy to read and
+  maintain.
 
 * 💻 **Automatic text resizing in terminals**: `--help` messages will
   automatically size-to-fit terminals of different sizes so that output remains
-  readable.
+  readable and well-structured.
 
 * ⏩ **Simplified flag surface area**: No more dozens of `pflag.FlagSet` values;
-  just use `flag.Add`, and it idiomatically uses Go to understand
+  just use [`flag.Add`], and it idiomatically uses Go to understand
   either [`encoding.TextUnmarshaler`] or custom [`flag.Unmarshaler`].
 
 * 🛟 **Support for flag fallback defaults**: Flags can now support falling back
@@ -47,36 +49,61 @@ opinionated and visually clear defaults.
 
 [`encoding.TextUnmarshaler`]: https://pkg.go.dev/encoding@go1.26.4#TextUnmarshaler
 [`flag.Unmarshaler`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/flag#Unmarshaler
+[`flag.Registrar`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/flag#Registrar
+[`flag.Add`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/flag#Add
+[`cli.Runner`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli#Runner
 
 ## Why `go-cli`?
 
-Both `cobra` and `pflag` are libraries that _get the job done_, but are not
-well-suited towards building testable or high-quality/scalable abstractions.
+Both [`cobra`] and [`pflag`] are libraries that _get the job done_, but are not
+particularly well-suited towards building testable or high-quality/scalable
+abstractions.
+
 There are a number of sharp-edges that this library tackles:
 
-* The `cobra.Command` and `pflag.FlagSet` share a number of responsibilities
-  between them -- which means writing code following best practices like
-  [Single-Responsibility-Principle][srp]. For example, flag names are dictated
-  by the flag definitions, but -_flag completion_, _flag constraints_ (requires,
-  mutually exclusive, etc.), etc are all part of the `cobra.Command` object.
-  This leads code to need to know about both, instead of just knowing about flags.
+* The [`cobra.Command`] and [`pflag.FlagSet`] split a number of responsibilities
+  between them -- which makes it difficult to write code following best
+  practices like [Single-Responsibility-Principle][srp].
 
-* The `pflag.Value` abstraction is a poor abstraction for testability since it
-  enables `Type()` and `String()` to vary, when the behavior should be
-  consistent. In practice, testing `Type()` leads to high-coupling in unit
-  tests, or missed coverage.
+  For example, flag names are dictated by the flag definitions, but
+  _flag completion_, _flag constraints_ (requires, mutually exclusive, etc.) are
+  all part of the `cobra.Command` object.
+  This leads code to need to "know" about both the flag its registering to, as
+  well as the command it will be used with -- which is tight coupling.
 
-* There is no mechanism for grouping flags in any easy way, it needs to be
-  hand-rolled.
+  _This library ensures flags only deal with flags, nothing more._
 
-* [pflag.FlagSet] offers entirely too many receivers for setting up flags.
+* The [`pflag.Value`] abstraction is a poor abstraction when it comes to
+  testability since it logically expects `Type() string` to be pinned to a
+  single value. Testing this in code inherently causes tight coupling between
+  the test and the Value implementation, since there is no logic to truly
+  validate.
+
+  _This library makes `Type` an option on flag creation, with the default coming
+  from reflection._
+
+* There is no mechanism for grouping flags in any way, it always needs to be
+  hand-rolled. This hand-rolling requires modifications to the [`cobra.Command`]
+  object's templates so that it can properly render the grouping.
+
+  _This library leverages flag annotations and custom, pre-built templates to
+  achieve automatic grouping that only the flags have to know about._
+
+* [`pflag.FlagSet`] offers entirely too many receivers for setting up flags.
+
+  _This library reduces cognitive overhead by having a single monolithic flag
+  entrypoint which leverages idiomatic unmarshaling patterns instead._
 
 * etc. The list goes on and on.
 
 The primary motivation is tackling these sharp edges, while improving ergonomics,
-at the sacrificed of overwhelming number of combinations users will never use.
+at the deliberate sacrifice of unnecessary complexity and an overwhelming number
+of combinations that most users should never need to experience.
 
 [srp]: https://en.wikipedia.org/wiki/Single-responsibility_principle
+[`cobra.Command`]: https://pkg.go.dev/github.com/spf13/cobra#Command
+[`pflag.FlagSet`]: https://pkg.go.dev/github.com/spf13/pflag#FlagSet
+[`pflag.Value`]: https://pkg.go.dev/github.com/spf13/pflag#Value
 
 ## Disclaimer
 
