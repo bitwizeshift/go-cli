@@ -14,7 +14,3 @@ is self-contained and can be run independently.
 * [Prompts](./prompt) - A small example application that demonstrates the
   different "prompt" types that can be used to gather user input in a
   command-line application.
-
-* [Progress](./progress) - An example application that showcases all of the
-  different progress-bars and spinners that can be used to provide feedback to
-  the user during long-running operations in a command-line application.
