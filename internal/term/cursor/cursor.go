@@ -1,10 +1,10 @@
-package ansi
+package cursor
 
 import "fmt"
 
 // ClearDown is the escape sequence that erases from the cursor to the end of
 // the screen.
-const ClearDown Colour = "\x1b[0J"
+const ClearDown string = "\x1b[0J"
 
 // CursorUp returns the escape sequence that moves the cursor up n lines. It
 // returns the empty string when n <= 0.

@@ -1,11 +1,10 @@
-package ansi_test
+package cursor_test
 
 import (
 	"testing"
 
+	"github.com/bitwizeshift/go-cli/internal/term/cursor"
 	"github.com/google/go-cmp/cmp"
-
-	"github.com/bitwizeshift/go-cli/internal/ansi"
 )
 
 func TestCursorUp(t *testing.T) {
@@ -43,7 +42,7 @@ func TestCursorUp(t *testing.T) {
 			n := tc.n
 
 			// Act
-			sequence := ansi.CursorUp(n)
+			sequence := cursor.CursorUp(n)
 
 			// Assert
 			if got, want := sequence, tc.want; !cmp.Equal(got, want) {

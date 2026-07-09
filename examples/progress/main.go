@@ -15,7 +15,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli"
 	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/internal/ansi"
+	"github.com/bitwizeshift/go-cli/internal/term/ansi"
 	"github.com/bitwizeshift/go-cli/progress"
 )
 

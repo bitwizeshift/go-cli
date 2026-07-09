@@ -1,6 +1,6 @@
 package palette
 
-import "github.com/bitwizeshift/go-cli/internal/ansi"
+import "github.com/bitwizeshift/go-cli/internal/term/ansi"
 
 // Palette styles the individual roles of rendered output. Each method colours
 // one role and returns the styled string; a plain implementation returns its

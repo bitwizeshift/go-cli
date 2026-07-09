@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/bitwizeshift/go-cli/internal/ansi"
+	"github.com/bitwizeshift/go-cli/internal/term/ansi"
 	"github.com/bitwizeshift/go-cli/progress"
 )
 

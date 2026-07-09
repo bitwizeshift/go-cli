@@ -1,8 +1,8 @@
 package progress
 
 import (
-	"github.com/bitwizeshift/go-cli/internal/ansi"
 	"github.com/bitwizeshift/go-cli/internal/format"
+	"github.com/bitwizeshift/go-cli/internal/term/ansi"
 )
 
 // Spinner is a renderable spinner animation. Its zero value spins the ASCII

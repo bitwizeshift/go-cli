@@ -9,11 +9,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/cobra"
 
-	"github.com/bitwizeshift/go-cli/internal/ansi"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/internal/template/palette"
 	"github.com/bitwizeshift/go-cli/internal/template/version"
 	"github.com/bitwizeshift/go-cli/internal/term"
+	"github.com/bitwizeshift/go-cli/internal/term/ansi"
 )
 
 // containsANSI reports whether s contains an ANSI escape sequence.

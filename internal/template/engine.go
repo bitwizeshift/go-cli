@@ -7,7 +7,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/bitwizeshift/go-cli/internal/ansi"
 	"github.com/bitwizeshift/go-cli/internal/format"
 	"github.com/bitwizeshift/go-cli/internal/template/help"
 	"github.com/bitwizeshift/go-cli/internal/template/palette"
@@ -16,6 +15,7 @@ import (
 	"github.com/bitwizeshift/go-cli/internal/template/usage"
 	"github.com/bitwizeshift/go-cli/internal/template/version"
 	"github.com/bitwizeshift/go-cli/internal/term"
+	"github.com/bitwizeshift/go-cli/internal/term/ansi"
 	"github.com/spf13/cobra"
 )
 

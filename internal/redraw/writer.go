@@ -4,7 +4,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/bitwizeshift/go-cli/internal/ansi"
+	"github.com/bitwizeshift/go-cli/internal/term/cursor"
 )
 
 // Writer redraws a block of text in place on an underlying [io.Writer]. Each
@@ -57,9 +57,9 @@ func (w *Writer) eraseCurrent() error {
 	if w.lines == 0 {
 		return nil
 	}
-	up := ansi.CursorUp(w.lines - 1)
+	up := cursor.CursorUp(w.lines - 1)
 	w.lines = 0
-	return w.write("\r" + up + string(ansi.ClearDown))
+	return w.write("\r" + up + cursor.ClearDown)
 }
 
 func (w *Writer) write(s string) error {

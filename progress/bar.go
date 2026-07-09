@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/bitwizeshift/go-cli/internal/ansi"
 	"github.com/bitwizeshift/go-cli/internal/format"
+	"github.com/bitwizeshift/go-cli/internal/term/ansi"
 )
 
 // defaultWidth is the whole-bar column budget used when [Bar.Width] is unset.
