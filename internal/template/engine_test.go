@@ -13,7 +13,6 @@ import (
 	"github.com/bitwizeshift/go-cli/internal/template/palette"
 	"github.com/bitwizeshift/go-cli/internal/template/version"
 	"github.com/bitwizeshift/go-cli/internal/term"
-	"github.com/bitwizeshift/go-cli/internal/term/ansi"
 )
 
 // containsANSI reports whether s contains an ANSI escape sequence.
@@ -49,7 +48,7 @@ func TestRenderEngine_HelpRenderer(t *testing.T) {
 
 			// Arrange
 			sut := template.RenderEngine{
-				ColourEnabler: ansi.FixedEnabler(tc.enabled),
+				ColourEnabler: term.FixedEnabler(tc.enabled),
 				Sizer:         term.FixedSizer(tc.columns),
 			}
 
@@ -92,7 +91,7 @@ func TestRenderEngine_UsageRenderer(t *testing.T) {
 
 			// Arrange
 			sut := template.RenderEngine{
-				ColourEnabler: ansi.FixedEnabler(tc.enabled),
+				ColourEnabler: term.FixedEnabler(tc.enabled),
 				Sizer:         term.FixedSizer(80),
 			}
 
@@ -132,7 +131,7 @@ func TestRenderEngine_PanicRenderer(t *testing.T) {
 
 			// Arrange
 			sut := template.RenderEngine{
-				ColourEnabler: ansi.FixedEnabler(tc.enabled),
+				ColourEnabler: term.FixedEnabler(tc.enabled),
 				Sizer:         term.FixedSizer(80),
 			}
 
@@ -172,7 +171,7 @@ func TestRenderEngine_VersionFuncs(t *testing.T) {
 
 			// Arrange
 			sut := template.RenderEngine{
-				ColourEnabler: ansi.FixedEnabler(tc.enabled),
+				ColourEnabler: term.FixedEnabler(tc.enabled),
 				Sizer:         term.FixedSizer(80),
 			}
 			funcs := sut.VersionFuncs()
@@ -194,7 +193,7 @@ func TestRenderEngine_VersionTemplate(t *testing.T) {
 
 	// Arrange
 	sut := template.RenderEngine{
-		ColourEnabler: ansi.FixedEnabler(true),
+		ColourEnabler: term.FixedEnabler(true),
 		Sizer:         term.FixedSizer(80),
 	}
 
@@ -232,7 +231,7 @@ func TestRenderEngine_HelpFunc(t *testing.T) {
 
 			// Arrange
 			sut := template.RenderEngine{
-				ColourEnabler: ansi.FixedEnabler(tc.enabled),
+				ColourEnabler: term.FixedEnabler(tc.enabled),
 				Sizer:         term.FixedSizer(80),
 			}
 			var buf bytes.Buffer
@@ -275,7 +274,7 @@ func TestRenderEngine_UsageFunc(t *testing.T) {
 
 			// Arrange
 			sut := template.RenderEngine{
-				ColourEnabler: ansi.FixedEnabler(tc.enabled),
+				ColourEnabler: term.FixedEnabler(tc.enabled),
 				Sizer:         term.FixedSizer(80),
 			}
 			var buf bytes.Buffer

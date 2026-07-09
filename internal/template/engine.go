@@ -15,20 +15,19 @@ import (
 	"github.com/bitwizeshift/go-cli/internal/template/usage"
 	"github.com/bitwizeshift/go-cli/internal/template/version"
 	"github.com/bitwizeshift/go-cli/internal/term"
-	"github.com/bitwizeshift/go-cli/internal/term/ansi"
 	"github.com/spf13/cobra"
 )
 
 // RenderEngine coordinates construction of the underlying Renderer objects
 type RenderEngine struct {
-	ColourEnabler ansi.ColourEnabler
+	ColourEnabler term.ColourEnabler
 	Sizer         term.Sizer
 }
 
 // DefaultRenderEngine is the standard configuration for the render
 // engine
 var DefaultRenderEngine = RenderEngine{
-	ColourEnabler: ansi.DefaultEnabler,
+	ColourEnabler: term.DefaultEnabler,
 	Sizer:         term.DefaultSizer,
 }
 

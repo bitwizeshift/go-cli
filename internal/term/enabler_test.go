@@ -1,4 +1,4 @@
-package ansi_test
+package term_test
 
 import (
 	"bytes"
@@ -7,15 +7,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/bitwizeshift/go-cli/internal/term/ansi"
+	"github.com/bitwizeshift/go-cli/internal/term"
 )
-
-type fdWriter struct {
-	bytes.Buffer
-	fd uintptr
-}
-
-func (f *fdWriter) Fd() uintptr { return f.fd }
 
 func TestIsTTYFuncEnabler_EnableColour(t *testing.T) {
 	t.Parallel()
@@ -55,7 +48,7 @@ func TestIsTTYFuncEnabler_EnableColour(t *testing.T) {
 			} else {
 				writer = &bytes.Buffer{}
 			}
-			enabler := ansi.IsTTYFuncEnabler(func(int) bool { return tc.fnResult })
+			enabler := term.IsTTYFuncEnabler(func(int) bool { return tc.fnResult })
 
 			// Act
 			got := enabler.EnableColour(writer)
@@ -92,7 +85,7 @@ func TestFixedEnabler_EnableColour(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := ansi.FixedEnabler(tc.result)
+			sut := term.FixedEnabler(tc.result)
 
 			// Act
 			enabled := sut.EnableColour(&bytes.Buffer{})
@@ -158,7 +151,7 @@ func TestEnvEnabler_EnableColour(t *testing.T) {
 			if tc.set {
 				t.Setenv(varName, tc.value)
 			}
-			sut := ansi.EnvEnabler{Variable: varName}
+			sut := term.EnvEnabler{Variable: varName}
 
 			// Act
 			enabled := sut.EnableColour(&bytes.Buffer{})
@@ -195,8 +188,8 @@ func TestInvertEnabler_EnableColour(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := ansi.InvertEnabler{
-				Enabler: ansi.FixedEnabler(tc.innerVal),
+			sut := term.InvertEnabler{
+				Enabler: term.FixedEnabler(tc.innerVal),
 			}
 
 			// Act
@@ -215,7 +208,7 @@ func TestConjunctiveEnabler_EnableColour(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		enablers []ansi.ColourEnabler
+		enablers []term.ColourEnabler
 		want     bool
 	}{
 		{
@@ -224,34 +217,34 @@ func TestConjunctiveEnabler_EnableColour(t *testing.T) {
 			want:     false,
 		}, {
 			name:     "SingleTrue",
-			enablers: []ansi.ColourEnabler{ansi.FixedEnabler(true)},
+			enablers: []term.ColourEnabler{term.FixedEnabler(true)},
 			want:     true,
 		}, {
 			name:     "SingleFalse",
-			enablers: []ansi.ColourEnabler{ansi.FixedEnabler(false)},
+			enablers: []term.ColourEnabler{term.FixedEnabler(false)},
 			want:     false,
 		}, {
 			name: "MultipleAllTrue",
-			enablers: []ansi.ColourEnabler{
-				ansi.FixedEnabler(true),
-				ansi.FixedEnabler(true),
-				ansi.FixedEnabler(true),
+			enablers: []term.ColourEnabler{
+				term.FixedEnabler(true),
+				term.FixedEnabler(true),
+				term.FixedEnabler(true),
 			},
 			want: true,
 		}, {
 			name: "MultipleFirstFalse",
-			enablers: []ansi.ColourEnabler{
-				ansi.FixedEnabler(false),
-				ansi.FixedEnabler(true),
-				ansi.FixedEnabler(true),
+			enablers: []term.ColourEnabler{
+				term.FixedEnabler(false),
+				term.FixedEnabler(true),
+				term.FixedEnabler(true),
 			},
 			want: false,
 		}, {
 			name: "MultipleLastFalse",
-			enablers: []ansi.ColourEnabler{
-				ansi.FixedEnabler(true),
-				ansi.FixedEnabler(true),
-				ansi.FixedEnabler(false),
+			enablers: []term.ColourEnabler{
+				term.FixedEnabler(true),
+				term.FixedEnabler(true),
+				term.FixedEnabler(false),
 			},
 			want: false,
 		},
@@ -262,7 +255,7 @@ func TestConjunctiveEnabler_EnableColour(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := ansi.ConjunctiveEnabler(tc.enablers)
+			sut := term.ConjunctiveEnabler(tc.enablers)
 
 			// Act
 			enabled := sut.EnableColour(&bytes.Buffer{})

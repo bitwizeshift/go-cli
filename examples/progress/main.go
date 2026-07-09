@@ -15,7 +15,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli"
 	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/internal/term/ansi"
+	"github.com/bitwizeshift/go-cli/internal/term"
 	"github.com/bitwizeshift/go-cli/progress"
 )
 
@@ -80,7 +80,7 @@ func (r *barRunner) Run(ctx context.Context, _ ...string) error {
 	bar := r.bar
 	bar.Total = int64(r.steps)
 	bar.ShowPercent = true
-	if !ansi.DefaultEnabler.EnableColour(os.Stdout) {
+	if !term.DefaultEnabler.EnableColour(os.Stdout) {
 		bar.FillColour, bar.EmptyColour = "", ""
 	}
 	delay := time.Duration(r.delay) * time.Millisecond
@@ -126,7 +126,7 @@ func (r *spinRunner) RegisterFlags(registry *flag.Registry) {
 func (r *spinRunner) Run(ctx context.Context, _ ...string) error {
 	spinner := r.spinner
 	spinner.Label = "working…"
-	if !ansi.DefaultEnabler.EnableColour(os.Stdout) {
+	if !term.DefaultEnabler.EnableColour(os.Stdout) {
 		spinner.Colour = ""
 	}
 
@@ -167,7 +167,7 @@ func (r *allRunner) RegisterFlags(registry *flag.Registry) {
 }
 
 func (r *allRunner) Run(ctx context.Context, _ ...string) error {
-	coloured := ansi.DefaultEnabler.EnableColour(os.Stdout)
+	coloured := term.DefaultEnabler.EnableColour(os.Stdout)
 	indicators := r.indicators(coloured)
 	group := indicators.group()
 	delay := time.Duration(r.delay) * time.Millisecond
