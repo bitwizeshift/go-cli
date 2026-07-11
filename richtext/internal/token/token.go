@@ -14,6 +14,21 @@ const (
 	Close
 )
 
+const (
+	// RawNamespace opens a passthrough region whose contents are scanned as
+	// literal text until the region is closed.
+	RawNamespace = "richtext"
+
+	// RawField is the only field RawNamespace accepts to begin a passthrough
+	// region.
+	RawField = "off"
+)
+
+// isRawOpen reports whether t opens a passthrough region.
+func isRawOpen(t Token) bool {
+	return t.Kind == Open && t.Namespace == RawNamespace && t.Field == RawField
+}
+
 // Token is a single unit produced by scanning tag markup. Raw always holds the
 // exact source text of the token; Namespace and Field carry the parsed parts of
 // a tag.

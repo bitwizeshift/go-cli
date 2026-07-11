@@ -92,6 +92,52 @@ func TestScanner_Scan(t *testing.T) {
 				{Kind: token.Text, Raw: "[fg"},
 			},
 		},
+		{
+			name:   "RawRegionPassesInnerTagsThrough",
+			chunks: []string{"[richtext:off]a[fg:red]b[/richtext]"},
+			want: []token.Token{
+				{Kind: token.Open, Raw: "[richtext:off]", Namespace: "richtext", Field: "off"},
+				{Kind: token.Text, Raw: "a[fg:red]b"},
+				{Kind: token.Close, Raw: "[/richtext]", Namespace: "richtext"},
+			},
+		},
+		{
+			name:   "RawRegionCloseSplitAcrossChunks",
+			chunks: []string{"[richtext:off]hi[/richt", "ext]bye"},
+			want: []token.Token{
+				{Kind: token.Open, Raw: "[richtext:off]", Namespace: "richtext", Field: "off"},
+				{Kind: token.Text, Raw: "hi"},
+				{Kind: token.Close, Raw: "[/richtext]", Namespace: "richtext"},
+				{Kind: token.Text, Raw: "bye"},
+			},
+		},
+		{
+			name:   "RawRegionWithNestedTags",
+			chunks: []string{"[richtext:off][fg:red]hi[/fg][/richt", "ext]bye"},
+			want: []token.Token{
+				{Kind: token.Open, Raw: "[richtext:off]", Namespace: "richtext", Field: "off"},
+				{Kind: token.Text, Raw: "[fg:red]hi[/fg]"},
+				{Kind: token.Close, Raw: "[/richtext]", Namespace: "richtext"},
+				{Kind: token.Text, Raw: "bye"},
+			},
+		},
+		{
+			name:   "RawRegionUnclosedFlushesText",
+			chunks: []string{"[richtext:off]abc"},
+			want: []token.Token{
+				{Kind: token.Open, Raw: "[richtext:off]", Namespace: "richtext", Field: "off"},
+				{Kind: token.Text, Raw: "abc"},
+			},
+		},
+		{
+			name:   "RichtextNamespaceOtherFieldParsesAsTag",
+			chunks: []string{"[richtext:on]x[/richtext]"},
+			want: []token.Token{
+				{Kind: token.Open, Raw: "[richtext:on]", Namespace: "richtext", Field: "on"},
+				{Kind: token.Text, Raw: "x"},
+				{Kind: token.Close, Raw: "[/richtext]", Namespace: "richtext"},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -2,6 +2,7 @@ package richtext_test
 
 import (
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -110,6 +111,27 @@ func TestWriter_Write(t *testing.T) {
 			input:   "[fg:red]x[/bg]",
 			want:    reset + red + "x",
 			wantErr: richtext.ErrUnbalancedTag,
+		},
+		{
+			name:    "RawRegionWritesContentsVerbatim",
+			theme:   nil,
+			input:   "[richtext:off][fg:red]x[/richtext]",
+			want:    "[fg:red]x",
+			wantErr: nil,
+		},
+		{
+			name:    "RawRegionInsideThemeKeepsStyle",
+			theme:   theme,
+			input:   "[theme:title][richtext:off][x][/richtext][/theme]",
+			want:    reset + title + "[x]" + reset,
+			wantErr: nil,
+		},
+		{
+			name:    "RichtextUnknownFieldResetsActiveStyle",
+			theme:   nil,
+			input:   "[fg:red][richtext:on]x[/richtext][/fg]",
+			want:    reset + red + reset + "x" + reset + red + reset,
+			wantErr: nil,
 		},
 	}
 
@@ -224,6 +246,12 @@ func TestWriter_Close(t *testing.T) {
 			want:    "ab[fg",
 			wantErr: nil,
 		},
+		{
+			name:    "UnclosedRawRegion",
+			input:   "[richtext:off]abc",
+			want:    "abc",
+			wantErr: richtext.ErrUnclosedTag,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -247,6 +275,23 @@ func TestWriter_Close(t *testing.T) {
 				t.Errorf("Close() output = %q, want %q", got, want)
 			}
 		})
+	}
+}
+
+func TestWriter_Writer(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	var buf strings.Builder
+	sut := richtext.NewWriter(&buf, nil)
+
+	// Act
+	underlying := sut.Writer()
+
+	// Assert
+	sameWriter := cmp.Comparer(func(a, b io.Writer) bool { return a == b })
+	if got, want := underlying, io.Writer(&buf); !cmp.Equal(got, want, sameWriter) {
+		t.Errorf("Writer() = %v, want %v", got, want)
 	}
 }
 

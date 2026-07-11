@@ -16,6 +16,7 @@ const (
 	nsBackground = "bg"
 	nsAttribute  = "attr"
 	nsTheme      = "theme"
+	nsRichText   = "richtext"
 )
 
 // Writer renders bracketed tag markup to an underlying writer as ANSI escapes.
@@ -25,7 +26,9 @@ const (
 //     named ANSI colours or rgb(r,g,b);
 //   - attr: a text attribute such as bold or italic, which accumulates while
 //     nested;
-//   - theme: a named style registered in the [Theme] passed to [NewWriter].
+//   - theme: a named style registered in the [Theme] passed to [NewWriter];
+//   - richtext: with the field "off", opens a passthrough region whose contents
+//     are written verbatim without being parsed as tags, closed by [/richtext].
 //
 // Tags must close in the reverse of the order they were opened. A known
 // namespace with an unrecognised field renders as a reset. An unknown namespace
@@ -152,6 +155,10 @@ func (w *Writer) openFrame(namespace, field string) frame {
 		} else {
 			f.reset = true
 		}
+	case nsRichText:
+		if field != token.RawField {
+			f.reset = true
+		}
 	}
 	return f
 }
@@ -205,9 +212,14 @@ func (w *Writer) writeString(s string) error {
 	return err
 }
 
+// Writer returns the destination this Writer renders onto.
+func (w *Writer) Writer() io.Writer {
+	return w.dst
+}
+
 func isKnownNamespace(namespace string) bool {
 	switch namespace {
-	case nsForeground, nsBackground, nsAttribute, nsTheme:
+	case nsForeground, nsBackground, nsAttribute, nsTheme, nsRichText:
 		return true
 	default:
 		return false

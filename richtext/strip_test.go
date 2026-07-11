@@ -35,6 +35,11 @@ func TestStrip(t *testing.T) {
 			input: "text[fg",
 			want:  "text[fg",
 		},
+		{
+			name:  "RawRegionContentsKeptMarkersRemoved",
+			input: "[richtext:off]a[fg:red]b[/richtext]",
+			want:  "a[fg:red]b",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -74,6 +79,11 @@ func TestLen(t *testing.T) {
 			name:  "MultibyteRunesCountedOnce",
 			input: "[fg:red]héllo[/fg]",
 			want:  5,
+		},
+		{
+			name:  "RawRegionCountsVisibleContents",
+			input: "[richtext:off][x][/richtext]",
+			want:  3,
 		},
 	}
 
