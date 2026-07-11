@@ -3,12 +3,15 @@ package spec
 import (
 	"fmt"
 	"io"
+	"maps"
+	"os"
 	"slices"
 	"strings"
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/template"
+	"github.com/bitwizeshift/go-cli/richtext"
 	"github.com/spf13/cobra"
 	"go.yaml.in/yaml/v4"
 )
@@ -17,28 +20,91 @@ func init() {
 	cobra.AddTemplateFuncs(template.DefaultRenderEngine.VersionFuncs())
 }
 
+// ColourMode selects how colour is decided for a command tree's output streams.
+type ColourMode int
+
+const (
+	// ColourAuto decides colour from the destination terminal.
+	ColourAuto ColourMode = iota
+	// ColourDisabled never emits colour.
+	ColourDisabled
+	// ColourEnabled always emits colour.
+	ColourEnabled
+)
+
+// Options configures how a command tree is built and how its output is styled.
+type Options struct {
+	// Runners binds each command id to the runner that executes it.
+	Runners map[string]Runner
+
+	// Theme resolves the styling tags emitted by the output templates. A nil
+	// Theme uses [richtext.DefaultTheme].
+	Theme *richtext.Theme
+
+	// Colour selects the colour policy applied to the wrapped output streams.
+	Colour ColourMode
+
+	// Stdout and Stderr are the base streams wrapped for styled output. A nil
+	// value uses [os.Stdout] or [os.Stderr] respectively.
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
 // Build decodes an [Application] specification from r and constructs the
 // corresponding [github.com/spf13/cobra.Command] tree, binding each runner to
-// the command whose id matches its key.
+// the command whose id matches its key. Every command writes styled output
+// through a [richtext.Writer] wrapping the configured streams; the writers must
+// be flushed by [Execute] once the tree has run.
 //
 // It returns [ErrUnboundRunner] if a runner is bound to an id with no matching
 // command, or a decoding error if r does not hold a valid specification.
-func Build(r io.Reader, runners map[string]Runner) (*cobra.Command, error) {
+func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 	var app Application
 	if err := yaml.NewDecoder(r).Decode(&app); err != nil {
 		return nil, err
 	}
 
-	unbound := make(map[string]Runner, len(runners))
-	for id, runner := range runners {
-		unbound[id] = runner
-	}
+	unbound := make(map[string]Runner, len(opts.Runners))
+	maps.Copy(unbound, opts.Runners)
 	cmd := app.toCobraCommand(unbound)
 	if len(unbound) > 0 {
 		return nil, fmt.Errorf("%w: %s", ErrUnboundRunner, strings.Join(sortedKeys(unbound), ", "))
 	}
 	annotation.AddIssueURL(cmd, app.IssueURL)
+	setStreams(cmd,
+		opts.newWriter(opts.Stdout, os.Stdout),
+		opts.newWriter(opts.Stderr, os.Stderr),
+	)
 	return cmd, nil
+}
+
+// newWriter wraps base (or fallback when base is nil) in a [richtext.Writer]
+// configured for the options' theme and colour policy.
+func (o Options) newWriter(base, fallback io.Writer) *richtext.Writer {
+	if base == nil {
+		base = fallback
+	}
+	theme := o.Theme
+	if theme == nil {
+		theme = richtext.DefaultTheme
+	}
+	w := richtext.NewWriter(base, theme)
+	switch o.Colour {
+	case ColourDisabled:
+		w.EnableColour(false)
+	case ColourEnabled:
+		w.ForceColour()
+	}
+	return w
+}
+
+// setStreams routes cmd and every command beneath it through out and err.
+func setStreams(cmd *cobra.Command, out, err io.Writer) {
+	cmd.SetOut(out)
+	cmd.SetErr(err)
+	for _, sub := range cmd.Commands() {
+		setStreams(sub, out, err)
+	}
 }
 
 // sortedKeys returns the keys of runners in sorted order.

@@ -1,9 +1,9 @@
-{{ palette.Title .Name }}
+[theme:title]{{ .Name }}[/theme]
 
 {{ if .Usage -}}
-{{ palette.Heading "USAGE" }}
+[theme:heading]USAGE[/theme]
 {{ text.Indent 2 .Usage }}
 
 {{ end -}}
 
-Run {{ palette.Emphasis (printf "%s --help" .CommandPath) }} for more details.
+Run [theme:emphasis]{{ printf "%s --help" .CommandPath }}[/theme] for more details.

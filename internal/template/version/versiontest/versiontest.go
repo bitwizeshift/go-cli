@@ -5,7 +5,6 @@ import (
 	"runtime/debug"
 	"text/template"
 
-	"github.com/bitwizeshift/go-cli/internal/template/palette"
 	"github.com/bitwizeshift/go-cli/internal/template/tmplfuncs"
 	"github.com/bitwizeshift/go-cli/internal/template/version"
 	"github.com/spf13/cobra"
@@ -33,12 +32,12 @@ func Command() *cobra.Command {
 	return &cobra.Command{Use: "widget"}
 }
 
-// Render renders the version template for cmd with plain (uncoloured) styling.
+// Render renders the version template for cmd, producing richtext styling tags.
 // It reads build information from [tmplfuncs.DefaultBuild], which callers set to
 // [BuildInfo] for deterministic output.
 func Render(cmd *cobra.Command) (string, error) {
 	tmpl, err := template.New("version").
-		Funcs(tmplfuncs.NewFunc(palette.NoColour{})).
+		Funcs(tmplfuncs.NewFunc()).
 		Parse(version.Template())
 	if err != nil {
 		return "", err

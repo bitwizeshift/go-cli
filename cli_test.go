@@ -8,6 +8,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli"
 	"github.com/bitwizeshift/go-cli/internal/spec/spectest"
+	"github.com/bitwizeshift/go-cli/richtext"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -105,6 +106,84 @@ func TestFromBytes_InvalidSpecification_Panics(t *testing.T) {
 	}
 }
 
+func TestFromReader_StyleOptions_Build(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []cli.Option
+	}{
+		{
+			name:    "Theme",
+			options: []cli.Option{cli.Theme(richtext.DefaultTheme)},
+		},
+		{
+			name:    "DisableColour",
+			options: []cli.Option{cli.DisableColour()},
+		},
+		{
+			name:    "ForceColour",
+			options: []cli.Option{cli.ForceColour()},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			options := append(tc.options, cli.BindRunner("root", spectest.NoOpRunner()))
+
+			// Act
+			sut := cli.FromBytes([]byte("id: root\nuse: root\n"), options...)
+
+			// Assert
+			if got, want := sut.CobraCommand().Use, "root"; !cmp.Equal(got, want) {
+				t.Errorf("cli.FromBytes(...).CobraCommand().Use = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestFromReader_ConflictingColourOptions_Panics(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []cli.Option
+	}{
+		{
+			name:    "DisableThenForce",
+			options: []cli.Option{cli.DisableColour(), cli.ForceColour()},
+		},
+		{
+			name:    "ForceThenDisable",
+			options: []cli.Option{cli.ForceColour(), cli.DisableColour()},
+		},
+		{
+			name:    "DisableTwice",
+			options: []cli.Option{cli.DisableColour(), cli.DisableColour()},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act
+			recovered := recoverPanic(func() {
+				cli.FromBytes([]byte("id: root\nuse: root\n"), tc.options...)
+			})
+
+			// Assert
+			message, _ := recovered.(string)
+			if got, want := strings.Contains(message, "colour mode already set"), true; got != want {
+				t.Fatalf("recovered panic = %q, want to contain %q", message, "colour mode already set")
+			}
+		})
+	}
+}
+
 func TestCLI_Run(t *testing.T) {
 	t.Parallel()
 
@@ -147,7 +226,7 @@ func TestCLI_Run(t *testing.T) {
 			code := sut.Run(ctx)
 
 			// Assert
-			if got, want := code, tc.want; got != want {
+			if got, want := code, tc.want; !cmp.Equal(got, want) {
 				t.Errorf("sut.Run(ctx) = %d, want %d", got, want)
 			}
 		})

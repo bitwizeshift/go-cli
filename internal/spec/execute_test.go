@@ -3,6 +3,7 @@ package spec_test
 import (
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -57,10 +58,8 @@ func TestExecute(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := newRootCommand(t, tc.runner)
 			var stderr strings.Builder
-			sut.SetOut(&stderr)
-			sut.SetErr(&stderr)
+			sut := newRootCommand(t, tc.runner, &stderr)
 			sut.SetArgs(tc.args)
 
 			// Act
@@ -79,10 +78,8 @@ func TestExecute_RunnerError_OmitsUsageAdvisory(t *testing.T) {
 
 	// Arrange
 	testErr := errors.New("test error")
-	sut := newRootCommand(t, spectest.Err(testErr))
 	var stderr strings.Builder
-	sut.SetOut(&stderr)
-	sut.SetErr(&stderr)
+	sut := newRootCommand(t, spectest.Err(testErr), &stderr)
 
 	// Act
 	err := spec.Execute(context.Background(), sut)
@@ -100,10 +97,8 @@ func TestExecute_ParseError_ShowsUsageAdvisory(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	sut := newRootCommand(t, spectest.NoOpRunner())
 	var stderr strings.Builder
-	sut.SetOut(&stderr)
-	sut.SetErr(&stderr)
+	sut := newRootCommand(t, spectest.NoOpRunner(), &stderr)
 	sut.SetArgs([]string{"--nope"})
 
 	// Act
@@ -123,14 +118,12 @@ func TestExecute_FallbackError_ShowsUsage(t *testing.T) {
 
 	// Arrange
 	fallbackErr := errors.New("fallback failed")
-	sut := newRootCommand(t, spectest.NoOpRunner())
+	var stderr strings.Builder
+	sut := newRootCommand(t, spectest.NoOpRunner(), &stderr)
 	sut.Flags().String("token", "", "")
 	annotation.AddFuncFallback(sut.Flags().Lookup("token"), func(context.Context) (string, error) {
 		return "", fallbackErr
 	})
-	var stderr strings.Builder
-	sut.SetOut(&stderr)
-	sut.SetErr(&stderr)
 	ctx := context.Background()
 
 	// Act
@@ -145,10 +138,15 @@ func TestExecute_FallbackError_ShowsUsage(t *testing.T) {
 	}
 }
 
-// newRootCommand builds a single root command bound to runner.
-func newRootCommand(t testing.TB, runner spec.Runner) *cobra.Command {
+// newRootCommand builds a single root command bound to runner, routing both of
+// its output streams to w.
+func newRootCommand(t testing.TB, runner spec.Runner, w io.Writer) *cobra.Command {
 	t.Helper()
-	cmd, err := spec.Build(strings.NewReader("id: root\nuse: root\n"), map[string]spec.Runner{"root": runner})
+	cmd, err := spec.Build(strings.NewReader("id: root\nuse: root\n"), spec.Options{
+		Runners: map[string]spec.Runner{"root": runner},
+		Stdout:  w,
+		Stderr:  w,
+	})
 	if err != nil {
 		t.Fatalf("spec.Build(...) = _, %v, want nil", err)
 	}

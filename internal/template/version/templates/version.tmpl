@@ -1,7 +1,7 @@
 {{- $width := text.MaxWidth build.FieldNames -}}
-{{ palette.Title .Name }} (version {{ build.Version }})
+[theme:title]{{ .Name }}[/theme] (version {{ build.Version }})
 
-{{ palette.Heading "BUILD DETAILS" }}
+[theme:heading]BUILD DETAILS[/theme]
 {{- range build.Fields }}
-  {{ palette.Label (text.Pad $width .Name) }} {{ palette.Value .Value }}
+  [theme:label]{{ text.Pad $width .Name }}[/theme] [theme:value]{{ .Value }}[/theme]
 {{- end }}

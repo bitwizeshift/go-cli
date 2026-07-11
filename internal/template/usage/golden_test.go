@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/bitwizeshift/go-cli/internal/template/plain"
 	"github.com/bitwizeshift/go-cli/internal/template/usage"
 	"github.com/bitwizeshift/go-cli/internal/template/usage/usagetest"
 )
@@ -27,13 +28,17 @@ func TestRenderer_Render_Golden(t *testing.T) {
 			var buf bytes.Buffer
 
 			// Act
-			err := sut.Render(&buf, tc.Command)
+			renderErr := sut.Render(&buf, tc.Command)
+			rendered, stripErr := plain.Render(buf.String())
 
 			// Assert
-			if err != nil {
-				t.Fatalf("Render(...) = %v, want nil", err)
+			if renderErr != nil {
+				t.Fatalf("Render(...) = %v, want nil", renderErr)
 			}
-			if got, want := buf.String(), want; !cmp.Equal(got, want) {
+			if stripErr != nil {
+				t.Fatalf("plain.Render(...) = %v, want nil", stripErr)
+			}
+			if got, want := rendered, want; !cmp.Equal(got, want) {
 				t.Errorf("Render(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))
 			}
 		})

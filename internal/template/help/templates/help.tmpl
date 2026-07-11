@@ -1,16 +1,16 @@
-{{ palette.Title .Name }}
+[theme:title]{{ .Name }}[/theme]
 
 {{ if .Description -}}
 {{ text.Wrap .Columns .Description }}
 
 {{ end -}}
 {{ if .Usage -}}
-{{ palette.Heading "USAGE" }}
+[theme:heading]USAGE[/theme]
 {{ text.Indent 2 .Usage }}
 
 {{ end -}}
 {{ if .Examples -}}
-{{ palette.Heading "EXAMPLES" }}
+[theme:heading]EXAMPLES[/theme]
 {{ text.IndentLines 2 .Examples }}
 
 {{ end -}}

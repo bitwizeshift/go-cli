@@ -12,6 +12,7 @@ import (
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/internal/template/panichandler"
+	"github.com/bitwizeshift/go-cli/richtext"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +24,9 @@ import (
 // has already been reported to the user and is intended only for exit-status
 // classification.
 func Execute(ctx context.Context, cmd *cobra.Command) error {
+	defer closeStream(cmd.OutOrStdout())
+	defer closeStream(cmd.ErrOrStderr())
+
 	target, err := cmd.ExecuteContextC(ctx)
 	if err == nil {
 		return nil
@@ -46,6 +50,15 @@ func Execute(ctx context.Context, cmd *cobra.Command) error {
 func renderError(w io.Writer, err error) {
 	_ = template.DefaultRenderEngine.Errorf(w, "%v", err)
 	_, _ = fmt.Fprintln(w)
+}
+
+// closeStream flushes w when it is a [richtext.Writer], emitting any trailing
+// styling and reporting nothing: a residual imbalance signals a template bug
+// rather than a runtime error. It never closes the underlying stream.
+func closeStream(w io.Writer) {
+	if rw, ok := w.(*richtext.Writer); ok {
+		_ = rw.Close()
+	}
 }
 
 // fromRunner reports whether err originated from a [Runner], as opposed to an
@@ -74,7 +87,7 @@ func (i *CommandInfo) run(runner Runner) func(cmd *cobra.Command, args []string)
 					Stack:    stack,
 					IssueURL: annotation.IssueURL(cmd),
 				}
-				_ = template.DefaultRenderEngine.PanicRenderer(stderr).Render(stderr, pctx)
+				_ = template.DefaultRenderEngine.PanicRenderer().Render(stderr, pctx)
 			}
 		}()
 

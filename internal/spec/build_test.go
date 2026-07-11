@@ -83,18 +83,70 @@ func TestBuild(t *testing.T) {
 			reader := strings.NewReader(tc.input)
 
 			// Act
-			cmd, err := spec.Build(reader, tc.runners)
+			cmd, err := spec.Build(reader, spec.Options{Runners: tc.runners})
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 				t.Fatalf("spec.Build(...) = _, %v, want %v", got, want)
 			}
-			use := ""
-			if cmd != nil {
-				use = cmd.Use
-			}
+			use := commandUse(cmd)
 			if got, want := use, tc.want; got != want {
 				t.Errorf("spec.Build(...).Use = %q, want %q", got, want)
+			}
+		})
+	}
+}
+func commandUse(cmd *cobra.Command) string {
+	if cmd == nil {
+		return ""
+	}
+	return cmd.Use
+}
+
+func TestBuild_Colour(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		colour   spec.ColourMode
+		wantANSI bool
+	}{
+		{
+			name:     "Enabled",
+			colour:   spec.ColourEnabled,
+			wantANSI: true,
+		},
+		{
+			name:     "Disabled",
+			colour:   spec.ColourDisabled,
+			wantANSI: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			var out bytes.Buffer
+			sut := build(t, "id: root\nuse: root\n", spec.Options{
+				Runners: map[string]spec.Runner{
+					"root": spectest.NoOpRunner(),
+				},
+				Colour: tc.colour,
+				Stdout: &out,
+				Stderr: &out,
+			})
+
+			// Act
+			err := sut.Help()
+
+			// Assert
+			if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+				t.Fatalf("Help() = %v, want nil", err)
+			}
+			if got, want := strings.Contains(out.String(), "\x1b"), tc.wantANSI; !cmp.Equal(got, want) {
+				t.Errorf("Help() coloured = %t, want %t (output %q)", got, want, out.String())
 			}
 		})
 	}
@@ -107,7 +159,11 @@ func TestBuild_DefaultGroup_LeavesChildUngrouped(t *testing.T) {
 	reader := strings.NewReader(rootWithChild)
 
 	// Act
-	sut, err := spec.Build(reader, map[string]spec.Runner{"root": spectest.NoOpRunner()})
+	sut, err := spec.Build(reader, spec.Options{
+		Runners: map[string]spec.Runner{
+			"root": spectest.NoOpRunner(),
+		},
+	})
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -134,7 +190,11 @@ commands:
 	reader := strings.NewReader(input)
 
 	// Act
-	sut, err := spec.Build(reader, map[string]spec.Runner{"root": spectest.NoOpRunner()})
+	sut, err := spec.Build(reader, spec.Options{
+		Runners: map[string]spec.Runner{
+			"root": spectest.NoOpRunner(),
+		},
+	})
 
 	// Assert
 	if err != nil {
@@ -156,7 +216,11 @@ func TestBuild_BoundRunner_RegistersFlags(t *testing.T) {
 	reader := strings.NewReader("id: root\nuse: root\n")
 
 	// Act
-	sut, err := spec.Build(reader, map[string]spec.Runner{"root": &flaggedRunner{}})
+	sut, err := spec.Build(reader, spec.Options{
+		Runners: map[string]spec.Runner{
+			"root": &flaggedRunner{},
+		},
+	})
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -175,7 +239,11 @@ func TestBuild_BoundRunner_RegistersCompletions(t *testing.T) {
 	reader := strings.NewReader("id: root\nuse: root\n")
 
 	// Act
-	sut, err := spec.Build(reader, map[string]spec.Runner{"root": &flaggedRunner{}})
+	sut, err := spec.Build(reader, spec.Options{
+		Runners: map[string]spec.Runner{
+			"root": &flaggedRunner{},
+		},
+	})
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -200,10 +268,14 @@ commands:
       use: child
       summary: a child command
 `
-	sut := build(t, input, map[string]spec.Runner{"root": spectest.NoOpRunner()})
 	var out bytes.Buffer
-	sut.SetOut(&out)
-	sut.SetErr(&out)
+	sut := build(t, input, spec.Options{
+		Runners: map[string]spec.Runner{
+			"root": spectest.NoOpRunner(),
+		},
+		Stdout: &out,
+		Stderr: &out,
+	})
 	sut.SetArgs([]string{"child"})
 
 	// Act
@@ -219,9 +291,9 @@ commands:
 }
 
 // build decodes input into a command tree, failing the test on error.
-func build(t testing.TB, input string, runners map[string]spec.Runner) *cobra.Command {
+func build(t testing.TB, input string, opts spec.Options) *cobra.Command {
 	t.Helper()
-	cmd, err := spec.Build(strings.NewReader(input), runners)
+	cmd, err := spec.Build(strings.NewReader(input), opts)
 	if err != nil {
 		t.Fatalf("spec.Build(...) = _, %v, want nil", err)
 	}

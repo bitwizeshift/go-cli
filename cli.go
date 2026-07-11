@@ -46,7 +46,11 @@ type CLI struct {
 // binary and therefore known-good at build time.
 func FromReader(r io.Reader, options ...Option) *CLI {
 	cfg := newConfig(options...)
-	cmd, err := spec.Build(r, cfg.runners)
+	cmd, err := spec.Build(r, spec.Options{
+		Runners: cfg.runners,
+		Theme:   cfg.theme,
+		Colour:  cfg.colour,
+	})
 	if err != nil {
 		panic("cli: " + err.Error())
 	}

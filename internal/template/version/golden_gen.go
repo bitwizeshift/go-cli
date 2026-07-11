@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 
+	"github.com/bitwizeshift/go-cli/internal/template/plain"
 	"github.com/bitwizeshift/go-cli/internal/template/tmplfuncs"
 	"github.com/bitwizeshift/go-cli/internal/template/version/versiontest"
 )
@@ -26,7 +27,11 @@ func run() error {
 	tmplfuncs.DefaultBuild.ReadBuildInfo = func() (*debug.BuildInfo, bool) {
 		return versiontest.BuildInfo(), true
 	}
-	rendered, err := versiontest.Render(versiontest.Command())
+	markup, err := versiontest.Render(versiontest.Command())
+	if err != nil {
+		return err
+	}
+	rendered, err := plain.Render(markup)
 	if err != nil {
 		return err
 	}

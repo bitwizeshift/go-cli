@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/bitwizeshift/go-cli/internal/template/plain"
 	"github.com/bitwizeshift/go-cli/internal/template/tmplfuncs"
 	"github.com/bitwizeshift/go-cli/internal/template/version/versiontest"
 )
@@ -23,11 +24,15 @@ func TestTemplate_Golden(t *testing.T) {
 	cmd := versiontest.Command()
 
 	// Act
-	rendered, err := versiontest.Render(cmd)
+	markup, renderErr := versiontest.Render(cmd)
+	rendered, stripErr := plain.Render(markup)
 
 	// Assert
-	if err != nil {
-		t.Fatalf("Render(...) = %v, want nil", err)
+	if renderErr != nil {
+		t.Fatalf("Render(...) = %v, want nil", renderErr)
+	}
+	if stripErr != nil {
+		t.Fatalf("plain.Render(...) = %v, want nil", stripErr)
 	}
 	if got, want := rendered, want; !cmp.Equal(got, want) {
 		t.Errorf("Render(...) mismatch (-want +got):\n%s", cmp.Diff(want, got))

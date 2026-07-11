@@ -5,26 +5,18 @@ import (
 	"io"
 	"strings"
 	"text/template"
-
-	"github.com/bitwizeshift/go-cli/internal/template/palette"
 )
 
-// Renderer writes a panic report describing an uncaught panic.
-type Renderer struct {
-	// Palette styles the output. A nil Palette produces plain output, equivalent
-	// to [palette.NoColour].
-	Palette palette.Palette
-}
+// Renderer writes a panic report describing an uncaught panic. The output
+// carries richtext styling tags; a richtext writer decides whether they render
+// as colour.
+type Renderer struct{}
 
 // Render writes the panic report for ctx to w. It reports any error from writing
 // to w.
 func (r Renderer) Render(w io.Writer, ctx PanicContext) error {
-	p := r.Palette
-	if p == nil {
-		p = palette.NoColour{}
-	}
 	tmpl := template.Must(template.New("panic").
-		Funcs(funcs(p)).
+		Funcs(funcs()).
 		ParseFS(templateFS, "templates/*.tmpl"))
 
 	// A static template over well-formed data cannot fail to execute into an

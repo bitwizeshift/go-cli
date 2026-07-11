@@ -1,13 +1,13 @@
-{{ palette.Error "error:" }} the application terminated unexpectedly
+[theme:error]error:[/theme] the application terminated unexpectedly
 
-Reason: {{ .Message }}
+Reason: [richtext:off]{{ .Message }}[/richtext]
 
 {{ traceBlock .Trace }}
 {{- if .IssueURL }}
 
 This is likely a bug. Please help us fix it by reporting this crash at:
 
-    {{ palette.URL .IssueURL }}
+    [theme:url]{{ .IssueURL }}[/theme]
 
 Include the stack trace above and a short description of what you were
 doing when it happened.

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/bitwizeshift/go-cli/internal/template/palette"
 	"github.com/bitwizeshift/go-cli/internal/template/tmplfuncs"
 	"github.com/spf13/cobra"
 )
@@ -43,22 +42,16 @@ func usageLineOf(cmd *cobra.Command) string {
 	return use
 }
 
-// Renderer writes the short usage advisory for a [cobra.Command].
-type Renderer struct {
-	// Palette styles the output. A nil Palette produces plain output, equivalent
-	// to [palette.NoColour].
-	Palette palette.Palette
-}
+// Renderer writes the short usage advisory for a [cobra.Command]. The output
+// carries richtext styling tags; a richtext writer decides whether they render
+// as colour.
+type Renderer struct{}
 
 // Render writes the usage advisory for cmd to w. It reports any error from
 // writing to w.
 func (r Renderer) Render(w io.Writer, cmd *cobra.Command) error {
-	p := r.Palette
-	if p == nil {
-		p = palette.NoColour{}
-	}
 	tmpl := template.Must(template.New("usage").
-		Funcs(tmplfuncs.NewFunc(p)).
+		Funcs(tmplfuncs.NewFunc()).
 		ParseFS(templateFS, "templates/*.tmpl"))
 
 	// A static template over a well-formed view cannot fail to execute into an

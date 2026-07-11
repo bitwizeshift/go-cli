@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/bitwizeshift/go-cli/internal/template/panichandler"
+	"github.com/bitwizeshift/go-cli/internal/template/plain"
 )
 
 // Sample panic inputs. These must match the constants in golden_test.go.
@@ -42,5 +43,9 @@ func run() error {
 	if err := (panichandler.Renderer{}).Render(&buf, ctx); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join("testdata", "panic.golden.txt"), buf.Bytes(), 0o644)
+	rendered, err := plain.Render(buf.String())
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join("testdata", "panic.golden.txt"), []byte(rendered), 0o644)
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli/internal/template/help"
 	"github.com/bitwizeshift/go-cli/internal/template/help/helptest"
+	"github.com/bitwizeshift/go-cli/internal/template/plain"
 )
 
 func main() {
@@ -29,8 +30,12 @@ func run() error {
 		if err := renderer.Render(&buf, c.Command); err != nil {
 			return err
 		}
+		rendered, err := plain.Render(buf.String())
+		if err != nil {
+			return err
+		}
 		path := filepath.Join("testdata", c.Name)
-		if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(rendered), 0o644); err != nil {
 			return err
 		}
 	}

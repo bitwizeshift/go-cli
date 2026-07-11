@@ -5,7 +5,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/bitwizeshift/go-cli/internal/template/palette"
+	"github.com/bitwizeshift/go-cli/internal/template/tag"
 	"github.com/bitwizeshift/go-cli/internal/template/tmplfuncs"
 )
 
@@ -34,20 +34,21 @@ func splitStack(stack []byte) []string {
 	return strings.Split(strings.TrimRight(string(stack), "\n"), "\n")
 }
 
-// traceBlock renders the stack-trace lines, prefixing each with a coloured
-// gutter.
-func traceBlock(p palette.Palette, lines []string) string {
+// traceBlock renders the stack-trace lines, prefixing each with a styled gutter.
+// Each line's content is wrapped in a passthrough region so bracketed sequences
+// in the trace are never parsed as tags.
+func traceBlock(lines []string) string {
 	rendered := make([]string, 0, len(lines))
 	for _, line := range lines {
-		rendered = append(rendered, p.Gutter(tracePipe)+p.Quote(line))
+		rendered = append(rendered, tag.Themed("gutter", tracePipe)+tag.Themed("quote", tag.Raw(line)))
 	}
 	return strings.Join(rendered, "\n")
 }
 
-// funcs builds the template function map using palette p. It extends the shared
+// funcs builds the template function map. It extends the shared
 // [tmplfuncs.NewFunc] set with the stack-trace block layout function.
-func funcs(p palette.Palette) template.FuncMap {
-	f := tmplfuncs.NewFunc(p)
-	f["traceBlock"] = func(lines []string) string { return traceBlock(p, lines) }
+func funcs() template.FuncMap {
+	f := tmplfuncs.NewFunc()
+	f["traceBlock"] = func(lines []string) string { return traceBlock(lines) }
 	return f
 }

@@ -2,9 +2,9 @@ package tmplfuncs
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/bitwizeshift/go-cli/internal/format"
+	"github.com/bitwizeshift/go-cli/richtext"
 )
 
 // Text exposes plain-text formatting helpers to templates. Its methods never
@@ -34,9 +34,10 @@ func (t Text) IndentLines(n int, lines []string) string {
 }
 
 // Pad right-pads s with spaces to width, returning s unchanged when it is
-// already at least that wide.
+// already at least that wide. Width is measured on the visible text, so any
+// styling tags in s do not count toward it.
 func (Text) Pad(width int, s string) string {
-	if n := width - utf8.RuneCountInString(s); n > 0 {
+	if n := width - richtext.Len(s); n > 0 {
 		return s + strings.Repeat(" ", n)
 	}
 	return s
@@ -48,11 +49,12 @@ func (Text) Upper(s string) string {
 }
 
 // MaxWidth returns the visible width of the widest string in values, or zero
-// when values is empty.
+// when values is empty. Width is measured on the visible text, so any styling
+// tags in a value do not count toward it.
 func (Text) MaxWidth(values []string) int {
 	width := 0
 	for _, value := range values {
-		width = max(width, utf8.RuneCountInString(value))
+		width = max(width, richtext.Len(value))
 	}
 	return width
 }
