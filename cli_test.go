@@ -27,7 +27,7 @@ func TestFromReader_BuildsCommandTree(t *testing.T) {
 	reader := strings.NewReader(rootWithChild)
 
 	// Act
-	sut := cli.FromReader(reader, cli.BindRunner("root", spectest.OK()))
+	sut := cli.FromReader(reader, cli.BindRunner("root", spectest.NoOpRunner()))
 
 	// Assert
 	if got, want := sut.CobraCommand().Use, "root"; got != want {
@@ -45,7 +45,7 @@ func TestFromBytes_BuildsCommandTree(t *testing.T) {
 	data := []byte(rootWithChild)
 
 	// Act
-	sut := cli.FromBytes(data, cli.BindRunner("root", spectest.OK()))
+	sut := cli.FromBytes(data, cli.BindRunner("root", spectest.NoOpRunner()))
 
 	// Assert
 	if got, want := sut.CobraCommand().Use, "root"; got != want {
@@ -73,13 +73,13 @@ func TestFromBytes_InvalidSpecification_Panics(t *testing.T) {
 		{
 			name:         "unbound runner",
 			input:        "id: root\nuse: root\n",
-			options:      []cli.Option{cli.BindRunner("ghost", spectest.OK())},
+			options:      []cli.Option{cli.BindRunner("ghost", spectest.NoOpRunner())},
 			wantContains: "no command",
 		},
 		{
 			name:         "duplicate binding",
 			input:        "id: root\nuse: root\n",
-			options:      []cli.Option{cli.BindRunner("root", spectest.OK()), cli.BindRunner("root", spectest.OK())},
+			options:      []cli.Option{cli.BindRunner("root", spectest.NoOpRunner()), cli.BindRunner("root", spectest.NoOpRunner())},
 			wantContains: "duplicate",
 		},
 	}
@@ -116,7 +116,7 @@ func TestCLI_Run(t *testing.T) {
 	}{
 		{
 			name:   "Success",
-			runner: spectest.OK(),
+			runner: spectest.NoOpRunner(),
 			want:   cli.ExitSuccess,
 		},
 		{
@@ -126,7 +126,7 @@ func TestCLI_Run(t *testing.T) {
 		},
 		{
 			name:   "RecoveredPanic",
-			runner: spectest.Panic("kaboom"),
+			runner: spectest.PanicRunner("kaboom"),
 			want:   cli.ExitPanic,
 		},
 	}

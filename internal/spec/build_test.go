@@ -58,13 +58,13 @@ func TestBuild(t *testing.T) {
 		{
 			name:    "builds command tree",
 			input:   "id: root\nuse: root <command>\n",
-			runners: map[string]spec.Runner{"root": spectest.OK()},
+			runners: map[string]spec.Runner{"root": spectest.NoOpRunner()},
 			want:    "root <command>",
 		},
 		{
 			name:    "reports unbound runner",
 			input:   "id: root\nuse: root\n",
-			runners: map[string]spec.Runner{"ghost": spectest.OK()},
+			runners: map[string]spec.Runner{"ghost": spectest.NoOpRunner()},
 			wantErr: spec.ErrUnboundRunner,
 		},
 		{
@@ -107,7 +107,7 @@ func TestBuild_DefaultGroup_LeavesChildUngrouped(t *testing.T) {
 	reader := strings.NewReader(rootWithChild)
 
 	// Act
-	sut, err := spec.Build(reader, map[string]spec.Runner{"root": spectest.OK()})
+	sut, err := spec.Build(reader, map[string]spec.Runner{"root": spectest.NoOpRunner()})
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -134,7 +134,7 @@ commands:
 	reader := strings.NewReader(input)
 
 	// Act
-	sut, err := spec.Build(reader, map[string]spec.Runner{"root": spectest.OK()})
+	sut, err := spec.Build(reader, map[string]spec.Runner{"root": spectest.NoOpRunner()})
 
 	// Assert
 	if err != nil {
@@ -200,7 +200,7 @@ commands:
       use: child
       summary: a child command
 `
-	sut := build(t, input, map[string]spec.Runner{"root": spectest.OK()})
+	sut := build(t, input, map[string]spec.Runner{"root": spectest.NoOpRunner()})
 	var out bytes.Buffer
 	sut.SetOut(&out)
 	sut.SetErr(&out)

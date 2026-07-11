@@ -26,7 +26,7 @@ func TestExecute(t *testing.T) {
 	}{
 		{
 			name:    "success",
-			runner:  spectest.OK(),
+			runner:  spectest.NoOpRunner(),
 			wantErr: nil,
 		},
 		{
@@ -36,17 +36,17 @@ func TestExecute(t *testing.T) {
 		},
 		{
 			name:    "usage error",
-			runner:  spectest.Usage(),
+			runner:  spectest.UsageRunner(),
 			wantErr: spec.ErrUsage,
 		},
 		{
 			name:    "recovered panic",
-			runner:  spectest.Panic("kaboom"),
+			runner:  spectest.PanicRunner("kaboom"),
 			wantErr: spec.ErrPanic,
 		},
 		{
 			name:    "argument parsing failure",
-			runner:  spectest.OK(),
+			runner:  spectest.NoOpRunner(),
 			args:    []string{"--nope"},
 			wantErr: cmpopts.AnyError,
 		},
@@ -100,7 +100,7 @@ func TestExecute_ParseError_ShowsUsageAdvisory(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	sut := newRootCommand(t, spectest.OK())
+	sut := newRootCommand(t, spectest.NoOpRunner())
 	var stderr strings.Builder
 	sut.SetOut(&stderr)
 	sut.SetErr(&stderr)
@@ -123,7 +123,7 @@ func TestExecute_FallbackError_ShowsUsage(t *testing.T) {
 
 	// Arrange
 	fallbackErr := errors.New("fallback failed")
-	sut := newRootCommand(t, spectest.OK())
+	sut := newRootCommand(t, spectest.NoOpRunner())
 	sut.Flags().String("token", "", "")
 	annotation.AddFuncFallback(sut.Flags().Lookup("token"), func(context.Context) (string, error) {
 		return "", fallbackErr

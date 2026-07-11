@@ -23,7 +23,7 @@ func TestRunners(t *testing.T) {
 	}{
 		{
 			name:    "OK succeeds",
-			sut:     spectest.OK(),
+			sut:     spectest.NoOpRunner(),
 			wantErr: nil,
 		},
 		{
@@ -33,7 +33,7 @@ func TestRunners(t *testing.T) {
 		},
 		{
 			name:    "Usage returns ErrUsage",
-			sut:     spectest.Usage(),
+			sut:     spectest.UsageRunner(),
 			wantErr: spec.ErrUsage,
 		},
 	}
@@ -60,7 +60,7 @@ func TestPanic_WhenRun_Panics(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	sut := spectest.Panic("boom")
+	sut := spectest.PanicRunner("boom")
 	ctx := context.Background()
 
 	// Act

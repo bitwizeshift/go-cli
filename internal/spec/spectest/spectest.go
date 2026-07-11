@@ -6,8 +6,8 @@ import (
 	"github.com/bitwizeshift/go-cli/internal/spec"
 )
 
-// OK returns a [spec.Runner] that succeeds without doing anything.
-func OK() spec.Runner {
+// NoOpRunner returns a [spec.Runner] that succeeds without doing anything.
+func NoOpRunner() spec.Runner {
 	return runner(func(context.Context, ...string) error {
 		return nil
 	})
@@ -20,13 +20,13 @@ func Err(err error) spec.Runner {
 	})
 }
 
-// Usage returns a [spec.Runner] that always returns [spec.ErrUsage].
-func Usage() spec.Runner {
+// UsageRunner returns a [spec.Runner] that always returns [spec.ErrUsage].
+func UsageRunner() spec.Runner {
 	return Err(spec.ErrUsage)
 }
 
-// Panic returns a [spec.Runner] that always panics with value.
-func Panic(value any) spec.Runner {
+// PanicRunner returns a [spec.Runner] that always panics with value.
+func PanicRunner(value any) spec.Runner {
 	return runner(func(context.Context, ...string) error {
 		panic(value)
 	})
