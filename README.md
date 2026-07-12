@@ -26,7 +26,7 @@ applications.
 [license-link]: https://raw.githubusercontent.com/bitwizeshift/go-cli/master/LICENSE-MIT
 [issue-badge]: https://img.shields.io/github/issues/bitwizeshift/go-cli.svg
 [issue-link]: https://github.com/bitwizeshift/go-cli/issues
-[release-badge]: https://img.shields.io/github/release/bitwizeshift/go-cli.svg
+[release-badge]: https://img.shields.io/github/release/bitwizeshift/go-cli.svg?include_prereleases
 [release-link]:https://github.com/bitwizeshift/go-cli/releases/latest
 
 ## Quick Links
