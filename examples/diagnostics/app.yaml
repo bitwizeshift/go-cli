@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../command.schema.json
+id: root
+use: diagnostics
+version: 1.0.0
+summary: A small example CLI showcasing the diagnostic logger
+description: |
+  diagnostics acts as an example for the diagnostic logger in the go-cli
+  library.
+
+  It reports an error, a warning, and an info diagnostic through a
+  diagnostic.LoggerFlag. The --output-format flag switches between the
+  human-readable text rendering, GitHub Actions workflow commands, and
+  newline-delimited JSON.
+examples:
+  - diagnostics
+  - diagnostics --output-format github
+  - diagnostics --output-format json
+issue-url: https://github.com/bitwizeshift/go-cli/issues

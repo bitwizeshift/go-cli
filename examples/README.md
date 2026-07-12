@@ -14,3 +14,7 @@ is self-contained and can be run independently.
 * [Prompts](./prompt) - A small example application that demonstrates the
   different "prompt" types that can be used to gather user input in a
   command-line application.
+
+* [Diagnostics](./diagnostics) - A small example application that showcases the
+  diagnostic logger, reporting diagnostics in a selectable output format (text,
+  GitHub Actions, or JSON) via `--output-format`.
