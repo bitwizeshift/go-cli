@@ -99,8 +99,10 @@ This is nothing too complex; the expression can be one of 3 primary things:
 * An exact value (e.g. `3`, `5`, etc)
 * An open/unbounded range using on of `>=`, `>`, `<`, or `<=` -- in the form of
   `<op><number>` (e.g. `>=5` expects 5 or more positional arguments)
-* An inclusive-range using `<start>..=<end>` syntax (e.g. `3..5` expects between
-  3 to 5 arguments)
+* A range with an _exclusive_ upper bound using `<start>..<end>` syntax (e.g.
+  `3..5` expects 3 or 4 arguments)
+* A range with an _inclusive_ upper bound using `<start>..=<end>` syntax (e.g.
+  `3..=5` expects between 3 to 5 arguments)
 
 In addition to the above, multiple clauses can be concatenated with `,` provided
 the ranges don't overlap. For example, `3,5,>=7` enables 3, 5, or greater than 7
@@ -151,7 +153,7 @@ by using:
 
 ```go
 var app = cli.FromReader(embeddedYAML,
-  cli.BindReader("init", ...), // bind 'init' ID to a 'Runner'
+  cli.BindRunner("init", ...), // bind 'init' ID to a 'Runner'
   ...
 )
 ```

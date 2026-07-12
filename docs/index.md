@@ -3,6 +3,18 @@
 This section provides guides and resources for developers looking to leverage
 the `go-cli` project, or looking to understand contributor processes.
 
+## Tutorials
+
+These are task-oriented walkthroughs for developers new to `go-cli`:
+
+* [Your First Application](./tutorial/first-application.md): Build, wire up, and
+  test a `go-cli` application from scratch.
+* [Custom Reusable Flag Types](./tutorial/custom-flags.md): Write flag components
+  that register themselves, expose high-level objects, and are testable with
+  `flagtest`.
+* [Formatted Output with Richtext](./tutorial/richtext-output.md): Style terminal
+  output, define themes, and safely print text you did not author.
+
 ## References
 
 This section provides reference material for understanding parts of the public
