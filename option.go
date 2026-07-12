@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/bitwizeshift/go-cli/internal/spec"
+	"github.com/bitwizeshift/go-cli/internal/term"
 	"github.com/bitwizeshift/go-cli/richtext"
 )
 
@@ -17,6 +18,7 @@ type config struct {
 	runners map[string]spec.Runner
 	theme   *richtext.Theme
 	colour  spec.ColourMode
+	sizer   term.Sizer
 }
 
 // newConfig resolves options into a config, panicking if two options bind a
@@ -73,6 +75,17 @@ func DisableColour() Option {
 func ForceColour() Option {
 	return option(func(c *config) {
 		setColour(c, spec.ColourEnabled)
+	})
+}
+
+// TerminalWidth sets a fixed width for the terminal width, instead of being
+// dynamic based on the terminal size. Setting columns less than 60 will panic.
+func TerminalWidth(columns int) Option {
+	return option(func(c *config) {
+		if columns < 60 {
+			panic(fmt.Sprintf("TerminalWidth set to %d, which is not enough for basic formatting", columns))
+		}
+		c.sizer = term.FixedSizer(columns)
 	})
 }
 

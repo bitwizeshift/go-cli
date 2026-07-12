@@ -13,6 +13,7 @@ import (
 	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/internal/template/panichandler"
+	"github.com/bitwizeshift/go-cli/internal/term"
 	"github.com/spf13/cobra"
 )
 
@@ -78,6 +79,7 @@ func (i *CommandInfo) run(runner Runner) func(cmd *cobra.Command, args []string)
 		stdout := cmd.OutOrStdout()
 		stderr := cmd.ErrOrStderr()
 		ctx = clictx.WithWriters(ctx, stdout, stderr)
+		ctx = clictx.WithSizer(ctx, term.DefaultSizer)
 
 		defer func() {
 			if e := recover(); e != nil {

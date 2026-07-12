@@ -176,9 +176,46 @@ func TestFromReader_ConflictingColourOptions_Panics(t *testing.T) {
 			})
 
 			// Assert
+			const substr = "colour mode already set"
 			message, _ := recovered.(string)
-			if got, want := strings.Contains(message, "colour mode already set"), true; got != want {
-				t.Fatalf("recovered panic = %q, want to contain %q", message, "colour mode already set")
+			if got, want := strings.Contains(message, substr), true; got != want {
+				t.Fatalf("recovered panic = %q, want to contain %q", message, substr)
+			}
+		})
+	}
+}
+
+func TestFromReader_InvalidSizeOptions_Panics(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []cli.Option
+	}{
+		{
+			name:    "Negative",
+			options: []cli.Option{cli.TerminalWidth(-20)},
+		},
+		{
+			name:    "LessThan60",
+			options: []cli.Option{cli.TerminalWidth(50)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act
+			recovered := recoverPanic(func() {
+				cli.FromBytes([]byte("id: root\nuse: root\n"), tc.options...)
+			})
+
+			// Assert
+			const substr = "not enough"
+			message, _ := recovered.(string)
+			if got, want := strings.Contains(message, substr), true; got != want {
+				t.Fatalf("recovered panic = %q, want to contain %q", message, substr)
 			}
 		})
 	}
