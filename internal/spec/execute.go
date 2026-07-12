@@ -13,7 +13,6 @@ import (
 	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/internal/template/panichandler"
-	"github.com/bitwizeshift/go-cli/richtext"
 	"github.com/spf13/cobra"
 )
 
@@ -27,9 +26,8 @@ import (
 func Execute(ctx context.Context, cmd *cobra.Command) error {
 	stdout := cmd.OutOrStdout()
 	stderr := cmd.ErrOrStderr()
-	defer closeStream(stdout)
-	defer closeStream(stderr)
-	ctx = clictx.WithWriters(ctx, stdout, stderr)
+	defer flushStream(stdout)
+	defer flushStream(stderr)
 
 	target, err := cmd.ExecuteContextC(ctx)
 	if err == nil {
@@ -55,12 +53,10 @@ func renderError(w io.Writer, err error) {
 	_, _ = fmt.Fprintln(w)
 }
 
-// closeStream flushes w when it is a [richtext.Writer], emitting any trailing
-// styling and reporting nothing: a residual imbalance signals a template bug
-// rather than a runtime error. It never closes the underlying stream.
-func closeStream(w io.Writer) {
-	if rw, ok := w.(*richtext.Writer); ok {
-		_ = rw.Close()
+// flushStream flushes w when it is a Flusher that implements Flush() error
+func flushStream(w io.Writer) {
+	if rw, ok := w.(interface{ Flush() error }); ok {
+		_ = rw.Flush()
 	}
 }
 
@@ -79,6 +75,9 @@ func (i *CommandInfo) run(runner Runner) func(cmd *cobra.Command, args []string)
 	return func(cmd *cobra.Command, args []string) (err error) {
 		ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 		defer cancel()
+		stdout := cmd.OutOrStdout()
+		stderr := cmd.ErrOrStderr()
+		ctx = clictx.WithWriters(ctx, stdout, stderr)
 
 		defer func() {
 			if e := recover(); e != nil {

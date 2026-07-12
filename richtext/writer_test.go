@@ -265,14 +265,14 @@ func TestWriter_Close(t *testing.T) {
 			_, _ = sut.Write([]byte(tc.input))
 
 			// Act
-			err := sut.Close()
+			err := sut.Flush()
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
-				t.Fatalf("Close() = %v, want %v", got, want)
+				t.Fatalf("Flush() = %v, want %v", got, want)
 			}
 			if got, want := buf.String(), tc.want; !cmp.Equal(got, want) {
-				t.Errorf("Close() output = %q, want %q", got, want)
+				t.Errorf("Flush() output = %q, want %q", got, want)
 			}
 		})
 	}
@@ -341,10 +341,10 @@ func TestWriter_Close_FlushWriteFails_ReturnsError(t *testing.T) {
 	_, _ = sut.Write([]byte("ab[fg"))
 
 	// Act
-	err := sut.Close()
+	err := sut.Flush()
 
 	// Assert
 	if got, want := err, wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
-		t.Fatalf("Close() = %v, want %v", got, want)
+		t.Fatalf("Flush() = %v, want %v", got, want)
 	}
 }

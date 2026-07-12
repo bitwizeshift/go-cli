@@ -92,10 +92,10 @@ func (w *Writer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// Close flushes any trailing partial tag as literal text and reports whether
+// Flush flushes any trailing partial tag as literal text and reports whether
 // the markup was balanced. It returns a [*TagError] wrapping [ErrUnclosedTag]
-// if any tags remain open. Close does not close the underlying writer.
-func (w *Writer) Close() error {
+// if any tags remain open.
+func (w *Writer) Flush() error {
 	if tok, ok := w.scanner.Flush(); ok {
 		if err := w.writeString(tok.Raw); err != nil {
 			return err

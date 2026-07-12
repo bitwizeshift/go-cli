@@ -17,7 +17,7 @@ func Render(markup string) (string, error) {
 	if _, err := io.WriteString(w, markup); err != nil {
 		return "", err
 	}
-	if err := w.Close(); err != nil {
+	if err := w.Flush(); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
