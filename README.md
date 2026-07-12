@@ -1,6 +1,16 @@
 # `go-cli`
 
+<!-- markdownlint-disable MD033 -->
+<div align="center">
+
+[![GoDoc][go-doc-badge]][go-doc-link]
+[![License][license-badge]][license-link]
+[![Release][release-badge]][release-link]
+
+[![Issues][issue-badge]][issue-link]
 [![Continuous Integration][ci-badge]][ci-link]
+</div>
+<!-- markdownlint-enable MD033 -->
 
 This library is an **opinionated** framework built around the [cobra] and [pflag]
 libraries to provide a simple and easy way to build **testable** command-line
@@ -10,12 +20,27 @@ applications.
 [pflag]: https://github.com/spf13/pflag
 [ci-badge]: https://github.com/bitwizeshift/go-cli/actions/workflows/continuous-integration.yaml/badge.svg
 [ci-link]: https://github.com/bitwizeshift/go-cli/actions/workflows/continuous-integration.yaml
+[go-doc-badge]: https://godoc.org/github.com/bitwizeshift/go-cli?status.svg
+[go-doc-link]: https://godoc.org/github.com/bitwizeshift/go-cli
+[license-badge]: https://img.shields.io/badge/license-MIT%20or%20Apache--2-blue.svg
+[license-link]: https://raw.githubusercontent.com/bitwizeshift/go-cli/master/LICENSE-MIT
+[issue-badge]: https://img.shields.io/github/issues/bitwizeshift/go-cli.svg
+[issue-link]: https://github.com/bitwizeshift/go-cli/issues
+[release-badge]: https://img.shields.io/github/release/bitwizeshift/go-cli.svg
+[release-link]:https://github.com/bitwizeshift/go-cli/releases/latest
 
 ## Quick Links
 
+* [🏆 Teaser Demo](#teaser)
 * [💼 Features](#features)
 * [🚀 Examples](./examples)
 * [🤨 Why `go-cli`?](#why-go-cli)
+
+## Teaser
+
+<!-- markdownlint-disable MD033 -->
+<div align="center"><img src="docs/demo.png" width="600px" alt="Demo"></div>
+<!-- markdownlint-enable MD033 -->
 
 ## Features
 
@@ -41,8 +66,12 @@ applications.
 * 📦 **Support for grouping flags**: A highly-requested but absent feature of
   both [`cobra`] and [`pflag`], available at last.
 
-* 🎨 **Visually clear defaults**: This puts a fresh coat of paint on the default
+* 💄 **Visually clear defaults**: This puts a fresh coat of paint on the default
   CLI experience of Cobra out of the box by leveraging conditional colours.
+
+* 🎨 **Configurable colours**: The CLI supports custom BBCode-inspired markup
+  for dynamic themes/colouring of text. You can write `[fg:red]hello[/fg]` to
+  stdout, and it will color the text red as long as you're in a terminal.
 
 Overall, this library sacrifices Cobra's verbosity and flexibility for some
 opinionated and visually clear defaults.
