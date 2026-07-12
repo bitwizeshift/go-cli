@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/internal/template/panichandler"
 	"github.com/bitwizeshift/go-cli/richtext"
@@ -24,14 +25,16 @@ import (
 // has already been reported to the user and is intended only for exit-status
 // classification.
 func Execute(ctx context.Context, cmd *cobra.Command) error {
-	defer closeStream(cmd.OutOrStdout())
-	defer closeStream(cmd.ErrOrStderr())
+	stdout := cmd.OutOrStdout()
+	stderr := cmd.ErrOrStderr()
+	defer closeStream(stdout)
+	defer closeStream(stderr)
+	ctx = clictx.WithWriters(ctx, stdout, stderr)
 
 	target, err := cmd.ExecuteContextC(ctx)
 	if err == nil {
 		return nil
 	}
-	stderr := target.ErrOrStderr()
 	switch {
 	case errors.Is(err, ErrPanic):
 		// The panic report was already rendered while unwinding the runner.
