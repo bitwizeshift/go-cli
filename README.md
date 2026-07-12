@@ -34,6 +34,7 @@ applications.
 * [🏆 Teaser Demo](#teaser)
 * [💼 Features](#features)
 * [🚀 Examples](./examples)
+* [📚 Documentation](./docs)
 * [🤨 Why `go-cli`?](#why-go-cli)
 
 ## Teaser
