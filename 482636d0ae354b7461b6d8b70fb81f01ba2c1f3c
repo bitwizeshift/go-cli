@@ -1,0 +1,30 @@
+Create and document consts for exit code that map to POSIX exit codes
+
+From those definitions, define a `DefaultClassifier` object which is implemented
+as a `ClassifierFunc`. Translate error codes using the standard library error
+codes (for example, we can detect `os` package errors to translate to os-errors).
+
+Also document FallbackClassifier.
+
+Write tests for both of these functions.
+Ensure code is authored with Skill(go:general), and that tests follow ALL of
+Skill(go:unit-testing) and Skill(go:table-testing).
+
+Do not use sub-agents for this, do all of the work inline.
+
+Write a @docs/tutorial/ for how to customize error code outputs. It should be a
+diataxis style document for tutorials. The tutorial should be focused on
+satisfying the goal of having custom application-specific errors being
+translated to a custom exit code. It should identify that users should do
+`exit.FallbackClassifier{customClassifier, exit.DefaultClassifier}` to support
+the existing translation if they want OS fallback.
+
+The documentation should NOT detail implementation details of the code. The
+documentation should be written from the view of a developer, with the audience
+being other developers. Do not include flowery language. Just be direct and
+informative about what is being done and how it's being approached.
+
+You do not need to review any code other than the @exit/  package for the
+implementation.
+We have an option that is being wired (assume it will be wired by the time it's
+done) in @option.go  that will set the classifier.
