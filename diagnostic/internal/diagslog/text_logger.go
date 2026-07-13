@@ -37,8 +37,7 @@ func (h *TextHandler) Handle(_ context.Context, r slog.Record) error {
 	diagnostic := RecordFromSlog(r)
 
 	severity := strings.ToLower(r.Level.String())
-	var location string
-	location = h.formatLocation(
+	location := h.formatLocation(
 		diagnostic.File,
 		diagnostic.LineStart,
 		diagnostic.LineEnd,

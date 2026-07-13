@@ -1,4 +1,4 @@
-// package flag simplifies command-line flag registration by wrapping
+// Package flag simplifies command-line flag registration by wrapping
 // [github.com/spf13/pflag] behind a small, type-driven surface.
 //
 // Rather than exposing a distinct registration call per value type, the package

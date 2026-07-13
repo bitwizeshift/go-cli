@@ -2,7 +2,7 @@ package diagslog
 
 import "log/slog"
 
-// Diagnostic represents a diagnostic message, such as an error or warning, that
+// Record represents a diagnostic message, such as an error or warning, that
 // can be reported to the user.
 type Record struct {
 	ID      string

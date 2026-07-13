@@ -116,7 +116,7 @@ func (a *Asker) readLine(ctx context.Context, r *bufio.Reader) (string, error) {
 	select {
 	case <-ctx.Done():
 		// No newline was echoed, so move off the prompt line before returning.
-		io.WriteString(a.Out, "\n")
+		_, _ = io.WriteString(a.Out, "\n")
 		return "", ctx.Err()
 	case res := <-ch:
 		if res.err != nil && !(errors.Is(res.err, io.EOF) && res.line != "") {
@@ -156,7 +156,7 @@ func (a *Asker) readSecret(ctx context.Context) (string, error) {
 		select {
 		case <-ctx.Done():
 			// Raw mode: "\r\n" both returns to the first column and moves down.
-			io.WriteString(a.Out, "\r\n")
+			_, _ = io.WriteString(a.Out, "\r\n")
 			return "", ctx.Err()
 		case res := <-ch:
 			switch {
@@ -168,18 +168,18 @@ func (a *Asker) readSecret(ctx context.Context) (string, error) {
 			case res.r == '\r' || res.r == '\n':
 				// The terminal is in raw mode, so a bare "\n" would only move
 				// the cursor down; "\r\n" also returns it to the first column.
-				io.WriteString(a.Out, "\r\n")
+				_, _ = io.WriteString(a.Out, "\r\n")
 				return string(buf), nil
 			case res.r == 0x7f || res.r == 0x08:
 				if len(buf) > 0 {
 					buf = buf[:len(buf)-1]
-					io.WriteString(a.Out, "\b \b")
+					_, _ = io.WriteString(a.Out, "\b \b")
 				}
 			case res.r == 0x03 || res.r == 0x04:
 				return "", ErrInterrupted
 			default:
 				buf = append(buf, res.r)
-				io.WriteString(a.Out, string(a.HiddenChar))
+				_, _ = io.WriteString(a.Out, string(a.HiddenChar))
 			}
 		}
 	}
