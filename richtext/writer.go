@@ -96,14 +96,22 @@ func (w *Writer) Write(p []byte) (int, error) {
 // the markup was balanced. It returns a [*TagError] wrapping [ErrUnclosedTag]
 // if any tags remain open.
 func (w *Writer) Flush() error {
-	if tok, ok := w.scanner.Flush(); ok {
-		if err := w.writeString(tok.Raw); err != nil {
-			return err
-		}
+	if err := w.flushPending(); err != nil {
+		return err
 	}
 	if len(w.stack) > 0 {
 		top := w.stack[len(w.stack)-1]
 		return &TagError{Namespace: top.namespace, Err: ErrUnclosedTag}
+	}
+	return nil
+}
+
+// flushPending drains any partial fragment buffered by the scanner to the
+// destination as literal text, leaving the open-tag stack untouched. Unlike
+// [Writer.Flush] it never reports an unclosed tag.
+func (w *Writer) flushPending() error {
+	if tok, ok := w.scanner.Flush(); ok {
+		return w.writeString(tok.Raw)
 	}
 	return nil
 }
@@ -212,10 +220,38 @@ func (w *Writer) writeString(s string) error {
 	return err
 }
 
-// Writer returns the destination this Writer renders onto.
+// Writer returns an [io.Writer] that writes verbatim to the destination without
+// interpreting the bytes as tag markup.
+//
+// This is the escape hatch for emitting untrusted text between an open and close
+// tag: the active style is preserved and embedded closing tags cannot end the
+// formatting early.
 func (w *Writer) Writer() io.Writer {
-	return w.dst
+	return &passthroughWriter{w: w}
 }
+
+// passthroughWriter writes bytes to a [Writer]'s destination verbatim, without
+// interpreting them as tag markup. It flushes any fragment the scanner is
+// holding before each write so ordering is preserved and no partial tag is
+// reconsidered. The active style is left in place.
+type passthroughWriter struct {
+	w *Writer
+}
+
+// Write implements [io.Writer].
+func (p *passthroughWriter) Write(b []byte) (int, error) {
+	if err := p.w.flushPending(); err != nil {
+		return 0, err
+	}
+	return p.w.dst.Write(b)
+}
+
+// Writer returns the destination the parent [Writer] renders onto.
+func (p *passthroughWriter) Writer() io.Writer {
+	return p.w.dst
+}
+
+var _ io.Writer = (*passthroughWriter)(nil)
 
 func isKnownNamespace(namespace string) bool {
 	switch namespace {

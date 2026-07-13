@@ -286,12 +286,62 @@ func TestWriter_Writer(t *testing.T) {
 	sut := richtext.NewWriter(&buf, nil)
 
 	// Act
-	underlying := sut.Writer()
+	passthrough := sut.Writer()
 
 	// Assert
+	unwrapper, ok := passthrough.(interface{ Writer() io.Writer })
+	if !ok {
+		t.Fatalf("Writer() = %T, want to implement Writer() io.Writer", passthrough)
+	}
+	underlying := unwrapper.Writer()
 	sameWriter := cmp.Comparer(func(a, b io.Writer) bool { return a == b })
 	if got, want := underlying, io.Writer(&buf); !cmp.Equal(got, want, sameWriter) {
-		t.Errorf("Writer() = %v, want %v", got, want)
+		t.Errorf("Writer().Writer() = %v, want %v", got, want)
+	}
+}
+
+func TestWriter_Writer_FlushesBufferedTextBeforeWrite(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	var buf strings.Builder
+	sut := richtext.NewWriter(&buf, nil)
+	sut.ForceColour()
+	_, _ = sut.Write([]byte("[fg:red]x[bg"))
+	passthrough := sut.Writer()
+
+	// Act
+	_, err := passthrough.Write([]byte("Y"))
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Write() = %v, want nil", got)
+	}
+	if got, want := buf.String(), reset+red+"x[bgY"; !cmp.Equal(got, want) {
+		t.Errorf("Write() output = %q, want %q", got, want)
+	}
+}
+
+func TestWriter_Writer_WritesUntrustedVerbatim(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	var buf strings.Builder
+	sut := richtext.NewWriter(&buf, nil)
+	sut.ForceColour()
+	_, _ = sut.Write([]byte("[fg:red]"))
+	passthrough := sut.Writer()
+	_, _ = passthrough.Write([]byte("[/fg][/richtext]evil"))
+
+	// Act
+	_, err := sut.Write([]byte("[/fg]"))
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Write() = %v, want nil", got)
+	}
+	if got, want := buf.String(), reset+red+"[/fg][/richtext]evil"+reset; !cmp.Equal(got, want) {
+		t.Errorf("Write() output = %q, want %q", got, want)
 	}
 }
 
@@ -329,6 +379,25 @@ func (w *errWriter) Write(p []byte) (int, error) {
 		return 0, w.err
 	}
 	return len(p), nil
+}
+
+func TestWriter_Writer_FlushWriteFails_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	wantErr := errors.New("boom")
+	dst := &errWriter{okWrites: 1, err: wantErr}
+	sut := richtext.NewWriter(dst, nil)
+	_, _ = sut.Write([]byte("ab[fg"))
+	passthrough := sut.Writer()
+
+	// Act
+	_, err := passthrough.Write([]byte("Y"))
+
+	// Assert
+	if got, want := err, wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("Write() = %v, want %v", got, want)
+	}
 }
 
 func TestWriter_Close_FlushWriteFails_ReturnsError(t *testing.T) {
