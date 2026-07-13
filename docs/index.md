@@ -33,3 +33,4 @@ The links below primarily are directed at contributors or anyone trying to
 understand the processes used in this project.
 
 * [Commit Standards](commit-standards.md)
+* ["AI" Disclosure](ai-disclosure.md)
