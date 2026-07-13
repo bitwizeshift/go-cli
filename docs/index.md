@@ -14,6 +14,9 @@ These are task-oriented walkthroughs for developers new to `go-cli`:
   `flagtest`.
 * [Formatted Output with Richtext](./tutorial/richtext-output.md): Style terminal
   output, define themes, and safely print text you did not author.
+* [Customizing Exit Codes](./tutorial/custom-exit-codes.md): Translate your
+  application's errors into your own exit codes, while keeping the framework's
+  translation of standard-library errors.
 
 ## References
 

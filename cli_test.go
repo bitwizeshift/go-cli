@@ -3,10 +3,13 @@ package cli_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io/fs"
 	"strings"
 	"testing"
 
 	"github.com/bitwizeshift/go-cli"
+	"github.com/bitwizeshift/go-cli/exit"
 	"github.com/bitwizeshift/go-cli/internal/spec/spectest"
 	"github.com/bitwizeshift/go-cli/richtext"
 	"github.com/google/go-cmp/cmp"
@@ -228,22 +231,22 @@ func TestCLI_Run(t *testing.T) {
 	testCases := []struct {
 		name   string
 		runner cli.Runner
-		want   cli.ExitCode
+		want   exit.Code
 	}{
 		{
 			name:   "Success",
 			runner: spectest.NoOpRunner(),
-			want:   cli.ExitSuccess,
+			want:   exit.CodeSuccess,
 		},
 		{
 			name:   "RunnerError",
 			runner: spectest.Err(testErr),
-			want:   cli.ExitError,
+			want:   exit.Code(1),
 		},
 		{
 			name:   "RecoveredPanic",
 			runner: spectest.PanicRunner("kaboom"),
-			want:   cli.ExitPanic,
+			want:   exit.CodeSoftware,
 		},
 	}
 
@@ -268,6 +271,110 @@ func TestCLI_Run(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExitClassifier(t *testing.T) {
+	t.Parallel()
+
+	testErr := errors.New("test error")
+	notExistErr := fmt.Errorf("read: %w", fs.ErrNotExist)
+	testCases := []struct {
+		name    string
+		options []cli.Option
+		err     error
+		want    exit.Code
+	}{
+		{
+			name:    "Unset",
+			options: nil,
+			err:     notExistErr,
+			want:    exit.CodeNoInput,
+		},
+		{
+			name:    "ClassifiesError",
+			options: []cli.Option{cli.ExitClassifier(constantClassifier(exit.CodeConfig))},
+			err:     testErr,
+			want:    exit.CodeConfig,
+		},
+		{
+			name:    "ReplacesPOSIXClassifier",
+			options: []cli.Option{cli.ExitClassifier(constantClassifier(exit.CodeConfig))},
+			err:     notExistErr,
+			want:    exit.CodeConfig,
+		},
+		{
+			name: "FallsBackToPOSIXClassifier",
+			options: []cli.Option{
+				cli.ExitClassifier(exit.FallbackClassifier{
+					constantClassifier(exit.CodeUnknown),
+					exit.POSIXClassifier,
+				}),
+			},
+			err:  notExistErr,
+			want: exit.CodeNoInput,
+		},
+		{
+			name: "DoesNotClassifyError",
+			options: []cli.Option{cli.ExitClassifier(
+				constantClassifier(exit.CodeUnknown),
+			)},
+			err:  testErr,
+			want: exit.Code(1),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			options := append(tc.options, cli.BindRunner("root", spectest.Err(tc.err)))
+			sut := cli.FromBytes([]byte("id: root\nuse: root\n"), options...)
+			var stderr strings.Builder
+			sut.CobraCommand().SetOut(&stderr)
+			sut.CobraCommand().SetErr(&stderr)
+			sut.CobraCommand().SetArgs(nil)
+			ctx := context.Background()
+
+			// Act
+			code := sut.Run(ctx)
+
+			// Assert
+			if got, want := code, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("sut.Run(ctx) = %d, want %d", got, want)
+			}
+		})
+	}
+}
+
+func TestExitClassifier_NilClassifier_Panics(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	data := []byte("id: root\nuse: root\n")
+
+	// Act
+	recovered := recoverPanic(func() {
+		cli.FromBytes(data,
+			cli.ExitClassifier(nil),
+			cli.BindRunner("root", spectest.NoOpRunner()),
+		)
+	})
+
+	// Assert
+	const substr = "nil classifier"
+	message, _ := recovered.(string)
+	if got, want := strings.Contains(message, substr), true; got != want {
+		t.Fatalf("recovered panic = %q, want to contain %q", message, substr)
+	}
+}
+
+// constantClassifier returns an [exit.Classifier] that always classifies errors
+// as code.
+func constantClassifier(code exit.Code) exit.Classifier {
+	return exit.ClassifierFunc(func(error) exit.Code {
+		return code
+	})
 }
 
 // childNames returns the names of the direct subcommands of the CLI's command,

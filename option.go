@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/bitwizeshift/go-cli/exit"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/term"
 	"github.com/bitwizeshift/go-cli/richtext"
@@ -15,16 +16,20 @@ type Option interface {
 
 // config holds the resolved options used to build a [CLI].
 type config struct {
-	runners map[string]spec.Runner
-	theme   *richtext.Theme
-	colour  spec.ColourMode
-	sizer   term.Sizer
+	runners    map[string]spec.Runner
+	theme      *richtext.Theme
+	colour     spec.ColourMode
+	sizer      term.Sizer
+	classifier exit.Classifier
 }
 
 // newConfig resolves options into a config, panicking if two options bind a
 // runner to the same command id.
 func newConfig(options ...Option) *config {
-	cfg := &config{runners: map[string]spec.Runner{}}
+	cfg := &config{
+		runners:    map[string]spec.Runner{},
+		classifier: exit.POSIXClassifier,
+	}
 	for _, opt := range options {
 		opt.apply(cfg)
 	}
@@ -86,6 +91,17 @@ func TerminalWidth(columns int) Option {
 			panic(fmt.Sprintf("TerminalWidth set to %d, which is not enough for basic formatting", columns))
 		}
 		c.sizer = term.FixedSizer(columns)
+	})
+}
+
+// ExitClassifier sets the [exit.Classifier] for this application to control
+// what the underlying exit code is given application-state errors.
+func ExitClassifier(classifier exit.Classifier) Option {
+	return option(func(c *config) {
+		if classifier == nil {
+			panic("nil classifier provided to cli.ExitClassifier")
+		}
+		c.classifier = classifier
 	})
 }
 

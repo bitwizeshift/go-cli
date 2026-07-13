@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/bitwizeshift/go-cli/exit"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +37,8 @@ var (
 // CLI is a fully assembled command-line application ready to be executed.
 type CLI struct {
 	cmd *cobra.Command
+
+	errClassifier exit.Classifier
 }
 
 // FromReader builds a [CLI] from a YAML specification read from r, binding
@@ -54,7 +57,10 @@ func FromReader(r io.Reader, options ...Option) *CLI {
 	if err != nil {
 		panic("cli: " + err.Error())
 	}
-	return &CLI{cmd: cmd}
+	return &CLI{
+		cmd:           cmd,
+		errClassifier: cfg.classifier,
+	}
 }
 
 // FromBytes builds a [CLI] from a YAML specification held in data. It is a
@@ -72,14 +78,17 @@ func (c *CLI) CobraCommand() *cobra.Command {
 // Run executes the application against ctx and reports the resulting [ExitCode]
 // without terminating the process. It returns [ExitSuccess] on success,
 // [ExitPanic] for a recovered panic, and [ExitError] for any other error.
-func (c *CLI) Run(ctx context.Context) ExitCode {
+func (c *CLI) Run(ctx context.Context) exit.Code {
 	switch err := spec.Execute(ctx, c.cmd); {
 	case err == nil:
-		return ExitSuccess
+		return exit.CodeSuccess
 	case errors.Is(err, ErrPanic):
-		return ExitPanic
+		return exit.CodeSoftware
 	default:
-		return ExitError
+		if code := c.errClassifier.ClassifyError(err); code != exit.CodeUnknown {
+			return code
+		}
+		return exit.Code(1)
 	}
 }
 
