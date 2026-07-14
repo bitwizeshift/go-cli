@@ -12,7 +12,9 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/flag/flagtest"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/flagreg"
 )
 
 // opCode is a defined multi-word type used to exercise the default kebab-case
@@ -131,11 +133,11 @@ func TestAdd_String(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var dst string
 
 			// Act
-			f := flag.Add(fs, "value", &dst, tc.options...)
+			f := flag.Add(registry, "value", &dst, tc.options...)
 			err := setEach(f.Value, tc.sets)
 
 			// Assert
@@ -183,11 +185,11 @@ func TestAdd_Int(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var dst int
 
 			// Act
-			f := flag.Add(fs, "n", &dst, tc.options...)
+			f := flag.Add(registry, "n", &dst, tc.options...)
 			err := setEach(f.Value, tc.sets)
 
 			// Assert
@@ -233,11 +235,11 @@ func TestAdd_Bool(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var dst bool
 
 			// Act
-			f := flag.Add(fs, "verbose", &dst)
+			f := flag.Add(registry, "verbose", &dst)
 			err := setEach(f.Value, tc.sets)
 
 			// Assert
@@ -281,11 +283,11 @@ func TestAdd_Slice(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var dst []int
 
 			// Act
-			f := flag.Add(fs, "n", &dst)
+			f := flag.Add(registry, "n", &dst)
 			err := setEach(f.Value, tc.sets)
 
 			// Assert
@@ -326,11 +328,11 @@ func TestAdd_DefinedSlice(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var dst stringList
 
 			// Act
-			f := flag.Add(fs, "n", &dst)
+			f := flag.Add(registry, "n", &dst)
 			err := setEach(f.Value, tc.sets)
 
 			// Assert
@@ -378,11 +380,11 @@ func TestAdd_Options(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var dst string
 
 			// Act
-			f := flag.Add(fs, "value", &dst, tc.options...)
+			f := flag.Add(registry, "value", &dst, tc.options...)
 			info := infoOf(f)
 
 			// Assert
@@ -397,15 +399,15 @@ func TestAdd_TypeNameAndBareFlag(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var opDst opCode
 	var boolDst bool
 	var toggleDst toggle
 
 	// Act
-	opFlag := flag.Add(fs, "op", &opDst)
-	boolFlag := flag.Add(fs, "bool", &boolDst)
-	toggleFlag := flag.Add(fs, "toggle", &toggleDst)
+	opFlag := flag.Add(registry, "op", &opDst)
+	boolFlag := flag.Add(registry, "bool", &boolDst)
+	toggleFlag := flag.Add(registry, "toggle", &toggleDst)
 	infos := []flagInfo{infoOf(opFlag), infoOf(boolFlag), infoOf(toggleFlag)}
 
 	// Assert
@@ -423,9 +425,9 @@ func TestAdd_NilPointerRendersEmptyString(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var dst *int
-	f := flag.Add(fs, "n", &dst)
+	f := flag.Add(registry, "n", &dst)
 
 	// Act
 	str := f.Value.String()
@@ -487,7 +489,7 @@ func TestCallback(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var seen []int
 			var dst int
 			cb := func(v int) error {
@@ -495,7 +497,7 @@ func TestCallback(t *testing.T) {
 				return nil
 			}
 			options := append([]flag.Option{flag.Callback(cb)}, tc.options...)
-			f := flag.Add(fs, "n", &dst, options...)
+			f := flag.Add(registry, "n", &dst, options...)
 
 			// Act
 			err := setEach(f.Value, tc.sets)
@@ -518,14 +520,14 @@ func TestCallback_Shapes(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var nullary, nullaryErr bool
 	var unary, unaryErr int
 	var d1, d2, d3, d4 int
-	fNullary := flag.Add(fs, "a", &d1, flag.Callback(func() { nullary = true }))
-	fUnary := flag.Add(fs, "b", &d2, flag.Callback(func(v int) { unary = v }))
-	fNullaryErr := flag.Add(fs, "c", &d3, flag.Callback(func() error { nullaryErr = true; return nil }))
-	fUnaryErr := flag.Add(fs, "d", &d4, flag.Callback(func(v int) error { unaryErr = v; return nil }))
+	fNullary := flag.Add(registry, "a", &d1, flag.Callback(func() { nullary = true }))
+	fUnary := flag.Add(registry, "b", &d2, flag.Callback(func(v int) { unary = v }))
+	fNullaryErr := flag.Add(registry, "c", &d3, flag.Callback(func() error { nullaryErr = true; return nil }))
+	fUnaryErr := flag.Add(registry, "d", &d4, flag.Callback(func(v int) error { unaryErr = v; return nil }))
 
 	// Act
 	err := errors.Join(
@@ -557,13 +559,13 @@ func TestCallback_ConvertibleArgument(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var anyDst any
 	var wideDst int64
 	var s string
 	var n int
-	fAny := flag.Add(fs, "s", &s, flag.Callback(func(v any) { anyDst = v }))
-	fWide := flag.Add(fs, "n", &n, flag.Callback(func(v int64) { wideDst = v }))
+	fAny := flag.Add(registry, "s", &s, flag.Callback(func(v any) { anyDst = v }))
+	fWide := flag.Add(registry, "n", &n, flag.Callback(func(v int64) { wideDst = v }))
 
 	// Act
 	err := errors.Join(fAny.Value.Set("hello"), fWide.Value.Set("42"))
@@ -584,9 +586,9 @@ func TestCallback_InconvertibleArgument(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var s string
-	f := flag.Add(fs, "s", &s, flag.Callback(func(chan int) {}))
+	f := flag.Add(registry, "s", &s, flag.Callback(func(chan int) {}))
 
 	// Act
 	err := f.Value.Set("hello")
@@ -601,14 +603,14 @@ func TestCallback_BoolBareInvokesTrue(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var seen []bool
 	var dst bool
 	cb := func(v bool) error {
 		seen = append(seen, v)
 		return nil
 	}
-	f := flag.Add(fs, "verbose", &dst, flag.Callback(cb))
+	f := flag.Add(registry, "verbose", &dst, flag.Callback(cb))
 
 	// Act
 	err := f.Value.Set("true")
@@ -630,11 +632,11 @@ func TestCallback_ErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	cbErr := errors.New("callback failed")
 	var dst int
 	cb := func(int) error { return cbErr }
-	f := flag.Add(fs, "n", &dst, flag.Callback(cb))
+	f := flag.Add(registry, "n", &dst, flag.Callback(cb))
 
 	// Act
 	err := f.Value.Set("5")
@@ -692,9 +694,9 @@ func TestRepeatable_ScalarKeepsLastValue(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var dst string
-	f := flag.Add(fs, "v", &dst, flag.Repeatable())
+	f := flag.Add(registry, "v", &dst, flag.Repeatable())
 
 	// Act
 	err := setEach(f.Value, []string{"a", "b", "c"})
@@ -712,9 +714,9 @@ func TestRepeatable_SliceAccumulates(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var dst []int
-	f := flag.Add(fs, "n", &dst, flag.Repeatable())
+	f := flag.Add(registry, "n", &dst, flag.Repeatable())
 
 	// Act
 	err := setEach(f.Value, []string{"1", "2"})
@@ -771,9 +773,9 @@ func TestRepeatableUpTo(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var dst string
-			f := flag.Add(fs, "v", &dst, flag.RepeatableUpTo(tc.cap))
+			f := flag.Add(registry, "v", &dst, flag.RepeatableUpTo(tc.cap))
 
 			// Act
 			err := setEach(f.Value, tc.sets)
@@ -793,12 +795,11 @@ func TestRepeatableUpTo_CapsSliceOccurrences(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+	registry := flagtest.NewRegistry()
 	var dst []int
-	f := flag.Add(fs, "n", &dst, flag.RepeatableUpTo(2))
+	f := flag.Add(registry, "n", &dst, flag.RepeatableUpTo(2))
 
-	// Act: each --n is one occurrence, so "1,2" contributes two elements but one
-	// occurrence; the third occurrence exceeds the cap.
+	// Act
 	err := setEach(f.Value, []string{"1,2", "3", "4"})
 
 	// Assert
@@ -862,11 +863,11 @@ func TestHidden(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			registry := flagtest.NewRegistry()
 			var dst string
 
 			// Act
-			f := flag.Add(fs, "flag", &dst, tc.options...)
+			f := flag.Add(registry, "flag", &dst, tc.options...)
 
 			// Assert
 			if got, want := f.Hidden, tc.want; !cmp.Equal(got, want) {
@@ -901,7 +902,7 @@ func TestRequired(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flag.NewRegistry(pflag.NewFlagSet("test", pflag.ContinueOnError))
+			fs := flagtest.NewRegistry()
 			var dst string
 
 			// Act
@@ -917,15 +918,16 @@ func TestRequired(t *testing.T) {
 
 func TestDefaultFromEnv(t *testing.T) {
 	// Arrange
-	pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	fs := flag.NewRegistry(pfs)
+	registry := flagtest.NewRegistry()
+	fs := flagreg.Flags((*flagreg.Registry)(registry))
+
 	var dst string
-	flag.Add(fs, "flag", &dst, flag.DefaultFromEnv("FLAG_ENV"))
+	flag.Add(registry, "flag", &dst, flag.DefaultFromEnv("FLAG_ENV"))
 	t.Setenv("FLAG_ENV", "from-env")
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, pfs)
+	err := annotation.SetFlagFallbacks(ctx, fs)
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -940,15 +942,15 @@ func TestDefaultFromFunc(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	fs := flag.NewRegistry(pfs)
+	registry := flagtest.NewRegistry()
+	fs := flagreg.Flags((*flagreg.Registry)(registry))
 	var dst string
 	fn := func(context.Context) (string, error) { return "from-func", nil }
-	flag.Add(fs, "flag", &dst, flag.DefaultFromFunc(fn))
+	flag.Add(registry, "flag", &dst, flag.DefaultFromFunc(fn))
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, pfs)
+	err := annotation.SetFlagFallbacks(ctx, fs)
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {

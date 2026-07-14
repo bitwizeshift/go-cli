@@ -69,6 +69,16 @@ func AddCompletion(f *pflag.Flag, fn CompletionFunc) {
 	runtime.AddCleanup(f, cleanup, id)
 }
 
+// GetCompletionFunc returns the completion function registered on f via
+// [AddCompletion], or nil if f has none.
+func GetCompletionFunc(f *pflag.Flag) CompletionFunc {
+	fn, ok := lookupCompletion(f)
+	if !ok {
+		return nil
+	}
+	return fn
+}
+
 // RegisterFlagCompletions walks the flags of cmd and registers a cobra
 // completion function for each flag annotated via [AddCompletion], translating
 // its [CompletionDirective] into the corresponding [cobra.ShellCompDirective].

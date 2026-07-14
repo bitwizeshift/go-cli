@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/internal/flagreg"
 	"github.com/spf13/cobra"
 )
 
@@ -132,7 +133,7 @@ example-cli sync origin v1.2.0 --force --timeout 1m`,
 
 // registerFlags registers the sync command's flags across two named groups.
 func registerFlags(cmd *cobra.Command) {
-	fs := flag.NewRegistry(cmd.Flags())
+	registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
 	var (
 		authToken string
 		force     bool
@@ -148,42 +149,42 @@ func registerFlags(cmd *cobra.Command) {
 	)
 
 	flag.AddToGroup("Connection Flags",
-		flag.Add(fs, "auth-token", &authToken,
+		flag.Add(registry, "auth-token", &authToken,
 			flag.Shorthand("T"),
 			flag.Usage("auth token used to authenticate with the remote"),
 		),
-		flag.Add(fs, "force", &force,
+		flag.Add(registry, "force", &force,
 			flag.Shorthand("f"),
 			flag.Usage("overwrite any item already present in the vault"),
 		),
-		flag.Add(fs, "parallel", &parallel,
+		flag.Add(registry, "parallel", &parallel,
 			flag.Shorthand("p"),
 			flag.Usage("number of transfers to run at once"),
 		),
-		flag.Add(fs, "remote", &remote,
+		flag.Add(registry, "remote", &remote,
 			flag.Shorthand("r"),
 			flag.Usage("base URL of the remote to synchronize with"),
 		),
-		flag.Add(fs, "timeout", &timeout,
+		flag.Add(registry, "timeout", &timeout,
 			flag.Shorthand("t"),
 			flag.Type("duration"),
 			flag.Usage("maximum time to wait for the sync to finish"),
 		),
 	)
 	flag.AddToGroup("Output Flags",
-		flag.Add(fs, "exclude-dependencies", &excludeDeps,
+		flag.Add(registry, "exclude-dependencies", &excludeDeps,
 			flag.Usage("skip synchronizing the transitive dependencies of the item"),
 		),
-		flag.Add(fs, "state-dir", &stateDir,
+		flag.Add(registry, "state-dir", &stateDir,
 			flag.Usage("directory in which sync state is stored"),
 		),
-		flag.Add(fs, "log", &logFile,
+		flag.Add(registry, "log", &logFile,
 			flag.Usage("file to write sync progress logs to"),
 		),
-		flag.Add(fs, "no-progress", &noProgress,
+		flag.Add(registry, "no-progress", &noProgress,
 			flag.Usage("disable the interactive progress bar"),
 		),
-		flag.Add(fs, "verbose", &verbose,
+		flag.Add(registry, "verbose", &verbose,
 			flag.Shorthand("v"),
 			flag.Usage("print additional diagnostic output while running"),
 		),

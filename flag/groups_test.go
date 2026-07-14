@@ -185,18 +185,17 @@ func TestAddToGroup(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			registry := flagtest.NewRegistry()
 			for _, f := range tc.flags {
-				fs.Bool(f.name, false, f.usage)
-			}
+				fg := flag.Add(registry, f.name, new(bool), flag.Usage(f.usage))
 
-			// Act
-			for _, f := range tc.flags {
-				flag.AddToGroup(f.group, fs.Lookup(f.name))
+				// Act
+				flag.AddToGroup(f.group, fg)
 			}
 
 			// Assert
-			if got, want := flagtest.AllFlags(fs), tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+			names := flagtest.AllFlags(registry)
+			if got, want := names, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 				t.Errorf("AddToGroup(...) mismatch (-want +got):\n%s", cmp.Diff(want, got, cmpopts.EquateEmpty()))
 			}
 		})

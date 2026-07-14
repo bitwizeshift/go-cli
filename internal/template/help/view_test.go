@@ -9,6 +9,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/flagreg"
 	"github.com/bitwizeshift/go-cli/internal/template/help"
 )
 
@@ -148,14 +149,14 @@ func commandWithGroups() *cobra.Command {
 
 func commandWithFlagGroups() *cobra.Command {
 	cmd := &cobra.Command{Use: "svc", Short: "svc", Run: noop}
-	fs := flag.NewRegistry(cmd.Flags())
+	registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
 	var force bool
 	var zulu, yankee, beta, gamma string
-	forceFlag := flag.Add(fs, "force", &force, flag.Shorthand("f"), flag.Usage("force it"))
-	zuluFlag := flag.Add(fs, "zulu", &zulu, flag.Usage("z option"))
-	betaFlag := flag.Add(fs, "beta", &beta, flag.Usage("b option"))
-	flag.Add(fs, "yankee", &yankee, flag.Usage("y option"))
-	gammaFlag := flag.Add(fs, "gamma", &gamma, flag.Usage("g option"))
+	forceFlag := flag.Add(registry, "force", &force, flag.Shorthand("f"), flag.Usage("force it"))
+	zuluFlag := flag.Add(registry, "zulu", &zulu, flag.Usage("z option"))
+	betaFlag := flag.Add(registry, "beta", &beta, flag.Usage("b option"))
+	flag.Add(registry, "yankee", &yankee, flag.Usage("y option"))
+	gammaFlag := flag.Add(registry, "gamma", &gamma, flag.Usage("g option"))
 	annotation.AddToGroup("Zeta Flags", forceFlag, zuluFlag, betaFlag)
 	annotation.AddToGroup("Secret Flags", gammaFlag)
 	betaFlag.Hidden = true

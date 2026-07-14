@@ -10,6 +10,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/flagreg"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/richtext"
 	"github.com/spf13/cobra"
@@ -142,7 +143,8 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner) *cobra.Command {
 	if runner := runners[i.ID]; runner != nil {
 		delete(runners, i.ID)
 		cmd.RunE = i.run(runner)
-		flag.Register(flag.NewRegistry(cmd.Flags()), runner)
+		registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
+		flag.Register(registry, runner)
 		annotation.ConfigureFlags(cmd)
 		annotation.RegisterFlagCompletions(cmd)
 	} else {

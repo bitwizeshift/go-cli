@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strings"
 	"unsafe"
+
+	"github.com/bitwizeshift/go-cli/internal/flagreg"
 )
 
 // Registrar abstracts objects that have flags that need to be registered to
@@ -57,13 +59,14 @@ func register(registry *Registry, rv reflect.Value, rt reflect.Type) {
 	if !rv.CanInterface() {
 		return
 	}
+	visited := flagreg.Visited((*flagreg.Registry)(registry))
 	for {
 		if registrar, ok := rv.Interface().(Registrar); ok {
 			if id, ok := instanceID(rv); ok {
-				if _, seen := registry.visited[id]; seen {
+				if _, seen := visited[id]; seen {
 					return
 				}
-				registry.visited[id] = struct{}{}
+				visited[id] = struct{}{}
 			}
 			registrar.RegisterFlags(registry)
 			return

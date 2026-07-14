@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/flagreg"
 	"github.com/bitwizeshift/go-cli/internal/strcase"
 	"github.com/spf13/pflag"
 )
@@ -331,7 +332,8 @@ func Add[T any](registry *Registry, name string, v *T, options ...Option) *pflag
 // register adds val to fs under name, applying the bool bare-flag default for an
 // unnamed bool T.
 func registerFlag[T any](registry *Registry, val *value, name string, cfg *config) *pflag.Flag {
-	f := registry.flags.VarPF(val, name, cfg.shorthand, cfg.usage)
+	flags := flagreg.Flags((*flagreg.Registry)(registry))
+	f := flags.VarPF(val, name, cfg.shorthand, cfg.usage)
 	f.Hidden = cfg.hidden
 	if cfg.required {
 		annotation.MarkRequired(f)

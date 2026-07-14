@@ -27,6 +27,64 @@ func TestAddCompletion(t *testing.T) {
 	}
 }
 
+func TestGetCompletionFunc_FlagWithCompletion_ReturnsCompletion(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	target := newStringFlag("flag")
+	annotation.AddCompletion(target, func(toComplete string) ([]string, annotation.CompletionDirective) {
+		return []string{toComplete + "-value"}, annotation.CompletionNoFileComp
+	})
+
+	// Act
+	sut := annotation.GetCompletionFunc(target)
+	values, directive := complete(t, sut, "flag")
+
+	// Assert
+	if got, want := values, []string{"flag-value"}; !cmp.Equal(got, want) {
+		t.Errorf("GetCompletionFunc(...)(...) values = %v, want %v\n%s", got, want, cmp.Diff(want, got))
+	}
+	if got, want := directive, annotation.CompletionNoFileComp; !cmp.Equal(got, want) {
+		t.Errorf("GetCompletionFunc(...)(...) directive = %v, want %v", got, want)
+	}
+}
+
+func TestGetCompletionFunc_FlagWithoutCompletion_ReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		annotations map[string][]string
+	}{
+		{
+			name:        "Unannotated",
+			annotations: nil,
+		},
+		{
+			name:        "UnknownCompletionID",
+			annotations: map[string][]string{annotation.AnnotationCompletion: {"not-a-registered-id"}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			target := newStringFlag("flag")
+			target.Annotations = tc.annotations
+
+			// Act
+			sut := annotation.GetCompletionFunc(target)
+
+			// Assert
+			if got, want := sut == nil, true; !cmp.Equal(got, want) {
+				t.Errorf("GetCompletionFunc(...) = nil %t, want %t", got, want)
+			}
+		})
+	}
+}
+
 func TestRegisterFlagCompletions(t *testing.T) {
 	t.Parallel()
 
@@ -113,6 +171,16 @@ func newStringFlagCommand(name string) *cobra.Command {
 	cmd := &cobra.Command{Use: "root"}
 	cmd.Flags().String(name, "", "")
 	return cmd
+}
+
+// complete invokes fn with toComplete, failing the test if no completion
+// function was found.
+func complete(t testing.TB, fn annotation.CompletionFunc, toComplete string) ([]string, annotation.CompletionDirective) {
+	t.Helper()
+	if fn == nil {
+		t.Fatalf("GetCompletionFunc(...) = nil, want a completion function")
+	}
+	return fn(toComplete)
 }
 
 // invokeCompletion invokes the completion function registered on cmd for the

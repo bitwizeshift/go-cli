@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/spf13/pflag"
 
 	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/flag/flagtest"
 )
 
 // boolFlag is a [flag.Registrar] that registers a single bool flag identified
@@ -165,14 +165,13 @@ func TestRegister(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-			fs := flag.NewRegistry(pfs)
+			registry := flagtest.NewRegistry()
 
 			// Act
-			flag.Register(fs, tc.v)
+			flag.Register(registry, tc.v)
 
 			// Assert
-			names := flagNames(pfs)
+			names := flagtest.LongFlags(registry)
 			opts := cmp.Options{cmpopts.SortSlices(strings.Compare), cmpopts.EquateEmpty()}
 			if got, want := names, tc.want; !cmp.Equal(got, want, opts...) {
 				t.Errorf("Register(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got, opts...))
@@ -226,28 +225,17 @@ func TestRegister_UniqueInstances(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-			fs := flag.NewRegistry(pfs)
+			registry := flagtest.NewRegistry()
 
 			// Act
-			flag.Register(fs, tc.v)
+			flag.Register(registry, tc.v)
 
 			// Assert
-			names := flagNames(pfs)
+			names := flagtest.LongFlags(registry)
 			opts := cmp.Options{cmpopts.SortSlices(strings.Compare), cmpopts.EquateEmpty()}
 			if got, want := names, tc.want; !cmp.Equal(got, want, opts...) {
 				t.Errorf("Register(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got, opts...))
 			}
 		})
 	}
-}
-
-// flagNames returns the names of all flags registered in fs, sorted
-// lexicographically by [pflag.FlagSet.VisitAll].
-func flagNames(fs *pflag.FlagSet) []string {
-	var names []string
-	fs.VisitAll(func(f *pflag.Flag) {
-		names = append(names, f.Name)
-	})
-	return names
 }

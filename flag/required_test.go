@@ -5,29 +5,22 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/spf13/pflag"
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/flag/flagtest"
 )
 
-// newFlagSet returns a flag set with two boolean flags "a" and "b".
-func newFlagSet() *pflag.FlagSet {
-	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	fs.Bool("a", false, "")
-	fs.Bool("b", false, "")
-	return fs
-}
-
 func TestMarkRequired(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := newFlagSet()
-	flag.MarkRequired(fs.Lookup("a"))
+	registry := flagtest.NewRegistry()
+	a := flag.Add(registry, "a", new(bool))
+	flag.Add(registry, "b", new(bool))
+	flag.MarkRequired(a)
 
 	// Act
-	flags := flagtest.AllFlags(fs)
+	flags := flagtest.AllFlags(registry)
 
 	// Assert
 	want := []*flagtest.Flag{
@@ -43,11 +36,13 @@ func TestMarkRequiredTogether(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := newFlagSet()
-	flag.MarkRequiredTogether(fs.Lookup("a"), fs.Lookup("b"))
+	registry := flagtest.NewRegistry()
+	a := flag.Add(registry, "a", new(bool))
+	b := flag.Add(registry, "b", new(bool))
+	flag.MarkRequiredTogether(a, b)
 
 	// Act
-	flags := flagtest.AllFlags(fs)
+	flags := flagtest.AllFlags(registry)
 
 	// Assert
 	want := []*flagtest.Flag{
@@ -63,11 +58,13 @@ func TestMarkMutuallyExclusive(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := newFlagSet()
-	flag.MarkMutuallyExclusive(fs.Lookup("a"), fs.Lookup("b"))
+	registry := flagtest.NewRegistry()
+	a := flag.Add(registry, "a", new(bool))
+	b := flag.Add(registry, "b", new(bool))
+	flag.MarkMutuallyExclusive(a, b)
 
 	// Act
-	flags := flagtest.AllFlags(fs)
+	flags := flagtest.AllFlags(registry)
 
 	// Assert
 	want := []*flagtest.Flag{
@@ -83,11 +80,13 @@ func TestMarkOneRequired(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	fs := newFlagSet()
-	flag.MarkOneRequired(fs.Lookup("a"), fs.Lookup("b"))
+	registry := flagtest.NewRegistry()
+	a := flag.Add(registry, "a", new(bool))
+	b := flag.Add(registry, "b", new(bool))
+	flag.MarkOneRequired(a, b)
 
 	// Act
-	flags := flagtest.AllFlags(fs)
+	flags := flagtest.AllFlags(registry)
 
 	// Assert
 	want := []*flagtest.Flag{

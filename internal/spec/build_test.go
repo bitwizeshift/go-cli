@@ -8,6 +8,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/flag/flagtest"
+	"github.com/bitwizeshift/go-cli/internal/flagreg"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/spec/spectest"
 	"github.com/google/go-cmp/cmp"
@@ -221,12 +222,13 @@ func TestBuild_BoundRunner_RegistersFlags(t *testing.T) {
 			"root": &flaggedRunner{},
 		},
 	})
+	registry := (*flag.Registry)(flagreg.FromFlagSet(sut.Flags()))
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("spec.Build(...) = _, %v, want nil", err)
 	}
-	flags := flagtest.LongFlags(sut.Flags())
+	flags := flagtest.LongFlags(registry)
 	if got, want := flags, []string{"format", "verbose"}; !cmp.Equal(got, want) {
 		t.Errorf("flags = %v, want %v", got, want)
 	}

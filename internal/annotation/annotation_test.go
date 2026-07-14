@@ -731,6 +731,28 @@ func TestSetFlagFallbacks_SkipsChangedFlag(t *testing.T) {
 	}
 }
 
+func TestSetFlagFallbacks_UnregisteredFuncFallback_SkipsFlag(t *testing.T) {
+	// Arrange
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs.String("flag", "", "")
+	target := fs.Lookup("flag")
+	target.Annotations = map[string][]string{
+		annotation.AnnotationFuncFallback: {"not-a-registered-id"},
+	}
+	ctx := context.Background()
+
+	// Act
+	err := annotation.SetFlagFallbacks(ctx, fs)
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("SetFlagFallbacks(...) = %v, want %v", got, want)
+	}
+	if got, want := target.Value.String(), ""; got != want {
+		t.Errorf("flag value = %q, want %q", got, want)
+	}
+}
+
 func TestSetFlagFallbacks_JoinsErrors(t *testing.T) {
 	// Arrange
 	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)

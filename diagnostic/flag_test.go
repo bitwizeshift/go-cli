@@ -7,21 +7,19 @@ import (
 
 	"github.com/bitwizeshift/go-cli/clitest"
 	"github.com/bitwizeshift/go-cli/diagnostic"
-	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/flag/flagtest"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/spf13/pflag"
 )
 
-// parseFormat registers lf into a fresh flag set and parses args, failing the
+// parseFormat registers lf into a fresh registry and parses args, failing the
 // test on a parse error.
 func parseFormat(t *testing.T, lf *diagnostic.LoggerFlag, args ...string) {
 	t.Helper()
 
-	pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-	lf.RegisterFlags(flag.NewRegistry(pfs))
-	flagtest.Parse(t, pfs, args...)
+	registry := flagtest.NewRegistry()
+	lf.RegisterFlags(registry)
+	flagtest.Parse(t, registry, args...)
 }
 
 func TestFormatType_UnmarshalText(t *testing.T) {
@@ -111,15 +109,15 @@ func TestLoggerFlag_RegisterFlags(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			registry := flagtest.NewRegistry()
 			lf := tc.flag
 
 			// Act
-			lf.RegisterFlags(flag.NewRegistry(pfs))
-			got := flagtest.AllFlags(pfs)
+			lf.RegisterFlags(registry)
+			flags := flagtest.AllFlags(registry)
 
 			// Assert
-			if got, want := got, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+			if got, want := flags, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 				t.Errorf("RegisterFlags(...) flags = %+v, want %+v", got, want)
 			}
 		})
