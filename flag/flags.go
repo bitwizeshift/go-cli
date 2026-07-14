@@ -275,7 +275,7 @@ func (v *value) Type() string       { return v.typ() }
 var _ pflag.Value = (*value)(nil)
 
 // Add registers a flag named name whose value is decoded into v, returning the
-// created [pflag.Flag].
+// created [Flag].
 //
 // By default the flag is decoded with [Unmarshal] and reports a kebab-case type
 // name derived from T; both may be adjusted with [Option] values. A bool-kinded
@@ -287,7 +287,7 @@ var _ pflag.Value = (*value)(nil)
 // caps it, reporting [ErrTooManyOccurrences] beyond the cap; a repeated non-slice
 // flag keeps the last value. [Callback] options are invoked with the decoded
 // value on each occurrence.
-func Add[T any](registry *Registry, name string, v *T, options ...Option) *pflag.Flag {
+func Add[T any](registry *Registry, name string, v *T, options ...Option) *Flag {
 	cfg := newConfig(options...)
 	slice := isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Slice
 	limit := 1
@@ -331,7 +331,7 @@ func Add[T any](registry *Registry, name string, v *T, options ...Option) *pflag
 
 // register adds val to fs under name, applying the bool bare-flag default for an
 // unnamed bool T.
-func registerFlag[T any](registry *Registry, val *value, name string, cfg *config) *pflag.Flag {
+func registerFlag[T any](registry *Registry, val *value, name string, cfg *config) *Flag {
 	flags := flagreg.Flags((*flagreg.Registry)(registry))
 	f := flags.VarPF(val, name, cfg.shorthand, cfg.usage)
 	f.Hidden = cfg.hidden
@@ -350,7 +350,7 @@ func registerFlag[T any](registry *Registry, val *value, name string, cfg *confi
 	if cfg.completer != nil {
 		annotation.AddCompletion(f, cfg.completer)
 	}
-	return f
+	return &Flag{flag: f}
 }
 
 // isBuiltin reports whether T is a predeclared or composite type (such as bool

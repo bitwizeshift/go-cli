@@ -1,21 +1,15 @@
 package flag_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/spf13/pflag"
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/flag/flagtest"
 )
-
-// flagName reduces a [pflag.Flag] to its long name so that [flag.Group] values
-// may be compared without depending on unexported flag state.
-var flagName = cmp.Transformer("flagName", func(f *pflag.Flag) string {
-	return f.Name
-})
 
 // groupFlag is a declarative specification of a flag to register, along with
 // the group it belongs to. An empty group leaves the flag ungrouped.
@@ -25,16 +19,53 @@ type groupFlag struct {
 	group string
 }
 
+// groupInfo captures a [flag.Group] as its name and the long names of its
+// flags, so that groups may be compared as plain data.
+type groupInfo struct {
+	Name  string
+	Flags []string
+}
+
+// groupInfosOf reduces groups to their comparable form.
+func groupInfosOf(groups []*flag.Group) []groupInfo {
+	var result []groupInfo
+	for _, g := range groups {
+		info := groupInfo{Name: g.Name}
+		for _, f := range g.Flags {
+			info.Flags = append(info.Flags, f.Name())
+		}
+		result = append(result, info)
+	}
+	return result
+}
+
+// hiddenFlags registers a bool flag for each entry in hidden, marking the flag
+// hidden when its entry is set.
+func hiddenFlags(t testing.TB, hidden []bool) []*flag.Flag {
+	t.Helper()
+
+	registry := flagtest.NewRegistry()
+	var flags []*flag.Flag
+	for i, h := range hidden {
+		var options []flag.Option
+		if h {
+			options = append(options, flag.Hidden())
+		}
+		flags = append(flags, flag.Add(registry, fmt.Sprintf("flag%d", i), new(bool), options...))
+	}
+	return flags
+}
+
 func TestGroups(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name  string
 		flags []groupFlag
-		want  []*flag.Group
+		want  []groupInfo
 	}{
 		{
-			name:  "EmptyFlagSetHasNoGroups",
+			name:  "EmptyRegistryHasNoGroups",
 			flags: nil,
 			want:  nil,
 		},
@@ -44,10 +75,10 @@ func TestGroups(t *testing.T) {
 				{name: "b"},
 				{name: "a"},
 			},
-			want: []*flag.Group{
+			want: []groupInfo{
 				{
 					Name:  "General Flags",
-					Flags: []*pflag.Flag{{Name: "a"}, {Name: "b"}},
+					Flags: []string{"a", "b"},
 				},
 			},
 		},
@@ -57,14 +88,14 @@ func TestGroups(t *testing.T) {
 				{name: "a", group: "Zeta"},
 				{name: "b", group: "Alpha"},
 			},
-			want: []*flag.Group{
+			want: []groupInfo{
 				{
 					Name:  "Alpha",
-					Flags: []*pflag.Flag{{Name: "b"}},
+					Flags: []string{"b"},
 				},
 				{
 					Name:  "Zeta",
-					Flags: []*pflag.Flag{{Name: "a"}},
+					Flags: []string{"a"},
 				},
 			},
 		},
@@ -74,14 +105,14 @@ func TestGroups(t *testing.T) {
 				{name: "a"},
 				{name: "z", group: "Named"},
 			},
-			want: []*flag.Group{
+			want: []groupInfo{
 				{
 					Name:  "Named",
-					Flags: []*pflag.Flag{{Name: "z"}},
+					Flags: []string{"z"},
 				},
 				{
 					Name:  "General Flags",
-					Flags: []*pflag.Flag{{Name: "a"}},
+					Flags: []string{"a"},
 				},
 			},
 		},
@@ -91,14 +122,14 @@ func TestGroups(t *testing.T) {
 				{name: "a", group: "Named"},
 				{name: "z"},
 			},
-			want: []*flag.Group{
+			want: []groupInfo{
 				{
 					Name:  "Named",
-					Flags: []*pflag.Flag{{Name: "a"}},
+					Flags: []string{"a"},
 				},
 				{
 					Name:  "General Flags",
-					Flags: []*pflag.Flag{{Name: "z"}},
+					Flags: []string{"z"},
 				},
 			},
 		},
@@ -108,10 +139,10 @@ func TestGroups(t *testing.T) {
 				{name: "b", group: "Shared"},
 				{name: "a", group: "Shared"},
 			},
-			want: []*flag.Group{
+			want: []groupInfo{
 				{
 					Name:  "Shared",
-					Flags: []*pflag.Flag{{Name: "a"}, {Name: "b"}},
+					Flags: []string{"a", "b"},
 				},
 			},
 		},
@@ -122,20 +153,18 @@ func TestGroups(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+			registry := flagtest.NewRegistry()
 			for _, f := range tc.flags {
-				fs.Bool(f.name, false, f.usage)
-			}
-			for _, f := range tc.flags {
-				flag.AddToGroup(f.group, fs.Lookup(f.name))
+				added := flag.Add(registry, f.name, new(bool), flag.Usage(f.usage))
+				flag.AddToGroup(f.group, added)
 			}
 
 			// Act
-			groups := flag.Groups(fs)
+			groups := groupInfosOf(flag.Groups(registry))
 
 			// Assert
-			if got, want := groups, tc.want; !cmp.Equal(got, want, flagName, cmpopts.EquateEmpty()) {
-				t.Errorf("Groups(...) mismatch (-want +got):\n%s", cmp.Diff(want, got, flagName, cmpopts.EquateEmpty()))
+			if got, want := groups, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("Groups(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got, cmpopts.EquateEmpty()))
 			}
 		})
 	}
@@ -242,13 +271,10 @@ func TestGroup_Hidden(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			group := &flag.Group{}
-			for _, h := range tc.hidden {
-				group.Flags = append(group.Flags, &pflag.Flag{Hidden: h})
-			}
+			sut := &flag.Group{Flags: hiddenFlags(t, tc.hidden)}
 
 			// Act
-			hidden := group.Hidden()
+			hidden := sut.Hidden()
 
 			// Assert
 			if got, want := hidden, tc.want; !cmp.Equal(got, want) {

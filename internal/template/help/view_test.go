@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/flagreg"
 	"github.com/bitwizeshift/go-cli/internal/template/help"
 )
@@ -154,13 +153,11 @@ func commandWithFlagGroups() *cobra.Command {
 	var zulu, yankee, beta, gamma string
 	forceFlag := flag.Add(registry, "force", &force, flag.Shorthand("f"), flag.Usage("force it"))
 	zuluFlag := flag.Add(registry, "zulu", &zulu, flag.Usage("z option"))
-	betaFlag := flag.Add(registry, "beta", &beta, flag.Usage("b option"))
+	betaFlag := flag.Add(registry, "beta", &beta, flag.Usage("b option"), flag.Hidden())
 	flag.Add(registry, "yankee", &yankee, flag.Usage("y option"))
-	gammaFlag := flag.Add(registry, "gamma", &gamma, flag.Usage("g option"))
-	annotation.AddToGroup("Zeta Flags", forceFlag, zuluFlag, betaFlag)
-	annotation.AddToGroup("Secret Flags", gammaFlag)
-	betaFlag.Hidden = true
-	gammaFlag.Hidden = true
+	gammaFlag := flag.Add(registry, "gamma", &gamma, flag.Usage("g option"), flag.Hidden())
+	flag.AddToGroup("Zeta Flags", forceFlag, zuluFlag, betaFlag)
+	flag.AddToGroup("Secret Flags", gammaFlag)
 	return cmd
 }
 

@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/internal/flagreg"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 // additionalCommands is the group title used for subcommands that do not belong
@@ -150,8 +150,10 @@ func visibleCommand(c *cobra.Command) bool {
 // flagGroupsOf returns the visible flag groups of cmd. Fully hidden groups are
 // omitted, and hidden flags within a group are excluded.
 func flagGroupsOf(cmd *cobra.Command) []FlagGroup {
+	registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
+
 	var groups []FlagGroup
-	for _, group := range flag.Groups(cmd.Flags()) {
+	for _, group := range flag.Groups(registry) {
 		if group.Hidden() {
 			continue
 		}
@@ -159,7 +161,7 @@ func flagGroupsOf(cmd *cobra.Command) []FlagGroup {
 		// [flag.Group.Hidden] reports true only when every flag is hidden.
 		var flags []FlagInfo
 		for _, f := range group.Flags {
-			if f.Hidden {
+			if f.Hidden() {
 				continue
 			}
 			flags = append(flags, flagInfoOf(f))
@@ -170,19 +172,19 @@ func flagGroupsOf(cmd *cobra.Command) []FlagGroup {
 }
 
 // flagInfoOf extracts the display information for a single flag.
-func flagInfoOf(f *pflag.Flag) FlagInfo {
+func flagInfoOf(f *flag.Flag) FlagInfo {
 	return FlagInfo{
-		Shorthand: f.Shorthand,
-		Name:      f.Name,
+		Shorthand: f.Shorthand(),
+		Name:      f.Name(),
 		Type:      flagTypeOf(f),
-		Usage:     f.Usage,
+		Usage:     f.Usage(),
 	}
 }
 
 // flagTypeOf returns the type name to display for f, or an empty string for
 // boolean flags, which take no value argument.
-func flagTypeOf(f *pflag.Flag) string {
-	if t := f.Value.Type(); t != "bool" {
+func flagTypeOf(f *flag.Flag) string {
+	if t := f.Type(); t != "bool" {
 		return t
 	}
 	return ""

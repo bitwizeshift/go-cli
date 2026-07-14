@@ -20,9 +20,10 @@ func TestAddCompletion(t *testing.T) {
 	annotation.AddCompletion(target, func(string) ([]string, annotation.CompletionDirective) {
 		return nil, annotation.CompletionDefault
 	})
+	ids := len(target.Annotations[annotation.AnnotationCompletion])
 
 	// Assert
-	if got, want := len(target.Annotations[annotation.AnnotationCompletion]), 1; got != want {
+	if got, want := ids, 1; !cmp.Equal(got, want) {
 		t.Errorf("AddCompletion(...) recorded %d ids, want %d", got, want)
 	}
 }
@@ -143,7 +144,7 @@ func TestRegisterFlagCompletions(t *testing.T) {
 			if got, want := values, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 				t.Errorf("completion values = %v, want %v\n%s", got, want, cmp.Diff(want, got))
 			}
-			if got, want := directive, tc.wantDirective; got != want {
+			if got, want := directive, tc.wantDirective; !cmp.Equal(got, want) {
 				t.Errorf("completion directive = %v, want %v", got, want)
 			}
 		})

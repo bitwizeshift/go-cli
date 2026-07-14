@@ -9,12 +9,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/spf13/pflag"
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/flag/flagtest"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
-	"github.com/bitwizeshift/go-cli/internal/flagreg"
 )
 
 // opCode is a defined multi-word type used to exercise the default kebab-case
@@ -44,15 +42,25 @@ func parseHexInt(data []byte) (int, error) {
 	return int(n), err
 }
 
-// setEach applies each value to v in order, mirroring one flag occurrence per
+// set assigns value to f, mirroring a single flag occurrence.
+func set(f *flag.Flag, value string) error {
+	return f.Flag().Value.Set(value)
+}
+
+// setEach applies each value to f in order, mirroring one flag occurrence per
 // value, and returns the first error encountered.
-func setEach(v pflag.Value, values []string) error {
+func setEach(f *flag.Flag, values []string) error {
 	for _, s := range values {
-		if err := v.Set(s); err != nil {
+		if err := set(f, s); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// valueOf renders the value currently assigned to f.
+func valueOf(f *flag.Flag) string {
+	return f.Flag().Value.String()
 }
 
 // requirePanic fails the test unless fn panics.
@@ -76,12 +84,12 @@ type flagInfo struct {
 }
 
 // infoOf reads the observable properties of f into a [flagInfo].
-func infoOf(f *pflag.Flag) flagInfo {
+func infoOf(f *flag.Flag) flagInfo {
 	return flagInfo{
-		Short: f.Shorthand,
-		Type:  f.Value.Type(),
-		Usage: f.Usage,
-		NoOpt: f.NoOptDefVal,
+		Short: f.Shorthand(),
+		Type:  f.Type(),
+		Usage: f.Usage(),
+		NoOpt: f.Flag().NoOptDefVal,
 	}
 }
 
@@ -138,7 +146,7 @@ func TestAdd_String(t *testing.T) {
 
 			// Act
 			f := flag.Add(registry, "value", &dst, tc.options...)
-			err := setEach(f.Value, tc.sets)
+			err := setEach(f, tc.sets)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -190,7 +198,7 @@ func TestAdd_Int(t *testing.T) {
 
 			// Act
 			f := flag.Add(registry, "n", &dst, tc.options...)
-			err := setEach(f.Value, tc.sets)
+			err := setEach(f, tc.sets)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -240,7 +248,7 @@ func TestAdd_Bool(t *testing.T) {
 
 			// Act
 			f := flag.Add(registry, "verbose", &dst)
-			err := setEach(f.Value, tc.sets)
+			err := setEach(f, tc.sets)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -288,7 +296,7 @@ func TestAdd_Slice(t *testing.T) {
 
 			// Act
 			f := flag.Add(registry, "n", &dst)
-			err := setEach(f.Value, tc.sets)
+			err := setEach(f, tc.sets)
 
 			// Assert
 			if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -333,7 +341,7 @@ func TestAdd_DefinedSlice(t *testing.T) {
 
 			// Act
 			f := flag.Add(registry, "n", &dst)
-			err := setEach(f.Value, tc.sets)
+			err := setEach(f, tc.sets)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -430,7 +438,7 @@ func TestAdd_NilPointerRendersEmptyString(t *testing.T) {
 	f := flag.Add(registry, "n", &dst)
 
 	// Act
-	str := f.Value.String()
+	str := valueOf(f)
 
 	// Assert
 	if got, want := str, ""; !cmp.Equal(got, want) {
@@ -500,7 +508,7 @@ func TestCallback(t *testing.T) {
 			f := flag.Add(registry, "n", &dst, options...)
 
 			// Act
-			err := setEach(f.Value, tc.sets)
+			err := setEach(f, tc.sets)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -531,26 +539,26 @@ func TestCallback_Shapes(t *testing.T) {
 
 	// Act
 	err := errors.Join(
-		fNullary.Value.Set("1"),
-		fUnary.Value.Set("2"),
-		fNullaryErr.Value.Set("3"),
-		fUnaryErr.Value.Set("4"),
+		set(fNullary, "1"),
+		set(fUnary, "2"),
+		set(fNullaryErr, "3"),
+		set(fUnaryErr, "4"),
 	)
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("Set(...) error = %v, want %v", got, want)
 	}
-	if got, want := nullary, true; got != want {
+	if got, want := nullary, true; !cmp.Equal(got, want) {
 		t.Errorf("func() callback invoked = %v, want %v", got, want)
 	}
-	if got, want := nullaryErr, true; got != want {
+	if got, want := nullaryErr, true; !cmp.Equal(got, want) {
 		t.Errorf("func() error callback invoked = %v, want %v", got, want)
 	}
-	if got, want := unary, 2; got != want {
+	if got, want := unary, 2; !cmp.Equal(got, want) {
 		t.Errorf("func(value) callback value = %v, want %v", got, want)
 	}
-	if got, want := unaryErr, 4; got != want {
+	if got, want := unaryErr, 4; !cmp.Equal(got, want) {
 		t.Errorf("func(value) error callback value = %v, want %v", got, want)
 	}
 }
@@ -568,7 +576,7 @@ func TestCallback_ConvertibleArgument(t *testing.T) {
 	fWide := flag.Add(registry, "n", &n, flag.Callback(func(v int64) { wideDst = v }))
 
 	// Act
-	err := errors.Join(fAny.Value.Set("hello"), fWide.Value.Set("42"))
+	err := errors.Join(set(fAny, "hello"), set(fWide, "42"))
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -591,7 +599,7 @@ func TestCallback_InconvertibleArgument(t *testing.T) {
 	f := flag.Add(registry, "s", &s, flag.Callback(func(chan int) {}))
 
 	// Act
-	err := f.Value.Set("hello")
+	err := set(f, "hello")
 
 	// Assert
 	if got, want := err, cmpopts.AnyError; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -613,7 +621,7 @@ func TestCallback_BoolBareInvokesTrue(t *testing.T) {
 	f := flag.Add(registry, "verbose", &dst, flag.Callback(cb))
 
 	// Act
-	err := f.Value.Set("true")
+	err := set(f, "true")
 	info := infoOf(f)
 
 	// Assert
@@ -639,7 +647,7 @@ func TestCallback_ErrorPropagates(t *testing.T) {
 	f := flag.Add(registry, "n", &dst, flag.Callback(cb))
 
 	// Act
-	err := f.Value.Set("5")
+	err := set(f, "5")
 
 	// Assert
 	if got, want := err, cbErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -699,7 +707,7 @@ func TestRepeatable_ScalarKeepsLastValue(t *testing.T) {
 	f := flag.Add(registry, "v", &dst, flag.Repeatable())
 
 	// Act
-	err := setEach(f.Value, []string{"a", "b", "c"})
+	err := setEach(f, []string{"a", "b", "c"})
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -719,7 +727,7 @@ func TestRepeatable_SliceAccumulates(t *testing.T) {
 	f := flag.Add(registry, "n", &dst, flag.Repeatable())
 
 	// Act
-	err := setEach(f.Value, []string{"1", "2"})
+	err := setEach(f, []string{"1", "2"})
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -778,7 +786,7 @@ func TestRepeatableUpTo(t *testing.T) {
 			f := flag.Add(registry, "v", &dst, flag.RepeatableUpTo(tc.cap))
 
 			// Act
-			err := setEach(f.Value, tc.sets)
+			err := setEach(f, tc.sets)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -800,7 +808,7 @@ func TestRepeatableUpTo_CapsSliceOccurrences(t *testing.T) {
 	f := flag.Add(registry, "n", &dst, flag.RepeatableUpTo(2))
 
 	// Act
-	err := setEach(f.Value, []string{"1,2", "3", "4"})
+	err := setEach(f, []string{"1,2", "3", "4"})
 
 	// Assert
 	if got, want := err, flag.ErrTooManyOccurrences; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -868,9 +876,10 @@ func TestHidden(t *testing.T) {
 
 			// Act
 			f := flag.Add(registry, "flag", &dst, tc.options...)
+			hidden := f.Hidden()
 
 			// Assert
-			if got, want := f.Hidden, tc.want; !cmp.Equal(got, want) {
+			if got, want := hidden, tc.want; !cmp.Equal(got, want) {
 				t.Errorf("Add(...) hidden = %t, want %t", got, want)
 			}
 		})
@@ -902,14 +911,15 @@ func TestRequired(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			fs := flagtest.NewRegistry()
+			registry := flagtest.NewRegistry()
 			var dst string
 
 			// Act
-			f := flag.Add(fs, "flag", &dst, tc.options...)
+			f := flag.Add(registry, "flag", &dst, tc.options...)
+			required := f.Required()
 
 			// Assert
-			if got, want := annotation.IsRequired(f), tc.want; !cmp.Equal(got, want) {
+			if got, want := required, tc.want; !cmp.Equal(got, want) {
 				t.Errorf("Add(...) required = %t, want %t", got, want)
 			}
 		})
@@ -919,15 +929,13 @@ func TestRequired(t *testing.T) {
 func TestDefaultFromEnv(t *testing.T) {
 	// Arrange
 	registry := flagtest.NewRegistry()
-	fs := flagreg.Flags((*flagreg.Registry)(registry))
-
 	var dst string
 	flag.Add(registry, "flag", &dst, flag.DefaultFromEnv("FLAG_ENV"))
 	t.Setenv("FLAG_ENV", "from-env")
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, fs)
+	err := annotation.SetFlagFallbacks(ctx, registry.FlagSet())
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -943,14 +951,13 @@ func TestDefaultFromFunc(t *testing.T) {
 
 	// Arrange
 	registry := flagtest.NewRegistry()
-	fs := flagreg.Flags((*flagreg.Registry)(registry))
 	var dst string
 	fn := func(context.Context) (string, error) { return "from-func", nil }
 	flag.Add(registry, "flag", &dst, flag.DefaultFromFunc(fn))
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, fs)
+	err := annotation.SetFlagFallbacks(ctx, registry.FlagSet())
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {

@@ -8,90 +8,116 @@ import (
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/flag/flagtest"
+	"github.com/bitwizeshift/go-cli/internal/annotation"
 )
+
+// completion is what a flag offers for a word being completed: the candidates it
+// returns, and the directive telling a shell how to treat them.
+type completion struct {
+	Candidates []string
+	Directive  annotation.CompletionDirective
+}
+
+// completionOf registers a string flag carrying option, and completes it with
+// the partial word toComplete. It fails the test if option registered no
+// completion on the flag.
+func completionOf(t testing.TB, option flag.Option, toComplete string) completion {
+	t.Helper()
+
+	f := flag.Add(flagtest.NewRegistry(), "value", new(string), option)
+	complete := annotation.GetCompletionFunc(f.Flag())
+	if complete == nil {
+		t.Fatalf("Add(...) registered no completion function, want one")
+	}
+	candidates, directive := complete(toComplete)
+	return completion{
+		Candidates: candidates,
+		Directive:  directive,
+	}
+}
+
+// suffixCompleter completes the word being completed by suffixing it, to observe
+// that the word reaches a [flag.CompleterFunc] unaltered.
+func suffixCompleter(toComplete string) []string {
+	return []string{toComplete + "-done"}
+}
+
+// noCompleter is a completer that offers no candidates.
+func noCompleter(string) []string {
+	return nil
+}
 
 func TestCompletionOptions(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name           string
-		option         flag.Option
-		toComplete     string
-		want           []string
-		wantExtensions []string
-		wantValues     bool
-		wantFiles      bool
-		wantDirs       bool
+		name       string
+		option     flag.Option
+		toComplete string
+		want       completion
 	}{
 		{
-			name:           "CompleteFromMatchesPrefix",
-			option:         flag.CompleteFrom("json", "yaml", "jsonl"),
-			toComplete:     "js",
-			want:           []string{"json", "jsonl"},
-			wantExtensions: nil,
-			wantValues:     true,
-			wantFiles:      false,
-			wantDirs:       false,
+			name:       "CompleteFromMatchesPrefix",
+			option:     flag.CompleteFrom("json", "yaml", "jsonl"),
+			toComplete: "js",
+			want: completion{
+				Candidates: []string{"json", "jsonl"},
+				Directive:  annotation.CompletionNoFileComp,
+			},
 		},
 		{
-			name:           "CompleteFromEmptyPrefixMatchesAll",
-			option:         flag.CompleteFrom("json", "yaml"),
-			toComplete:     "",
-			want:           []string{"json", "yaml"},
-			wantExtensions: nil,
-			wantValues:     true,
-			wantFiles:      false,
-			wantDirs:       false,
+			name:       "CompleteFromEmptyPrefixMatchesAll",
+			option:     flag.CompleteFrom("json", "yaml"),
+			toComplete: "",
+			want: completion{
+				Candidates: []string{"json", "yaml"},
+				Directive:  annotation.CompletionNoFileComp,
+			},
 		},
 		{
-			name:           "CompleteFromNoMatchReturnsEmpty",
-			option:         flag.CompleteFrom("json", "yaml"),
-			toComplete:     "x",
-			want:           nil,
-			wantExtensions: nil,
-			wantValues:     true,
-			wantFiles:      false,
-			wantDirs:       false,
+			name:       "CompleteFromNoMatchOffersNothing",
+			option:     flag.CompleteFrom("json", "yaml"),
+			toComplete: "x",
+			want: completion{
+				Candidates: nil,
+				Directive:  annotation.CompletionNoFileComp,
+			},
 		},
 		{
-			name:           "CompleterFuncPassesCandidatesThrough",
-			option:         flag.CompleterFunc(suffixCompleter),
-			toComplete:     "value",
-			want:           []string{"value-done"},
-			wantExtensions: nil,
-			wantValues:     true,
-			wantFiles:      false,
-			wantDirs:       false,
+			name:       "CompleterFuncOffersItsCandidates",
+			option:     flag.CompleterFunc(suffixCompleter),
+			toComplete: "value",
+			want: completion{
+				Candidates: []string{"value-done"},
+				Directive:  annotation.CompletionNoFileComp,
+			},
 		},
 		{
-			name:           "CompleteFilesDefersToShell",
-			option:         flag.CompleteFiles(),
-			toComplete:     "",
-			want:           nil,
-			wantExtensions: nil,
-			wantValues:     false,
-			wantFiles:      true,
-			wantDirs:       false,
+			name:       "CompleteFilesDefersToShell",
+			option:     flag.CompleteFiles(),
+			toComplete: "",
+			want: completion{
+				Candidates: nil,
+				Directive:  annotation.CompletionDefault,
+			},
 		},
 		{
-			name:           "CompleteFilesMatchingNormalizesExtensions",
-			option:         flag.CompleteFilesMatching(".json", "yaml"),
-			toComplete:     "",
-			want:           nil,
-			wantExtensions: []string{"json", "yaml"},
-			wantValues:     false,
-			wantFiles:      true,
-			wantDirs:       false,
+			name:       "CompleteFilesMatchingNormalizesExtensions",
+			option:     flag.CompleteFilesMatching(".json", "yaml"),
+			toComplete: "",
+			want: completion{
+				Candidates: []string{"json", "yaml"},
+				Directive:  annotation.CompletionFilterFileExt,
+			},
 		},
 		{
-			name:           "CompleteDirsFiltersDirectories",
-			option:         flag.CompleteDirs(),
-			toComplete:     "",
-			want:           nil,
-			wantExtensions: nil,
-			wantValues:     false,
-			wantFiles:      false,
-			wantDirs:       true,
+			name:       "CompleteDirsFiltersDirectories",
+			option:     flag.CompleteDirs(),
+			toComplete: "",
+			want: completion{
+				Candidates: nil,
+				Directive:  annotation.CompletionFilterDirs,
+			},
 		},
 	}
 
@@ -100,47 +126,16 @@ func TestCompletionOptions(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
-			var dst string
-			sut := flag.Add(registry, "value", &dst, tc.option)
+			sut := tc.option
 
 			// Act
-			completion := flagtest.CompleteFlag(sut, tc.toComplete)
+			offered := completionOf(t, sut, tc.toComplete)
 
 			// Assert
-			if got, want := completion.Candidates(), tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-				t.Errorf("CompleteFlag(...).Candidates() = %v, want %v\n%s", got, want, cmp.Diff(want, got))
-			}
-			if got, want := completion.FileExtensions(), tc.wantExtensions; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-				t.Errorf("CompleteFlag(...).FileExtensions() = %v, want %v\n%s", got, want, cmp.Diff(want, got))
-			}
-			if got, want := completion.CompletesValues(), tc.wantValues; got != want {
-				t.Errorf("CompleteFlag(...).CompletesValues() = %t, want %t", got, want)
-			}
-			if got, want := completion.CompletesFiles(), tc.wantFiles; got != want {
-				t.Errorf("CompleteFlag(...).CompletesFiles() = %t, want %t", got, want)
-			}
-			if got, want := completion.CompletesDirs(), tc.wantDirs; got != want {
-				t.Errorf("CompleteFlag(...).CompletesDirs() = %t, want %t", got, want)
+			if got, want := offered, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+				t.Errorf("Add(..., option) completion = %+v, want %+v\n%s", got, want, cmp.Diff(want, got, cmpopts.EquateEmpty()))
 			}
 		})
-	}
-}
-
-func TestCompletionOptions_NoCompletionOption_DoesNotComplete(t *testing.T) {
-	t.Parallel()
-
-	// Arrange
-	registry := flagtest.NewRegistry()
-	var dst string
-	sut := flag.Add(registry, "value", &dst)
-
-	// Act
-	completion := flagtest.CompleteFlag(sut, "")
-
-	// Assert
-	if got, want := completion, (*flagtest.Completion)(nil); got != want {
-		t.Errorf("CompleteFlag(...) = %v, want %v", got, want)
 	}
 }
 
@@ -177,15 +172,4 @@ func TestCompletionOptions_Conflict_Panics(t *testing.T) {
 			requirePanic(t, func() { flag.Add(registry, "value", &dst, tc.options...) })
 		})
 	}
-}
-
-// suffixCompleter completes the word being completed by suffixing it, to observe
-// that the word reaches a [flag.CompleterFunc] unaltered.
-func suffixCompleter(toComplete string) []string {
-	return []string{toComplete + "-done"}
-}
-
-// noCompleter is a completer that offers no candidates.
-func noCompleter(string) []string {
-	return nil
 }

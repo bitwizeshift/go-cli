@@ -9,7 +9,6 @@ import (
 
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/flag/flagtest"
-	"github.com/bitwizeshift/go-cli/internal/annotation"
 )
 
 type FakeT struct {
@@ -66,136 +65,6 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestCompleteFlag(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name           string
-		option         flag.Option
-		toComplete     string
-		want           []string
-		wantExtensions []string
-		wantValues     bool
-		wantFiles      bool
-		wantDirs       bool
-	}{
-		{
-			name:           "Values",
-			option:         flag.CompleteFrom("json", "yaml"),
-			toComplete:     "j",
-			want:           []string{"json"},
-			wantExtensions: nil,
-			wantValues:     true,
-			wantFiles:      false,
-			wantDirs:       false,
-		},
-		{
-			name:           "Files",
-			option:         flag.CompleteFiles(),
-			toComplete:     "",
-			want:           nil,
-			wantExtensions: nil,
-			wantValues:     false,
-			wantFiles:      true,
-			wantDirs:       false,
-		},
-		{
-			name:           "FilesMatchingExtensions",
-			option:         flag.CompleteFilesMatching("json"),
-			toComplete:     "",
-			want:           nil,
-			wantExtensions: []string{"json"},
-			wantValues:     false,
-			wantFiles:      true,
-			wantDirs:       false,
-		},
-		{
-			name:           "Dirs",
-			option:         flag.CompleteDirs(),
-			toComplete:     "",
-			want:           nil,
-			wantExtensions: nil,
-			wantValues:     false,
-			wantFiles:      false,
-			wantDirs:       true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Arrange
-			registry := flagtest.NewRegistry()
-			target := flag.Add(registry, "value", new(string), tc.option)
-
-			// Act
-			sut := flagtest.CompleteFlag(target, tc.toComplete)
-
-			// Assert
-			if got, want := sut.Candidates(), tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-				t.Errorf("Completion.Candidates() = %v, want %v\n%s", got, want, cmp.Diff(want, got))
-			}
-			if got, want := sut.FileExtensions(), tc.wantExtensions; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-				t.Errorf("Completion.FileExtensions() = %v, want %v\n%s", got, want, cmp.Diff(want, got))
-			}
-			if got, want := sut.CompletesValues(), tc.wantValues; got != want {
-				t.Errorf("Completion.CompletesValues() = %t, want %t", got, want)
-			}
-			if got, want := sut.CompletesFiles(), tc.wantFiles; got != want {
-				t.Errorf("Completion.CompletesFiles() = %t, want %t", got, want)
-			}
-			if got, want := sut.CompletesDirs(), tc.wantDirs; got != want {
-				t.Errorf("Completion.CompletesDirs() = %t, want %t", got, want)
-			}
-		})
-	}
-}
-
-func TestCompleteFlag_FlagWithoutCompletion_ReturnsNil(t *testing.T) {
-	t.Parallel()
-
-	// Arrange
-	registry := flagtest.NewRegistry()
-	target := flag.Add(registry, "value", new(string))
-
-	// Act
-	sut := flagtest.CompleteFlag(target, "")
-
-	// Assert
-	if got, want := sut, (*flagtest.Completion)(nil); got != want {
-		t.Errorf("CompleteFlag(...) = %v, want %v", got, want)
-	}
-}
-
-func TestCompletion_NilCompletion_CompletesNothing(t *testing.T) {
-	t.Parallel()
-
-	// Arrange
-	sut := (*flagtest.Completion)(nil)
-
-	// Act
-	candidates, extensions := sut.Candidates(), sut.FileExtensions()
-	values, files, dirs := sut.CompletesValues(), sut.CompletesFiles(), sut.CompletesDirs()
-
-	// Assert
-	if got, want := candidates, []string(nil); !cmp.Equal(got, want) {
-		t.Errorf("Completion.Candidates() = %v, want %v", got, want)
-	}
-	if got, want := extensions, []string(nil); !cmp.Equal(got, want) {
-		t.Errorf("Completion.FileExtensions() = %v, want %v", got, want)
-	}
-	if got, want := values, false; got != want {
-		t.Errorf("Completion.CompletesValues() = %t, want %t", got, want)
-	}
-	if got, want := files, false; got != want {
-		t.Errorf("Completion.CompletesFiles() = %t, want %t", got, want)
-	}
-	if got, want := dirs, false; got != want {
-		t.Errorf("Completion.CompletesDirs() = %t, want %t", got, want)
-	}
-}
-
 func TestAllFlags(t *testing.T) {
 	t.Parallel()
 
@@ -205,11 +74,11 @@ func TestAllFlags(t *testing.T) {
 	name := flag.Add(registry, "name", new(string))
 	flag.Add(registry, "region", new(string))
 	novalue := flag.Add(registry, "novalue", new(int))
-	annotation.MarkRequired(name)
-	annotation.MarkRequiredTogether(verbose, name)
-	annotation.MarkMutuallyExclusive(verbose, novalue)
-	annotation.MarkOneRequired(name, novalue)
-	annotation.AddToGroup("Location Flags", novalue)
+	flag.MarkRequired(name)
+	flag.MarkRequiredTogether(verbose, name)
+	flag.MarkMutuallyExclusive(verbose, novalue)
+	flag.MarkOneRequired(name, novalue)
+	flag.AddToGroup("Location Flags", novalue)
 
 	// Act
 	flags := flagtest.AllFlags(registry)
