@@ -212,20 +212,14 @@ features from an existing theme. Themes always override what is on the
 [format stack](#format-stack).
 
 Construction is done with either [`richtext.NewTheme`] for a new, base theme, or
-[`richtext.Theme.New`] for derived. They are configured from Go `struct` objects
-that define `theme` struct tags as [`style.Style`] objects
+[`richtext.Theme.New`] for derived. They are configured from `map` objects
+binding string names to defined [`style.Style`]s:
 
 ```go
-theme, err := richtext.NewTheme(struct {
-  Title   style.Style `theme:"title"`
-  Heading style.Style `theme:"heading"`
-}{
-  Title:   style.Style{Foreground: style.Cyan, Attributes: style.Bold},
-  Heading: style.Style{Foreground: style.Green},
+theme := richtext.NewTheme(map[string]{
+  "title":   style.Style{Foreground: style.Cyan, Attributes: style.Bold},
+  "heading": style.Style{Foreground: style.Green},
 })
-if err != nil {
-  ...
-}
 ```
 
 This theme would enable `[theme:title]` and `[theme:heading]` in the `richtext`

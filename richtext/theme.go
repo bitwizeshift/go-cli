@@ -1,7 +1,8 @@
 package richtext
 
 import (
-	"reflect"
+	"fmt"
+	"strings"
 
 	"github.com/bitwizeshift/go-cli/richtext/style"
 )
@@ -35,55 +36,37 @@ var DefaultTheme = &Theme{
 	},
 }
 
-// NewTheme builds a Theme from the exported fields of v that carry a
-// `theme:"name"` struct tag. v may be a struct or a pointer to one; each tagged
-// field must be of type [style.Style]. Fields without the tag are ignored.
-//
-// It returns [ErrNotStruct] when v is not a struct, and a [*ThemeFieldError]
-// (wrapping [ErrThemeFieldType] or [ErrDuplicateTheme]) for a tagged field of
-// the wrong type or a repeated name.
-func NewTheme(v any) (*Theme, error) {
-	rv := reflect.ValueOf(v)
-	for rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	if rv.Kind() != reflect.Struct {
-		return nil, ErrNotStruct
-	}
-
-	styleType := reflect.TypeFor[style.Style]()
-	rt := rv.Type()
-	styles := make(map[string]style.Style)
-	for i := range rt.NumField() {
-		field := rt.Field(i)
-		if !field.IsExported() {
-			continue
-		}
-		name, ok := field.Tag.Lookup("theme")
-		if !ok {
-			continue
-		}
-		if field.Type != styleType {
-			return nil, &ThemeFieldError{Field: field.Name, Name: name, Err: ErrThemeFieldType}
-		}
-		if _, dup := styles[name]; dup {
-			return nil, &ThemeFieldError{Field: field.Name, Name: name, Err: ErrDuplicateTheme}
-		}
-		styles[name] = rv.Field(i).Interface().(style.Style)
-	}
-	return &Theme{styles: styles}, nil
+// NewTheme builds a Theme that maps each name in styles to its style. A name is
+// referenced by a [theme:name] tag, so it must be non-empty and must not contain
+// a ']'; NewTheme panics if any name violates this.
+func NewTheme(styles map[string]style.Style) *Theme {
+	return &Theme{styles: copyStyles(styles)}
 }
 
-// New derives a Theme from v that overrides the receiver: names declared in v
-// take precedence, and any other name falls back to the receiver and its
-// ancestors. It follows the same rules and errors as [NewTheme].
-func (t *Theme) New(v any) (*Theme, error) {
-	derived, err := NewTheme(v)
-	if err != nil {
-		return nil, err
+// New derives a Theme from styles that overrides the receiver: names declared in
+// styles take precedence, and any other name falls back to the receiver and its
+// ancestors. It follows the same naming rules and panic behaviour as [NewTheme].
+func (t *Theme) New(styles map[string]style.Style) *Theme {
+	return &Theme{parent: t, styles: copyStyles(styles)}
+}
+
+// copyStyles returns a private copy of styles, panicking on any name that could
+// never be referenced by a [theme:name] tag.
+func copyStyles(styles map[string]style.Style) map[string]style.Style {
+	out := make(map[string]style.Style, len(styles))
+	for name, s := range styles {
+		if !validThemeName(name) {
+			panic(fmt.Sprintf("richtext: invalid theme name %q", name))
+		}
+		out[name] = s
 	}
-	derived.parent = t
-	return derived, nil
+	return out
+}
+
+// validThemeName reports whether name can be referenced by a [theme:name] tag: a
+// non-empty string that does not contain the tag terminator ']'.
+func validThemeName(name string) bool {
+	return name != "" && !strings.ContainsRune(name, ']')
 }
 
 // lookup resolves a theme by name, searching this theme before its ancestors.

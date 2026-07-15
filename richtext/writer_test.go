@@ -24,17 +24,9 @@ const (
 func newTheme(t *testing.T) *richtext.Theme {
 	t.Helper()
 
-	theme, err := richtext.NewTheme(struct {
-		Title    style.Style `theme:"title"`
-		Note     style.Style // exported but untagged: ignored
-		reserved style.Style `theme:"reserved"` // unexported: ignored
-	}{
-		Title: style.Style{Foreground: style.Cyan, Attributes: style.Bold},
+	return richtext.NewTheme(map[string]style.Style{
+		"title": {Foreground: style.Cyan, Attributes: style.Bold},
 	})
-	if err != nil {
-		t.Fatalf("NewTheme() = %v, want nil", err)
-	}
-	return theme
 }
 
 func TestWriter_Write(t *testing.T) {

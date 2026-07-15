@@ -1,7 +1,7 @@
 package richtext_test
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -21,28 +21,14 @@ const (
 func derivedTheme(t *testing.T) *richtext.Theme {
 	t.Helper()
 
-	parent, err := richtext.NewTheme(struct {
-		Title   style.Style `theme:"title"`
-		Heading style.Style `theme:"heading"`
-	}{
-		Title:   style.Style{Foreground: style.Cyan, Attributes: style.Bold},
-		Heading: style.Style{Foreground: style.Green},
+	parent := richtext.NewTheme(map[string]style.Style{
+		"title":   {Foreground: style.Cyan, Attributes: style.Bold},
+		"heading": {Foreground: style.Green},
 	})
-	if err != nil {
-		t.Fatalf("NewTheme() = %v, want nil", err)
-	}
-
-	child, err := parent.New(struct {
-		Title style.Style `theme:"title"`
-		Note  style.Style `theme:"note"`
-	}{
-		Title: style.Style{Foreground: style.Red},
-		Note:  style.Style{Foreground: style.Blue},
+	return parent.New(map[string]style.Style{
+		"title": {Foreground: style.Red},
+		"note":  {Foreground: style.Blue},
 	})
-	if err != nil {
-		t.Fatalf("New() = %v, want nil", err)
-	}
-	return child
 }
 
 func TestTheme_New(t *testing.T) {
@@ -100,61 +86,23 @@ func TestTheme_New(t *testing.T) {
 	}
 }
 
-func TestTheme_New_InvalidInput_ReturnsError(t *testing.T) {
-	t.Parallel()
-
-	// Arrange
-	parent, err := richtext.NewTheme(struct {
-		Title style.Style `theme:"title"`
-	}{})
-	if err != nil {
-		t.Fatalf("NewTheme() = %v, want nil", err)
-	}
-
-	// Act
-	derived, err := parent.New(42)
-
-	// Assert
-	if got, want := err, richtext.ErrNotStruct; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
-		t.Fatalf("New() = %v, want %v", got, want)
-	}
-	if got, want := derived == nil, true; !cmp.Equal(got, want) {
-		t.Errorf("New() theme = %v, want nil", derived)
-	}
-}
-
-func TestNewTheme(t *testing.T) {
+func TestNewTheme_InvalidName_Panics(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name    string
-		input   any
-		wantErr error
+		name      string
+		styles    map[string]style.Style
+		themeName string
 	}{
 		{
-			name:    "NotAStruct",
-			input:   42,
-			wantErr: richtext.ErrNotStruct,
+			name:      "EmptyName",
+			styles:    map[string]style.Style{"": {Foreground: style.Red}},
+			themeName: "",
 		},
 		{
-			name:    "NilPointer",
-			input:   (*int)(nil),
-			wantErr: richtext.ErrNotStruct,
-		},
-		{
-			name: "WrongFieldType",
-			input: struct {
-				Title int `theme:"title"`
-			}{Title: 1},
-			wantErr: richtext.ErrThemeFieldType,
-		},
-		{
-			name: "DuplicateName",
-			input: struct {
-				A style.Style `theme:"dup"`
-				B style.Style `theme:"dup"`
-			}{},
-			wantErr: richtext.ErrDuplicateTheme,
+			name:      "NameContainsBracket",
+			styles:    map[string]style.Style{"a]b": {Foreground: style.Red}},
+			themeName: "a]b",
 		},
 	}
 
@@ -162,59 +110,68 @@ func TestNewTheme(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			// Arrange
+			var recovered any
+
 			// Act
-			theme, err := richtext.NewTheme(tc.input)
+			func() {
+				defer func() { recovered = recover() }()
+				_ = richtext.NewTheme(tc.styles)
+			}()
 
 			// Assert
-			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
-				t.Fatalf("NewTheme() = %v, want %v", got, want)
-			}
-			if got, want := theme == nil, true; !cmp.Equal(got, want) {
-				t.Errorf("NewTheme() theme = %v, want nil", theme)
+			message, ok := recovered.(string)
+			want := fmt.Sprintf("%q", tc.themeName)
+			if !ok || !strings.Contains(message, want) {
+				t.Fatalf("NewTheme() panic = %v, want a message containing %q", recovered, want)
 			}
 		})
 	}
 }
 
-func TestNewTheme_WrongFieldType_ReturnsFieldError(t *testing.T) {
+func TestTheme_New_InvalidName_Panics(t *testing.T) {
 	t.Parallel()
 
-	// Arrange
-	input := struct {
-		Heading int `theme:"heading"`
-	}{Heading: 1}
-
-	// Act
-	_, err := richtext.NewTheme(input)
-
-	// Assert
-	var fieldErr *richtext.ThemeFieldError
-	if !errors.As(err, &fieldErr) {
-		t.Fatalf("NewTheme() = %v, want *richtext.ThemeFieldError", err)
+	testCases := []struct {
+		name      string
+		styles    map[string]style.Style
+		themeName string
+	}{
+		{
+			name:      "EmptyName",
+			styles:    map[string]style.Style{"": {Foreground: style.Red}},
+			themeName: "",
+		},
+		{
+			name:      "NameContainsBracket",
+			styles:    map[string]style.Style{"a]b": {Foreground: style.Red}},
+			themeName: "a]b",
+		},
 	}
-	if got, want := fieldErr.Field, "Heading"; !cmp.Equal(got, want) {
-		t.Errorf("Field = %q, want %q", got, want)
-	}
-	if got, want := fieldErr.Name, "heading"; !cmp.Equal(got, want) {
-		t.Errorf("Name = %q, want %q", got, want)
-	}
-}
 
-func TestThemeFieldError_Error_ContainsFieldAndName(t *testing.T) {
-	t.Parallel()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	// Arrange
-	sut := &richtext.ThemeFieldError{Field: "Heading", Name: "heading", Err: richtext.ErrThemeFieldType}
+			// Arrange
+			parent := richtext.NewTheme(map[string]style.Style{
+				"title": {Foreground: style.Green},
+			})
+			var recovered any
 
-	// Act
-	msg := sut.Error()
+			// Act
+			func() {
+				defer func() { recovered = recover() }()
+				_ = parent.New(tc.styles)
+			}()
 
-	// Assert
-	if got, want := strings.Contains(msg, "Heading"), true; !cmp.Equal(got, want) {
-		t.Errorf("Error() = %q, want it to contain %q", msg, "Heading")
-	}
-	if got, want := strings.Contains(msg, "heading"), true; !cmp.Equal(got, want) {
-		t.Errorf("Error() = %q, want it to contain %q", msg, "heading")
+			// Assert
+			message, ok := recovered.(string)
+			want := fmt.Sprintf("%q", tc.themeName)
+			if !ok || !strings.Contains(message, want) {
+				t.Fatalf("New() panic = %v, want a message containing %q", recovered, want)
+			}
+		})
 	}
 }
 
