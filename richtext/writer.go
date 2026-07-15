@@ -92,11 +92,11 @@ func (w *Writer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// Flush flushes any trailing partial tag as literal text and reports whether
+// Close flushes any trailing partial tag as literal text and reports whether
 // the markup was balanced. It returns a [*TagError] wrapping [ErrUnclosedTag]
 // if any tags remain open.
-func (w *Writer) Flush() error {
-	if err := w.flushPending(); err != nil {
+func (w *Writer) Close() error {
+	if err := w.Flush(); err != nil {
 		return err
 	}
 	if len(w.stack) > 0 {
@@ -106,10 +106,10 @@ func (w *Writer) Flush() error {
 	return nil
 }
 
-// flushPending drains any partial fragment buffered by the scanner to the
+// Flush drains any partial fragment buffered by the scanner to the
 // destination as literal text, leaving the open-tag stack untouched. Unlike
-// [Writer.Flush] it never reports an unclosed tag.
-func (w *Writer) flushPending() error {
+// [Writer.Close] it never reports an unclosed tag.
+func (w *Writer) Flush() error {
 	if tok, ok := w.scanner.Flush(); ok {
 		return w.writeString(tok.Raw)
 	}
@@ -240,7 +240,7 @@ type passthroughWriter struct {
 
 // Write implements [io.Writer].
 func (p *passthroughWriter) Write(b []byte) (int, error) {
-	if err := p.w.flushPending(); err != nil {
+	if err := p.w.Flush(); err != nil {
 		return 0, err
 	}
 	return p.w.dst.Write(b)

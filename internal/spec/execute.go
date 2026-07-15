@@ -27,8 +27,8 @@ import (
 func Execute(ctx context.Context, cmd *cobra.Command) error {
 	stdout := cmd.OutOrStdout()
 	stderr := cmd.ErrOrStderr()
-	defer flushStream(stdout)
-	defer flushStream(stderr)
+	defer closeStream(stdout)
+	defer closeStream(stderr)
 
 	target, err := cmd.ExecuteContextC(ctx)
 	if err == nil {
@@ -54,10 +54,10 @@ func renderError(w io.Writer, err error) {
 	_, _ = fmt.Fprintln(w)
 }
 
-// flushStream flushes w when it is a Flusher that implements Flush() error
-func flushStream(w io.Writer) {
-	if rw, ok := w.(interface{ Flush() error }); ok {
-		_ = rw.Flush()
+// closeStream flushes w when it is an [io.Closer] that implements Flush() error
+func closeStream(w io.Writer) {
+	if rw, ok := w.(io.Closer); ok {
+		_ = rw.Close()
 	}
 }
 

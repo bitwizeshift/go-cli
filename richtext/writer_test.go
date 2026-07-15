@@ -265,7 +265,7 @@ func TestWriter_Close(t *testing.T) {
 			_, _ = sut.Write([]byte(tc.input))
 
 			// Act
-			err := sut.Flush()
+			err := sut.Close()
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -410,7 +410,7 @@ func TestWriter_Close_FlushWriteFails_ReturnsError(t *testing.T) {
 	_, _ = sut.Write([]byte("ab[fg"))
 
 	// Act
-	err := sut.Flush()
+	err := sut.Close()
 
 	// Assert
 	if got, want := err, wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
