@@ -16,6 +16,9 @@ type Renderer struct {
 	// Columns is the width that prose, usage, and flag or command descriptions
 	// wrap to.
 	Columns int
+
+	// Notice, when non-nil, appends an update advisory to the foot of the output.
+	Notice *Notice
 }
 
 // Render writes the formatted help for cmd to w. It reports any error from
@@ -25,7 +28,8 @@ func (r Renderer) Render(w io.Writer, cmd *cobra.Command) error {
 	data := struct {
 		View
 		Columns int
-	}{View: view, Columns: r.Columns}
+		Notice  *Notice
+	}{View: view, Columns: r.Columns, Notice: r.Notice}
 	tmpl := template.Must(template.New("help").
 		Funcs(funcs(r.Columns, view)).
 		ParseFS(templateFS, "templates/*.tmpl"))

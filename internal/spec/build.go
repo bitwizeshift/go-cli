@@ -50,6 +50,10 @@ type Options struct {
 	// value uses [os.Stdout] or [os.Stderr] respectively.
 	Stdout io.Writer
 	Stderr io.Writer
+
+	// Update configures update-availability checking. Checking is enabled only
+	// when it carries a version, a source, and at least one provider.
+	Update UpdateOptions
 }
 
 // Build decodes an [Application] specification from r and constructs the
@@ -74,6 +78,13 @@ func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 		return nil, fmt.Errorf("%w: %s", ErrUnboundRunner, strings.Join(sortedKeys(unbound), ", "))
 	}
 	annotation.AddIssueURL(cmd, app.IssueURL)
+	checker, err := opts.Update.checker(&app, store.Cache)
+	if err != nil {
+		return nil, err
+	}
+	if checker != nil {
+		installUpdateHelp(cmd, checker)
+	}
 	setStreams(cmd,
 		opts.newWriter(opts.Stdout, os.Stdout),
 		opts.newWriter(opts.Stderr, os.Stderr),

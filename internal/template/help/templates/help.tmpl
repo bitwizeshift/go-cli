@@ -25,3 +25,6 @@
 {{ if .Hint.Show -}}
 {{ hint .Hint.Path }}
 {{ end -}}
+{{ if .Notice -}}
+[theme:emphasis]A new version is available:[/theme] [theme:label]{{ .Notice.Current }}[/theme] → [theme:label]{{ .Notice.Latest }}[/theme]
+{{ end -}}

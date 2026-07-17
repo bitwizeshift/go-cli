@@ -53,6 +53,12 @@ func FromReader(r io.Reader, options ...Option) *CLI {
 		Runners: cfg.runners,
 		Theme:   cfg.theme,
 		Colour:  cfg.colour,
+		Update: spec.UpdateOptions{
+			Version:   cfg.buildVersion,
+			Source:    cfg.buildSource,
+			TTL:       cfg.updateTTL,
+			Providers: cfg.updateProviders,
+		},
 	})
 	if err != nil {
 		panic("cli: " + err.Error())

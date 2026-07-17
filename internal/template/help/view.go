@@ -61,6 +61,14 @@ type Hint struct {
 	Path string
 }
 
+// Notice models the trailing advisory shown when a newer release of the
+// application is available. Current and Latest are the running and available
+// versions.
+type Notice struct {
+	Current string
+	Latest  string
+}
+
 // NewView builds the help [View] for cmd.
 func NewView(cmd *cobra.Command) View {
 	return View{

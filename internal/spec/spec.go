@@ -25,6 +25,11 @@ type Application struct {
 	// AppID scopes the application's on-disk storage. When empty, it is derived
 	// from the first token of Use, and failing that the running binary's name.
 	AppID string `yaml:"app-id,omitempty"`
+
+	// UpdateSources holds per-source configuration for update checking, keyed by
+	// the source name. Each value is decoded into the update provider registered
+	// under that name.
+	UpdateSources map[string]yaml.Node `yaml:"update-sources"`
 }
 
 // resolveAppID returns the effective application id used to scope storage: the

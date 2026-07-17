@@ -2,11 +2,13 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/bitwizeshift/go-cli/exit"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/term"
 	"github.com/bitwizeshift/go-cli/richtext"
+	"github.com/bitwizeshift/go-cli/update"
 )
 
 // Option configures how a [CLI] is constructed from a specification.
@@ -21,14 +23,20 @@ type config struct {
 	colour     spec.ColourMode
 	sizer      term.Sizer
 	classifier exit.Classifier
+
+	buildVersion    string
+	buildSource     string
+	updateTTL       time.Duration
+	updateProviders map[string]update.Provider
 }
 
 // newConfig resolves options into a config, panicking if two options bind a
 // runner to the same command id.
 func newConfig(options ...Option) *config {
 	cfg := &config{
-		runners:    map[string]spec.Runner{},
-		classifier: exit.POSIXClassifier,
+		runners:         map[string]spec.Runner{},
+		classifier:      exit.POSIXClassifier,
+		updateProviders: map[string]update.Provider{},
 	}
 	for _, opt := range options {
 		opt.apply(cfg)
@@ -102,6 +110,46 @@ func ExitClassifier(classifier exit.Classifier) Option {
 			panic("nil classifier provided to cli.ExitClassifier")
 		}
 		c.classifier = classifier
+	})
+}
+
+// CurrentVersion sets the running build's version, typically injected at build
+// time with -ldflags. It enables update checking together with [BuildSource] and
+// at least one [UpdateProvider]; without all three, no update check is performed.
+func CurrentVersion(version string) Option {
+	return option(func(c *config) {
+		c.buildVersion = version
+	})
+}
+
+// BuildSource sets the distribution channel the running build was installed from,
+// such as "github" or "brew". It selects which registered [UpdateProvider] is
+// consulted for updates.
+func BuildSource(source string) Option {
+	return option(func(c *config) {
+		c.buildSource = source
+	})
+}
+
+// UpdateTTL sets how long a cached update check is reused before the source is
+// queried again. When unset, a default of 24 hours is used.
+func UpdateTTL(d time.Duration) Option {
+	return option(func(c *config) {
+		c.updateTTL = d
+	})
+}
+
+// UpdateProvider registers provider as the source of update information under
+// name. The name is matched against [BuildSource] and against keys of the
+// "update-sources" specification block, whose values configure the provider.
+//
+// It panics if name has already been registered by an earlier option.
+func UpdateProvider(name string, provider update.Provider) Option {
+	return option(func(c *config) {
+		if _, ok := c.updateProviders[name]; ok {
+			panic(fmt.Sprintf("cli: duplicate update provider registered for %q", name))
+		}
+		c.updateProviders[name] = provider
 	})
 }
 

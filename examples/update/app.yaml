@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../command.schema.json
+id: root
+use: update-demo <command>
+version: 1.0.0
+app-id: com.rodusek.update-demo
+summary: Demonstrates go-cli's update-availability advisory
+description: |
+  update-demo wires a fake update provider that reports a fixed, newer version.
+  Because the running build is configured as v1.0.0 and the provider reports
+  v2.5.0, the root --help output ends with an advisory.
+
+  The advisory appears only on the root command. Run "update-demo greet --help"
+  to confirm a subcommand's help omits it.
+issue-url: https://github.com/bitwizeshift/go-cli/issues
+
+commands:
+  default:
+    - id: greet
+      use: greet [<name>]
+      summary: Prints a greeting
+      description: |
+        Prints a friendly greeting. Its --help output deliberately omits the
+        update advisory, which only appears on the root command.
+      arity: <=1
