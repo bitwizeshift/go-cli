@@ -1,0 +1,117 @@
+Create a plan
+
+**Background:** This project wraps pflag and cobra so that very little of these
+libraries are visible or usable on the seam.
+
+## Goal
+
+Create a mechanism to support detecting when updates are available so we can
+tell the user.
+
+### Expectations
+
+A new `update` package is created that defines abstractions like:
+
+```go
+type BuildInfo struct {
+  Version string // The semantic version, or 'snapshot' if not prebuilt
+  Source  string // the source (apt, brew, github, etc)
+}
+
+type Provider interface {
+  LatestVersion(ctx context.Context) (*semver.Version, error)
+}
+
+type GitHubProvider struct {
+  Owner string `yaml:"owner"`
+  Repo  string `yaml:"repo"`
+}
+
+type BrewProvider struct {
+  Tap  string `yaml:"tap"`
+  Name string `yaml:"name"`
+}
+
+type CacheProvider struct {
+  CacheName    string
+  UserCacheDir func() (string, error)
+  MkdirAll     func(string) error
+  TTL          time.Duration
+  Provider     Provider
+  // ...
+}
+
+// ...
+
+type ProviderRegistry map[string]Provider
+
+func (pr ProviderRegistry) LatestVersion(ctx context.Context, source string) (*semver.Version, error)
+
+type Checker struct {
+  build    BuildInfo
+  registry *ProviderRegistry
+}
+```
+
+* `Provider`s return the current version.
+* `CacheProvider` wraps `Provider` by storing the "last checked" time and the
+  last value discovered in the `os.UserCacheDir()`. This will prevent fetching
+  every time. Do not cache errors.
+* `ProviderRegistry` supports multiple providers
+* `Checker` does the actual checking to decide whether an update exists
+
+On a new version being available, the help menu should add a line to the bottom
+saying "a new version is available" and indicate both the current and new
+version.
+
+This will require a lot of new wiring, including:
+
+* New `cli.Option` values to pass through the current version and the current
+  build source. If the options aren't provided, no update is performed.
+
+* New config values in the YAML for config update sources. This is free-form
+  under `update-sources`. Each key under `update-sources` will correspond to the
+  key name `source` frm the updater itself, and be assigned to a `yaml` field
+  in the source definition. This enables custom `update.Provider`s to be defined
+  and configured.
+
+* Add `cli.Option`s for the TTL value for re-checking, and
+  `cli.UpateProvider(name, Provider)` for defining custom providers.
+
+  * No providers are used by default. If no providers are specified, the app
+    should never check for updates
+
+* New top-level config value for `cache-name` which is the name of the dir in
+  the cache (no slashes).
+  When unspecified, this becomes just the app name from the root `use`.
+
+Versions are only checked for on `--help` menu, and only displayed on the
+`--help` menu. It should have a short/reasonable timeout
+
+We will likely require additional abstractions for testing the update sources.
+For GitHub, we will raw network calls on the release API (no library, do not use
+`go-github`).
+
+Propose other update sources and how we'll check it.
+
+It's fine that these will not support auth. If someone wants custom auth, they
+can overwrite it.
+
+## Requirements
+
+* Development MUST use Skill(go:general)
+* Testing MUST use Skill(go:table-testing), Skill(go:unit-testing), Skill(go:testing-errors)
+* Coverage MUST be evaluated using Skill(go:coverage)
+
+All of the rules defined in the skills above are binding and MUST be followed. It is ILLEGAL to deviate from any of the rules. You are not allowed to rationalize or ignore any rule listed above. Missing even one rule is considered failure of the project. It is CRITICAL that these rules are aligned.
+
+Any problems with the design, judgment calls, uncertainties, or ambiguities MUST be resolved by the user. You are NOT to resolve any of these yourself. Use the Tool(AskUserQuestion) to raise any such problems to the user and suggest paths forward. Mark one of the options as the recommended path to allow the user to know your leaning.
+
+DO NOT make a judgment call on your own.
+
+## Important
+
+DO NOT SUMMARIZE EVERY TYPE OR FUNCTION IN PACKAGE DOCS. You have a horrible habit of doing this and no human in existance writes code like this.
+DO NOT SUMMARIZE IMPLEMENTATIONS OF FUNCTIONS IN DOCUMENTS, OR IN TYPES. Give high-level descriptions of how things work, optionally with examples where reasonable. But do NOT summarize the actual implementaiton.
+
+Do not use the explore agent for this; inspect the files yourself for this plan.
