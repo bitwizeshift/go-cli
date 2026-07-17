@@ -41,6 +41,11 @@ field of [Command nodes](#command), as well as some additional settings.
   is provided to the user if the program ever panics without being `recover`ed
   before it reaches the end of the command.
 
+* `app-id`: The identifier used to scope the application's on-disk storage — the
+  `config`, `cache`, `data`, and `runtime` roots reachable from a runner's
+  context. When omitted, it is derived from the first token of `use`, and
+  failing that from the running binary's name.
+
 For the rest of the fields, read below.
 
 ### Command

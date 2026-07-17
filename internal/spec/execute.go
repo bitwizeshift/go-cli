@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/clictx"
+	"github.com/bitwizeshift/go-cli/internal/storage"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/internal/template/panichandler"
 	"github.com/bitwizeshift/go-cli/internal/term"
@@ -71,8 +72,9 @@ func fromRunner(err error) bool {
 // run adapts a [Runner] into a cobra RunE, installing signal-cancellation and
 // panic recovery. A recovered panic is rendered as a crash report and returned
 // as a [PanicError]; any other error is wrapped so that [Execute] can tell it
-// apart from an argument-parsing failure.
-func (i *CommandInfo) run(runner Runner) func(cmd *cobra.Command, args []string) error {
+// apart from an argument-parsing failure. store is placed on the context so the
+// runner can reach the application's storage roots.
+func (i *CommandInfo) run(runner Runner, store *storage.AppStorage) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) (err error) {
 		ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 		defer cancel()
@@ -80,6 +82,7 @@ func (i *CommandInfo) run(runner Runner) func(cmd *cobra.Command, args []string)
 		stderr := cmd.ErrOrStderr()
 		ctx = clictx.WithWriters(ctx, stdout, stderr)
 		ctx = clictx.WithSizer(ctx, term.DefaultSizer)
+		ctx = clictx.WithStorage(ctx, store)
 
 		defer func() {
 			if e := recover(); e != nil {

@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=../../command.schema.json
 id: root
 use: flags-demo
+app-id: com.rodusek.flags-demo
 version: 1.0.0
 summary: A small example CLI using custom GitHub flags
 description: |

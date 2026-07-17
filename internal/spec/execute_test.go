@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/spec/spectest"
 	"github.com/google/go-cmp/cmp"
@@ -135,6 +136,69 @@ func TestExecute_FallbackError_ShowsUsage(t *testing.T) {
 	}
 	if got, want := strings.Contains(stderr.String(), "--help"), true; got != want {
 		t.Errorf("stderr shows usage = %t, want %t", got, want)
+	}
+}
+
+// storageCapture is a [spec.Runner] that records whether application storage
+// was present on the context it ran with.
+type storageCapture struct {
+	injected bool
+}
+
+func (sc *storageCapture) Run(ctx context.Context, _ ...string) error {
+	sc.injected = clictx.Storage(ctx) != nil
+	return nil
+}
+
+func TestExecute_InjectsStorage(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		spec string
+		want bool
+	}{
+		{
+			name: "ExplicitAppID",
+			spec: "id: root\nuse: root\napp-id: com.example.app\n",
+			want: true,
+		},
+		{
+			name: "AppIDFromUse",
+			spec: "id: root\nuse: mytool\n",
+			want: true,
+		},
+		{
+			name: "AppIDFromBinary",
+			spec: "id: root\nuse: \"\"\n",
+			want: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			runner := &storageCapture{}
+			sut := build(t, tc.spec, spec.Options{
+				Runners: map[string]spec.Runner{"root": runner},
+				Stdout:  io.Discard,
+				Stderr:  io.Discard,
+			})
+			ctx := context.Background()
+
+			// Act
+			err := spec.Execute(ctx, sut)
+
+			// Assert
+			if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+				t.Fatalf("spec.Execute(...) = %v, want %v", got, want)
+			}
+			if got, want := runner.injected, tc.want; got != want {
+				t.Errorf("storage injected = %t, want %t", got, want)
+			}
+		})
 	}
 }
 

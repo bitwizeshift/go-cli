@@ -6,7 +6,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/bitwizeshift/go-cli"
 	"github.com/bitwizeshift/go-cli/internal/clictx"
+	"github.com/bitwizeshift/go-cli/internal/storage/storagetest"
 	"github.com/bitwizeshift/go-cli/richtext"
 )
 
@@ -52,6 +54,16 @@ func WithWriters(ctx context.Context, stdout, stderr io.Writer) context.Context 
 	stdout = defaultRichTextWriter(stdout)
 	stderr = defaultRichTextWriter(stderr)
 	return clictx.WithWriters(ctx, stdout, stderr)
+}
+
+// WithStorage returns a context carrying in-memory application storage, along
+// with the [cli.AppStorage] handle backed by it. The roots are isolated from
+// one another and from the real filesystem; data written through the returned
+// handle is readable back through it, so a test can assert on what a command
+// persisted.
+func WithStorage(ctx context.Context) (context.Context, *cli.AppStorage) {
+	ctx = clictx.WithStorage(ctx, storagetest.NewAppStorage())
+	return ctx, cli.StorageFrom(ctx)
 }
 
 func defaultRichTextWriter(w io.Writer) io.Writer {

@@ -24,6 +24,10 @@
       "type": "string",
       "description": "URL users are directed to for filing bugs, propagated to every command in the hierarchy.",
       "format": "uri"
+    },
+    "app-id": {
+      "type": "string",
+      "description": "Identifier used to scope the application's on-disk storage (config, cache, data, runtime). When omitted, it is derived from the first token of `use`, then the running binary's name."
     }
   },
   "unevaluatedProperties": false,

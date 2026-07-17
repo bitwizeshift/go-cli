@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=../../command.schema.json
 id: root
 use: prompt-demo <command>
+app-id: com.rodusek.prompt-demo
 version: 1.0.0
 summary: Showcases the go-cli prompt package
 description: |

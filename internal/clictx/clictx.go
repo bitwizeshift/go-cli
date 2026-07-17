@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/bitwizeshift/go-cli/internal/storage"
 	"github.com/bitwizeshift/go-cli/internal/term"
 	"github.com/bitwizeshift/go-cli/richtext"
 )
@@ -14,6 +15,7 @@ type ctxKey int
 const (
 	ctxKeyIO ctxKey = iota
 	ctxKeySizer
+	ctxKeyStorage
 )
 
 type writerContext struct {
@@ -58,6 +60,21 @@ func Columns(ctx context.Context, w io.Writer) int {
 		sizer = v.(term.Sizer)
 	}
 	return sizer.Columns(underlying(w))
+}
+
+// WithStorage returns a copy of ctx carrying app as the application's storage
+// roots, retrievable with [Storage].
+func WithStorage(ctx context.Context, app *storage.AppStorage) context.Context {
+	return context.WithValue(ctx, ctxKeyStorage, app)
+}
+
+// Storage returns the [storage.AppStorage] stored on ctx by [WithStorage], or
+// nil when ctx carries none.
+func Storage(ctx context.Context) *storage.AppStorage {
+	if app, ok := ctx.Value(ctxKeyStorage).(*storage.AppStorage); ok {
+		return app
+	}
+	return nil
 }
 
 // underlying returns the writer beneath w, following any writer that exposes a

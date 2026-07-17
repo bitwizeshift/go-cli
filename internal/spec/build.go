@@ -11,6 +11,7 @@ import (
 	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/flagreg"
+	"github.com/bitwizeshift/go-cli/internal/storage"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/richtext"
 	"github.com/spf13/cobra"
@@ -67,7 +68,8 @@ func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 
 	unbound := make(map[string]Runner, len(opts.Runners))
 	maps.Copy(unbound, opts.Runners)
-	cmd := app.toCobraCommand(unbound)
+	store := storage.NewAppStorage(app.resolveAppID())
+	cmd := app.toCobraCommand(unbound, store)
 	if len(unbound) > 0 {
 		return nil, fmt.Errorf("%w: %s", ErrUnboundRunner, strings.Join(sortedKeys(unbound), ", "))
 	}
@@ -119,8 +121,9 @@ func sortedKeys(runners map[string]Runner) []string {
 }
 
 // toCobraCommand converts the command info into a [github.com/spf13/cobra.Command],
-// removing each bound runner from runners as it is consumed.
-func (i *CommandInfo) toCobraCommand(runners map[string]Runner) *cobra.Command {
+// removing each bound runner from runners as it is consumed. store is shared by
+// every command so a bound runner can reach the application's storage roots.
+func (i *CommandInfo) toCobraCommand(runners map[string]Runner, store *storage.AppStorage) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           i.Use,
 		Short:         i.Summary,
@@ -142,7 +145,7 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner) *cobra.Command {
 	}
 	if runner := runners[i.ID]; runner != nil {
 		delete(runners, i.ID)
-		cmd.RunE = i.run(runner)
+		cmd.RunE = i.run(runner, store)
 		registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
 		flag.Register(registry, runner)
 		annotation.ConfigureFlags(cmd)
@@ -155,7 +158,7 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner) *cobra.Command {
 	cmd.SetVersionTemplate(template.DefaultRenderEngine.VersionTemplate())
 
 	for _, group := range i.Commands {
-		i.addGroup(cmd, group, runners)
+		i.addGroup(cmd, group, runners, store)
 	}
 	return cmd
 }
@@ -169,7 +172,7 @@ func (*CommandInfo) showHelp(cmd *cobra.Command, _ []string) error {
 
 // addGroup adds the commands of group to cmd. A group named [DefaultGroup] is
 // left ungrouped; any other group is registered as a titled cobra group.
-func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, runners map[string]Runner) {
+func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, runners map[string]Runner, store *storage.AppStorage) {
 	groupID := ""
 	if group.Name != DefaultGroup {
 		groupID = strings.ReplaceAll(group.Name, " ", "-")
@@ -179,7 +182,7 @@ func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, runne
 		})
 	}
 	for _, c := range group.Commands {
-		command := c.toCobraCommand(runners)
+		command := c.toCobraCommand(runners, store)
 		command.GroupID = groupID
 		cmd.AddCommand(command)
 	}

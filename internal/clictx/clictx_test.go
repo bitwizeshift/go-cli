@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/bitwizeshift/go-cli/internal/clictx"
+	"github.com/bitwizeshift/go-cli/internal/storage"
+	"github.com/bitwizeshift/go-cli/internal/storage/storagetest"
 	"github.com/bitwizeshift/go-cli/internal/term"
 	"github.com/bitwizeshift/go-cli/richtext"
 )
@@ -50,6 +52,43 @@ func TestWriters(t *testing.T) {
 			}
 			if got, want := reflect.TypeOf(errWriter), tc.wantErrType; got != want {
 				t.Errorf("Writers(ctx) stderr = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestStorage(t *testing.T) {
+	t.Parallel()
+
+	app := storagetest.NewAppStorage()
+
+	testCases := []struct {
+		name string
+		ctx  context.Context
+		want *storage.AppStorage
+	}{
+		{
+			name: "StoredStorage",
+			ctx:  clictx.WithStorage(context.Background(), app),
+			want: app,
+		},
+		{
+			name: "NoStorage",
+			ctx:  context.Background(),
+			want: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act
+			app := clictx.Storage(tc.ctx)
+
+			// Assert
+			if got, want := app, tc.want; got != want {
+				t.Errorf("Storage(ctx) = %v, want %v", got, want)
 			}
 		})
 	}
