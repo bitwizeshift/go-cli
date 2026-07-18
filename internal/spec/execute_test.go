@@ -211,8 +211,10 @@ type positionalCapture struct {
 }
 
 func (pc *positionalCapture) RegisterArgs(cl *arg.CommandLine) {
-	arg.Positional(cl, "first", 0, &pc.first)
-	arg.Unmatched(cl, &pc.rest)
+	cl.Add(
+		arg.Positional("first", 0, &pc.first),
+		arg.Unmatched(&pc.rest),
+	)
 }
 
 func (pc *positionalCapture) Run(context.Context) error {
@@ -254,7 +256,7 @@ type positionalFailure struct {
 }
 
 func (pf *positionalFailure) RegisterArgs(cl *arg.CommandLine) {
-	arg.Positional(cl, "count", 0, &pf.count)
+	cl.Add(arg.Positional("count", 0, &pf.count))
 }
 
 func (pf *positionalFailure) Run(context.Context) error {

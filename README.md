@@ -58,7 +58,7 @@ applications.
   readable and well-structured.
 
 * ⏩ **Simplified flag surface area**: No more dozens of `pflag.FlagSet` values;
-  just use [`arg.AddFlag`], and it idiomatically uses Go to understand
+  just use [`arg.Flag`], and it idiomatically uses Go to understand
   either [`encoding.TextUnmarshaler`] or custom [`arg.Unmarshaler`].
 
 * 🛟 **Support for flag fallback defaults**: Flags can now support falling back
@@ -80,7 +80,7 @@ opinionated and visually clear defaults.
 [`encoding.TextUnmarshaler`]: https://pkg.go.dev/encoding@go1.26.4#TextUnmarshaler
 [`arg.Unmarshaler`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/arg#Unmarshaler
 [`arg.Registrar`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/arg#Registrar
-[`arg.AddFlag`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/arg#Add
+[`arg.Flag`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/arg#Flag
 [`cli.Runner`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli#Runner
 
 ## Why `go-cli`?

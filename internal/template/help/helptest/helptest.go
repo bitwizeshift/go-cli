@@ -155,11 +155,13 @@ func registerArgs(cmd *cobra.Command) *arg.CommandLine {
 		remoteRef string
 		ref       string
 	)
-	arg.Positional(cl, "remote", 0, &remoteRef,
-		arg.Usage("name of the remote to synchronize with"),
-	)
-	arg.Positional(cl, "ref", 1, &ref,
-		arg.Usage("reference within the remote to synchronize"),
+	cl.Add(
+		arg.Positional("remote", 0, &remoteRef,
+			arg.Usage("name of the remote to synchronize with"),
+		),
+		arg.Positional("ref", 1, &ref,
+			arg.Usage("reference within the remote to synchronize"),
+		),
 	)
 	var (
 		authToken string
@@ -175,48 +177,57 @@ func registerArgs(cmd *cobra.Command) *arg.CommandLine {
 		verbose     bool
 	)
 
-	arg.AddToGroup("Connection Flags",
-		arg.AddFlag(cl, "auth-token", &authToken,
+	addGroup(cl, "Connection Flags",
+		arg.Flag("auth-token", &authToken,
 			arg.Shorthand("T"),
 			arg.Usage("auth token used to authenticate with the remote"),
 		),
-		arg.AddFlag(cl, "force", &force,
+		arg.Flag("force", &force,
 			arg.Shorthand("f"),
 			arg.Usage("overwrite any item already present in the vault"),
 		),
-		arg.AddFlag(cl, "parallel", &parallel,
+		arg.Flag("parallel", &parallel,
 			arg.Shorthand("p"),
 			arg.Usage("number of transfers to run at once"),
 		),
-		arg.AddFlag(cl, "remote", &remote,
+		arg.Flag("remote", &remote,
 			arg.Shorthand("r"),
 			arg.Usage("base URL of the remote to synchronize with"),
 		),
-		arg.AddFlag(cl, "timeout", &timeout,
+		arg.Flag("timeout", &timeout,
 			arg.Shorthand("t"),
 			arg.Type("duration"),
 			arg.Usage("maximum time to wait for the sync to finish"),
 		),
 	)
-	arg.AddToGroup("Output Flags",
-		arg.AddFlag(cl, "exclude-dependencies", &excludeDeps,
+	addGroup(cl, "Output Flags",
+		arg.Flag("exclude-dependencies", &excludeDeps,
 			arg.Usage("skip synchronizing the transitive dependencies of the item"),
 		),
-		arg.AddFlag(cl, "state-dir", &stateDir,
+		arg.Flag("state-dir", &stateDir,
 			arg.Usage("directory in which sync state is stored"),
 		),
-		arg.AddFlag(cl, "log", &logFile,
+		arg.Flag("log", &logFile,
 			arg.Usage("file to write sync progress logs to"),
 		),
-		arg.AddFlag(cl, "no-progress", &noProgress,
+		arg.Flag("no-progress", &noProgress,
 			arg.Usage("disable the interactive progress bar"),
 		),
-		arg.AddFlag(cl, "verbose", &verbose,
+		arg.Flag("verbose", &verbose,
 			arg.Shorthand("v"),
 			arg.Usage("print additional diagnostic output while running"),
 		),
 	)
 	return cl
+}
+
+// addGroup registers each flag on cl and assigns them all to the named display
+// group.
+func addGroup(cl *arg.CommandLine, name string, flags ...*arg.FlagArg) {
+	for _, f := range flags {
+		cl.Add(f)
+	}
+	arg.Group(name, flags...)
 }
 
 func noop(*cobra.Command, []string) {}

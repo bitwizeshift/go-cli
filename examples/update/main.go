@@ -34,9 +34,9 @@ type greetRunner struct {
 }
 
 func (r *greetRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.Positional(cl, "name", 0, &r.name,
+	cl.Add(arg.Positional("name", 0, &r.name,
 		arg.Usage("Optional name to greet"),
-	)
+	))
 }
 
 func (r *greetRunner) Run(_ context.Context) error {

@@ -1,26 +1,91 @@
 package arg
 
 import (
+	"fmt"
+	"reflect"
 	"slices"
 
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/spf13/pflag"
 )
 
-// Flag is a flag registered in a [CommandLine]. It exposes the properties that
-// describe the flag to a user -- how it is named and documented, and the
-// constraints it participates in -- while keeping the underlying flag
-// representation opaque.
+// FlagArg is a flag registered in a [CommandLine] with [CommandLine.Add]. It is
+// produced by [Flag], and exposes the properties that describe the flag to a
+// user -- how it is named and documented, and the constraints it participates in
+// -- while keeping the underlying flag representation opaque.
 //
-// A nil [Flag] reports the zero-value of every property.
-type Flag struct {
+// A nil [FlagArg] reports the zero-value of every property.
+type FlagArg struct {
 	flag *pflag.Flag
 }
+
+// Flag constructs a flag named name whose value is decoded into v. The returned
+// [FlagArg] is registered on a [CommandLine] with [CommandLine.Add].
+//
+// By default the flag is decoded with [Unmarshal] and reports a kebab-case type
+// name derived from T; both may be adjusted with [Option] values. A bool-kinded
+// T is registered so that a bare --name implies true.
+//
+// An unnamed slice T accumulates across repeated occurrences, so --name a --name
+// b is equivalent to --name a,b; any other T reports [ErrAlreadySet] if
+// specified more than once. [Repeatable] lifts that limit, and [RepeatableUpTo]
+// caps it, reporting [ErrTooManyOccurrences] beyond the cap; a repeated non-slice
+// flag keeps the last value. [Callback] options are invoked with the decoded
+// value on each occurrence.
+func Flag[T any](name string, v *T, options ...Option) *FlagArg {
+	cfg := newConfig(options...)
+	slice := isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Slice
+	limit := 1
+	if slice {
+		limit = 0 // builtin slices accumulate without a limit by default
+	}
+	if cfg.maxSet {
+		limit = cfg.maxCount
+	}
+	count := 0
+	val := &value{
+		set: func(s string) error {
+			if limit > 0 && count >= limit {
+				if cfg.capped {
+					return fmt.Errorf("%s: %w", name, ErrTooManyOccurrences)
+				}
+				return fmt.Errorf("%s: %w", name, ErrAlreadySet)
+			}
+			var tmp T
+			if err := cfg.set(&tmp, []byte(s)); err != nil {
+				return err
+			}
+			if slice && count > 0 {
+				appendInto(v, tmp)
+			} else {
+				*v = tmp
+			}
+			for _, cb := range cfg.callbacks {
+				if err := invokeCallback(cb, reflect.ValueOf(tmp)); err != nil {
+					return err
+				}
+			}
+			count++
+			return nil
+		},
+		str: func() string { return defaultString(v) },
+		typ: func() string { return cfg.typeName(v) },
+	}
+	return newFlagArg[T](val, name, cfg)
+}
+
+// register adds the underlying flag to cl's flag set.
+func (f *FlagArg) register(cl *CommandLine) {
+	argreg.Flags((*argreg.CommandLine)(cl)).AddFlag(f.flag)
+}
+
+var _ Arg = (*FlagArg)(nil)
 
 // Flag is an escape-hatch to allow direct access to the underlying
 // [pflag.Flag]. In general, this should _only_ be used as a transitional
 // mechanism -- but should otherwise aim to avoid relying on this.
-func (f *Flag) Flag() *pflag.Flag {
+func (f *FlagArg) Flag() *pflag.Flag {
 	if f == nil {
 		return nil
 	}
@@ -29,7 +94,7 @@ func (f *Flag) Flag() *pflag.Flag {
 
 // Name returns the long name of the flag, as specified on a command-line with a
 // double-dash prefix.
-func (f *Flag) Name() string {
+func (f *FlagArg) Name() string {
 	if f.Flag() == nil {
 		return ""
 	}
@@ -38,7 +103,7 @@ func (f *Flag) Name() string {
 
 // Shorthand returns the single-character alias of the flag, as specified on a
 // command-line with a single-dash prefix. It is empty if the flag has no alias.
-func (f *Flag) Shorthand() string {
+func (f *FlagArg) Shorthand() string {
 	if f.Flag() == nil {
 		return ""
 	}
@@ -46,7 +111,7 @@ func (f *Flag) Shorthand() string {
 }
 
 // Usage returns the help string displayed for the flag.
-func (f *Flag) Usage() string {
+func (f *FlagArg) Usage() string {
 	if f.Flag() == nil {
 		return ""
 	}
@@ -55,7 +120,7 @@ func (f *Flag) Usage() string {
 
 // Type returns the name of the type the flag's value is reported as, such as
 // "string" or "mips-op-code".
-func (f *Flag) Type() string {
+func (f *FlagArg) Type() string {
 	if f.Flag() == nil || f.flag.Value == nil {
 		return ""
 	}
@@ -64,7 +129,7 @@ func (f *Flag) Type() string {
 
 // Hidden reports whether the flag is omitted from generated help and usage
 // output.
-func (f *Flag) Hidden() bool {
+func (f *FlagArg) Hidden() bool {
 	if f.Flag() == nil {
 		return false
 	}
@@ -73,7 +138,7 @@ func (f *Flag) Hidden() bool {
 
 // Required reports whether the flag must be specified, as marked by
 // [MarkRequired] or the [Required] option.
-func (f *Flag) Required() bool {
+func (f *FlagArg) Required() bool {
 	if f.Flag() == nil {
 		return false
 	}
@@ -81,8 +146,8 @@ func (f *Flag) Required() bool {
 }
 
 // Group returns the name of the display group the flag was added to by
-// [AddToGroup]. It is empty if the flag is in no named group.
-func (f *Flag) Group() string {
+// [Group]. It is empty if the flag is in no named group.
+func (f *FlagArg) Group() string {
 	if f.Flag() == nil {
 		return ""
 	}
@@ -92,7 +157,7 @@ func (f *Flag) Group() string {
 // MutuallyExclusiveWith returns the sorted names of the flags that may not be
 // specified alongside this one, as marked by [MarkMutuallyExclusive]. The result
 // includes this flag, and is empty if it is in no such group.
-func (f *Flag) MutuallyExclusiveWith() []string {
+func (f *FlagArg) MutuallyExclusiveWith() []string {
 	if f.Flag() == nil {
 		return nil
 	}
@@ -102,7 +167,7 @@ func (f *Flag) MutuallyExclusiveWith() []string {
 // RequiredWith returns the sorted names of the flags that must be specified
 // alongside this one, as marked by [MarkRequiredTogether]. The result includes
 // this flag, and is empty if it is in no such group.
-func (f *Flag) RequiredWith() []string {
+func (f *FlagArg) RequiredWith() []string {
 	if f.Flag() == nil {
 		return nil
 	}
@@ -112,7 +177,7 @@ func (f *Flag) RequiredWith() []string {
 // OneRequiredWith returns the sorted names of the flags of which at least one
 // must be specified, as marked by [MarkOneRequired]. The result includes this
 // flag, and is empty if it is in no such group.
-func (f *Flag) OneRequiredWith() []string {
+func (f *FlagArg) OneRequiredWith() []string {
 	if f.Flag() == nil {
 		return nil
 	}
@@ -123,9 +188,9 @@ func (f *Flag) OneRequiredWith() []string {
 // property the flag exposes. A nil flag is equal to any other flag that
 // describes nothing.
 //
-// This enables [Flag] values to be compared with
+// This enables [FlagArg] values to be compared with
 // [github.com/google/go-cmp/cmp.Equal].
-func (f *Flag) Equal(other *Flag) bool {
+func (f *FlagArg) Equal(other *FlagArg) bool {
 	return f.Name() == other.Name() &&
 		f.Shorthand() == other.Shorthand() &&
 		f.Usage() == other.Usage() &&
@@ -139,10 +204,76 @@ func (f *Flag) Equal(other *Flag) bool {
 }
 
 // flagsOf wraps every flag registered in fs, in the order fs visits them.
-func flagsOf(fs *pflag.FlagSet) []*Flag {
-	var result []*Flag
+func flagsOf(fs *pflag.FlagSet) []*FlagArg {
+	var result []*FlagArg
 	fs.VisitAll(func(f *pflag.Flag) {
-		result = append(result, &Flag{flag: f})
+		result = append(result, &FlagArg{flag: f})
 	})
+	return result
+}
+
+// newFlagArg builds the underlying [pflag.Flag] for val and applies every
+// configured annotation, without inserting it into any flag set. Insertion is
+// deferred to [FlagArg.register]. It applies the bool bare-flag default for an
+// unnamed bool T.
+func newFlagArg[T any](val *value, name string, cfg *config) *FlagArg {
+	f := &pflag.Flag{
+		Name:      name,
+		Shorthand: cfg.shorthand,
+		Usage:     cfg.usage,
+		Value:     val,
+		DefValue:  val.String(),
+	}
+	f.Hidden = cfg.hidden
+	if cfg.required {
+		annotation.MarkRequired(f)
+	}
+	if isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Bool {
+		f.NoOptDefVal = "true"
+	}
+	for _, env := range cfg.envs {
+		annotation.AddENVFallback(f, env)
+	}
+	for _, fn := range cfg.custom {
+		annotation.AddFuncFallback(f, fn)
+	}
+	if cfg.completer != nil {
+		annotation.AddCompletion(f, cfg.completer)
+	}
+	return &FlagArg{flag: f}
+}
+
+// MarkRequired marks that all of the specified flags must be required when
+// parsing command lines.
+func MarkRequired(flags ...*FlagArg) {
+	annotation.MarkRequired(pflags(flags)...)
+}
+
+// MarkRequiredTogether marks that all flags must be specified together when any
+// one flag is specified. Note that this does not mean that all flags are always
+// required; it's all or none. If all flags are always required, then
+// [MarkRequired] should be used.
+func MarkRequiredTogether(flags ...*FlagArg) {
+	annotation.MarkRequiredTogether(pflags(flags)...)
+}
+
+// MarkMutuallyExclusive marks that all flags must be mutually exclusive with
+// each other, and will generate an error when parsing flags that have both set.
+func MarkMutuallyExclusive(flags ...*FlagArg) {
+	annotation.MarkMutuallyExclusive(pflags(flags)...)
+}
+
+// MarkOneRequired marks that at least one of the specified flags is required
+// when parsing command lines.
+func MarkOneRequired(flags ...*FlagArg) {
+	annotation.MarkOneRequired(pflags(flags)...)
+}
+
+// pflags unwraps flags into the representation the annotations are recorded on.
+func pflags(flags []*FlagArg) []*pflag.Flag {
+	result := make([]*pflag.Flag, 0, len(flags))
+	for _, f := range flags {
+		result = append(result, f.Flag())
+	}
 	return result
 }

@@ -2,34 +2,13 @@ package arg
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
-	"github.com/bitwizeshift/go-cli/internal/annotation"
-	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/bitwizeshift/go-cli/internal/strcase"
 	"github.com/spf13/pflag"
 )
-
-// ErrAlreadySet indicates a non-accumulating flag was specified more than once.
-// Only unnamed slice flags (such as []string) accumulate across occurrences by
-// default; any other flag reports this error on its second occurrence unless it
-// was made repeatable with [Repeatable] or [RepeatableUpTo].
-var ErrAlreadySet = errors.New("flag already specified")
-
-// ErrTooManyOccurrences indicates a flag was specified more times than its
-// [RepeatableUpTo] cap allows.
-var ErrTooManyOccurrences = errors.New("flag specified too many times")
-
-// errDecoderType indicates that a decoder supplied via [UnmarshalWith] produces
-// a value whose type does not match the flag's destination.
-var errDecoderType = errors.New("decoder type does not match flag value")
-
-// errCallbackType indicates a flag's decoded value is not assignable or
-// convertible to a [Callback] function's parameter type.
-var errCallbackType = errors.New("flag value not convertible to callback argument")
 
 // typeToName converts the underlying object's value to a pflag "type" name
 // by converting the Go reflect-API's type-identifier to a kebab-case. This
@@ -48,7 +27,7 @@ func typeToName(v any) string {
 	return strings.Join(parts, "-")
 }
 
-// Option configures an optional property of a flag registered by [AddFlag].
+// Option configures an optional property of a flag constructed by [Flag].
 type Option interface {
 	apply(*config)
 }
@@ -261,7 +240,7 @@ func invokeCallback(fn reflect.Value, arg reflect.Value) error {
 	return nil
 }
 
-// value is a closure-backed [pflag.Value] used by [AddFlag].
+// value is a closure-backed [pflag.Value] used by [Flag].
 type value struct {
 	set func(string) error
 	str func() string
@@ -273,85 +252,6 @@ func (v *value) String() string     { return v.str() }
 func (v *value) Type() string       { return v.typ() }
 
 var _ pflag.Value = (*value)(nil)
-
-// AddFlag registers a flag named name whose value is decoded into v, returning
-// the created [Flag].
-//
-// By default the flag is decoded with [Unmarshal] and reports a kebab-case type
-// name derived from T; both may be adjusted with [Option] values. A bool-kinded
-// T is registered so that a bare --name implies true.
-//
-// An unnamed slice T accumulates across repeated occurrences, so --name a --name
-// b is equivalent to --name a,b; any other T reports [ErrAlreadySet] if
-// specified more than once. [Repeatable] lifts that limit, and [RepeatableUpTo]
-// caps it, reporting [ErrTooManyOccurrences] beyond the cap; a repeated non-slice
-// flag keeps the last value. [Callback] options are invoked with the decoded
-// value on each occurrence.
-func AddFlag[T any](cl *CommandLine, name string, v *T, options ...Option) *Flag {
-	cfg := newConfig(options...)
-	slice := isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Slice
-	limit := 1
-	if slice {
-		limit = 0 // builtin slices accumulate without a limit by default
-	}
-	if cfg.maxSet {
-		limit = cfg.maxCount
-	}
-	count := 0
-	val := &value{
-		set: func(s string) error {
-			if limit > 0 && count >= limit {
-				if cfg.capped {
-					return fmt.Errorf("%s: %w", name, ErrTooManyOccurrences)
-				}
-				return fmt.Errorf("%s: %w", name, ErrAlreadySet)
-			}
-			var tmp T
-			if err := cfg.set(&tmp, []byte(s)); err != nil {
-				return err
-			}
-			if slice && count > 0 {
-				appendInto(v, tmp)
-			} else {
-				*v = tmp
-			}
-			for _, cb := range cfg.callbacks {
-				if err := invokeCallback(cb, reflect.ValueOf(tmp)); err != nil {
-					return err
-				}
-			}
-			count++
-			return nil
-		},
-		str: func() string { return defaultString(v) },
-		typ: func() string { return cfg.typeName(v) },
-	}
-	return registerFlag[T](cl, val, name, cfg)
-}
-
-// register adds val to fs under name, applying the bool bare-flag default for an
-// unnamed bool T.
-func registerFlag[T any](cl *CommandLine, val *value, name string, cfg *config) *Flag {
-	flags := argreg.Flags((*argreg.CommandLine)(cl))
-	f := flags.VarPF(val, name, cfg.shorthand, cfg.usage)
-	f.Hidden = cfg.hidden
-	if cfg.required {
-		annotation.MarkRequired(f)
-	}
-	if isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Bool {
-		f.NoOptDefVal = "true"
-	}
-	for _, env := range cfg.envs {
-		annotation.AddENVFallback(f, env)
-	}
-	for _, fn := range cfg.custom {
-		annotation.AddFuncFallback(f, fn)
-	}
-	if cfg.completer != nil {
-		annotation.AddCompletion(f, cfg.completer)
-	}
-	return &Flag{flag: f}
-}
 
 // isBuiltin reports whether T is a predeclared or composite type (such as bool
 // or []string) rather than a defined type such as `type Foo []string`. Defined

@@ -61,7 +61,7 @@ func (lf *LoggerFlag) RegisterArgs(cl *arg.CommandLine) {
 	if lf.ShortFlag != "" {
 		opts = append(opts, arg.Shorthand(lf.ShortFlag))
 	}
-	arg.AddFlag(cl, flagName, &lf.format, opts...)
+	cl.Add(arg.Flag(flagName, &lf.format, opts...))
 }
 
 var _ arg.Registrar = (*LoggerFlag)(nil)

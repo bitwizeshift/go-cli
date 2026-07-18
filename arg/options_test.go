@@ -43,13 +43,13 @@ func parseHexInt(data []byte) (int, error) {
 }
 
 // set assigns value to f, mirroring a single flag occurrence.
-func set(f *arg.Flag, value string) error {
+func set(f *arg.FlagArg, value string) error {
 	return f.Flag().Value.Set(value)
 }
 
 // setEach applies each value to f in order, mirroring one flag occurrence per
 // value, and returns the first error encountered.
-func setEach(f *arg.Flag, values []string) error {
+func setEach(f *arg.FlagArg, values []string) error {
 	for _, s := range values {
 		if err := set(f, s); err != nil {
 			return err
@@ -59,7 +59,7 @@ func setEach(f *arg.Flag, values []string) error {
 }
 
 // valueOf renders the value currently assigned to f.
-func valueOf(f *arg.Flag) string {
+func valueOf(f *arg.FlagArg) string {
 	return f.Flag().Value.String()
 }
 
@@ -84,7 +84,7 @@ type flagInfo struct {
 }
 
 // infoOf reads the observable properties of f into a [flagInfo].
-func infoOf(f *arg.Flag) flagInfo {
+func infoOf(f *arg.FlagArg) flagInfo {
 	return flagInfo{
 		Short: f.Shorthand(),
 		Type:  f.Type(),
@@ -145,7 +145,7 @@ func TestAdd_String(t *testing.T) {
 			var dst string
 
 			// Act
-			f := arg.AddFlag(cl, "value", &dst, tc.options...)
+			f := addFlag(cl, "value", &dst, tc.options...)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -197,7 +197,7 @@ func TestAdd_Int(t *testing.T) {
 			var dst int
 
 			// Act
-			f := arg.AddFlag(cl, "n", &dst, tc.options...)
+			f := addFlag(cl, "n", &dst, tc.options...)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -247,7 +247,7 @@ func TestAdd_Bool(t *testing.T) {
 			var dst bool
 
 			// Act
-			f := arg.AddFlag(cl, "verbose", &dst)
+			f := addFlag(cl, "verbose", &dst)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -295,7 +295,7 @@ func TestAdd_Slice(t *testing.T) {
 			var dst []int
 
 			// Act
-			f := arg.AddFlag(cl, "n", &dst)
+			f := addFlag(cl, "n", &dst)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -340,7 +340,7 @@ func TestAdd_DefinedSlice(t *testing.T) {
 			var dst stringList
 
 			// Act
-			f := arg.AddFlag(cl, "n", &dst)
+			f := addFlag(cl, "n", &dst)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -392,7 +392,7 @@ func TestAdd_Options(t *testing.T) {
 			var dst string
 
 			// Act
-			f := arg.AddFlag(cl, "value", &dst, tc.options...)
+			f := addFlag(cl, "value", &dst, tc.options...)
 			info := infoOf(f)
 
 			// Assert
@@ -413,9 +413,9 @@ func TestAdd_TypeNameAndBareFlag(t *testing.T) {
 	var toggleDst toggle
 
 	// Act
-	opFlag := arg.AddFlag(cl, "op", &opDst)
-	boolFlag := arg.AddFlag(cl, "bool", &boolDst)
-	toggleFlag := arg.AddFlag(cl, "toggle", &toggleDst)
+	opFlag := addFlag(cl, "op", &opDst)
+	boolFlag := addFlag(cl, "bool", &boolDst)
+	toggleFlag := addFlag(cl, "toggle", &toggleDst)
 	infos := []flagInfo{infoOf(opFlag), infoOf(boolFlag), infoOf(toggleFlag)}
 
 	// Assert
@@ -435,7 +435,7 @@ func TestAdd_NilPointerRendersEmptyString(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst *int
-	f := arg.AddFlag(cl, "n", &dst)
+	f := addFlag(cl, "n", &dst)
 
 	// Act
 	str := valueOf(f)
@@ -505,7 +505,7 @@ func TestCallback(t *testing.T) {
 				return nil
 			}
 			options := append([]arg.Option{arg.Callback(cb)}, tc.options...)
-			f := arg.AddFlag(cl, "n", &dst, options...)
+			f := addFlag(cl, "n", &dst, options...)
 
 			// Act
 			err := setEach(f, tc.sets)
@@ -532,10 +532,10 @@ func TestCallback_Shapes(t *testing.T) {
 	var nullary, nullaryErr bool
 	var unary, unaryErr int
 	var d1, d2, d3, d4 int
-	fNullary := arg.AddFlag(cl, "a", &d1, arg.Callback(func() { nullary = true }))
-	fUnary := arg.AddFlag(cl, "b", &d2, arg.Callback(func(v int) { unary = v }))
-	fNullaryErr := arg.AddFlag(cl, "c", &d3, arg.Callback(func() error { nullaryErr = true; return nil }))
-	fUnaryErr := arg.AddFlag(cl, "d", &d4, arg.Callback(func(v int) error { unaryErr = v; return nil }))
+	fNullary := addFlag(cl, "a", &d1, arg.Callback(func() { nullary = true }))
+	fUnary := addFlag(cl, "b", &d2, arg.Callback(func(v int) { unary = v }))
+	fNullaryErr := addFlag(cl, "c", &d3, arg.Callback(func() error { nullaryErr = true; return nil }))
+	fUnaryErr := addFlag(cl, "d", &d4, arg.Callback(func(v int) error { unaryErr = v; return nil }))
 
 	// Act
 	err := errors.Join(
@@ -572,8 +572,8 @@ func TestCallback_ConvertibleArgument(t *testing.T) {
 	var wideDst int64
 	var s string
 	var n int
-	fAny := arg.AddFlag(cl, "s", &s, arg.Callback(func(v any) { anyDst = v }))
-	fWide := arg.AddFlag(cl, "n", &n, arg.Callback(func(v int64) { wideDst = v }))
+	fAny := addFlag(cl, "s", &s, arg.Callback(func(v any) { anyDst = v }))
+	fWide := addFlag(cl, "n", &n, arg.Callback(func(v int64) { wideDst = v }))
 
 	// Act
 	err := errors.Join(set(fAny, "hello"), set(fWide, "42"))
@@ -596,7 +596,7 @@ func TestCallback_InconvertibleArgument(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var s string
-	f := arg.AddFlag(cl, "s", &s, arg.Callback(func(chan int) {}))
+	f := addFlag(cl, "s", &s, arg.Callback(func(chan int) {}))
 
 	// Act
 	err := set(f, "hello")
@@ -618,7 +618,7 @@ func TestCallback_BoolBareInvokesTrue(t *testing.T) {
 		seen = append(seen, v)
 		return nil
 	}
-	f := arg.AddFlag(cl, "verbose", &dst, arg.Callback(cb))
+	f := addFlag(cl, "verbose", &dst, arg.Callback(cb))
 
 	// Act
 	err := set(f, "true")
@@ -644,7 +644,7 @@ func TestCallback_ErrorPropagates(t *testing.T) {
 	cbErr := errors.New("callback failed")
 	var dst int
 	cb := func(int) error { return cbErr }
-	f := arg.AddFlag(cl, "n", &dst, arg.Callback(cb))
+	f := addFlag(cl, "n", &dst, arg.Callback(cb))
 
 	// Act
 	err := set(f, "5")
@@ -704,7 +704,7 @@ func TestRepeatable_ScalarKeepsLastValue(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst string
-	f := arg.AddFlag(cl, "v", &dst, arg.Repeatable())
+	f := addFlag(cl, "v", &dst, arg.Repeatable())
 
 	// Act
 	err := setEach(f, []string{"a", "b", "c"})
@@ -724,7 +724,7 @@ func TestRepeatable_SliceAccumulates(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst []int
-	f := arg.AddFlag(cl, "n", &dst, arg.Repeatable())
+	f := addFlag(cl, "n", &dst, arg.Repeatable())
 
 	// Act
 	err := setEach(f, []string{"1", "2"})
@@ -783,7 +783,7 @@ func TestRepeatableUpTo(t *testing.T) {
 			// Arrange
 			cl := argtest.NewCommandLine()
 			var dst string
-			f := arg.AddFlag(cl, "v", &dst, arg.RepeatableUpTo(tc.cap))
+			f := addFlag(cl, "v", &dst, arg.RepeatableUpTo(tc.cap))
 
 			// Act
 			err := setEach(f, tc.sets)
@@ -805,7 +805,7 @@ func TestRepeatableUpTo_CapsSliceOccurrences(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst []int
-	f := arg.AddFlag(cl, "n", &dst, arg.RepeatableUpTo(2))
+	f := addFlag(cl, "n", &dst, arg.RepeatableUpTo(2))
 
 	// Act
 	err := setEach(f, []string{"1,2", "3", "4"})
@@ -875,7 +875,7 @@ func TestHidden(t *testing.T) {
 			var dst string
 
 			// Act
-			f := arg.AddFlag(cl, "flag", &dst, tc.options...)
+			f := addFlag(cl, "flag", &dst, tc.options...)
 			hidden := f.Hidden()
 
 			// Assert
@@ -915,7 +915,7 @@ func TestRequired(t *testing.T) {
 			var dst string
 
 			// Act
-			f := arg.AddFlag(cl, "flag", &dst, tc.options...)
+			f := addFlag(cl, "flag", &dst, tc.options...)
 			required := f.Required()
 
 			// Assert
@@ -930,7 +930,7 @@ func TestDefaultFromEnv(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst string
-	arg.AddFlag(cl, "flag", &dst, arg.DefaultFromEnv("FLAG_ENV"))
+	addFlag(cl, "flag", &dst, arg.DefaultFromEnv("FLAG_ENV"))
 	t.Setenv("FLAG_ENV", "from-env")
 	ctx := context.Background()
 
@@ -953,7 +953,7 @@ func TestDefaultFromFunc(t *testing.T) {
 	cl := argtest.NewCommandLine()
 	var dst string
 	fn := func(context.Context) (string, error) { return "from-func", nil }
-	arg.AddFlag(cl, "flag", &dst, arg.DefaultFromFunc(fn))
+	addFlag(cl, "flag", &dst, arg.DefaultFromFunc(fn))
 	ctx := context.Background()
 
 	// Act

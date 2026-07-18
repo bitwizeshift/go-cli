@@ -19,7 +19,7 @@ type boolFlag struct {
 
 func (b boolFlag) RegisterArgs(cl *arg.CommandLine) {
 	var v bool
-	arg.AddFlag(cl, b.name, &v)
+	addFlag(cl, b.name, &v)
 }
 
 var _ arg.Registrar = boolFlag{}

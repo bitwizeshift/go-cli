@@ -167,13 +167,14 @@ func commandWithFlagGroups() *cobra.Command {
 	cl := (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
 	var force bool
 	var zulu, yankee, beta, gamma string
-	forceFlag := arg.AddFlag(cl, "force", &force, arg.Shorthand("f"), arg.Usage("force it"))
-	zuluFlag := arg.AddFlag(cl, "zulu", &zulu, arg.Usage("z option"))
-	betaFlag := arg.AddFlag(cl, "beta", &beta, arg.Usage("b option"), arg.Hidden())
-	arg.AddFlag(cl, "yankee", &yankee, arg.Usage("y option"))
-	gammaFlag := arg.AddFlag(cl, "gamma", &gamma, arg.Usage("g option"), arg.Hidden())
-	arg.AddToGroup("Zeta Flags", forceFlag, zuluFlag, betaFlag)
-	arg.AddToGroup("Secret Flags", gammaFlag)
+	forceFlag := arg.Flag("force", &force, arg.Shorthand("f"), arg.Usage("force it"))
+	zuluFlag := arg.Flag("zulu", &zulu, arg.Usage("z option"))
+	betaFlag := arg.Flag("beta", &beta, arg.Usage("b option"), arg.Hidden())
+	yankeeFlag := arg.Flag("yankee", &yankee, arg.Usage("y option"))
+	gammaFlag := arg.Flag("gamma", &gamma, arg.Usage("g option"), arg.Hidden())
+	cl.Add(forceFlag, zuluFlag, betaFlag, yankeeFlag, gammaFlag)
+	arg.Group("Zeta Flags", forceFlag, zuluFlag, betaFlag)
+	arg.Group("Secret Flags", gammaFlag)
 	return cmd
 }
 
@@ -181,8 +182,10 @@ func commandWithPositionals() (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{Use: "cp <src> <dst>", Short: "cp", Run: noop}
 	cl := (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
 	var src, dst string
-	arg.Positional(cl, "src", 0, &src, arg.Usage("source path"))
-	arg.Positional(cl, "dst", 1, &dst, arg.Usage("destination path"))
+	cl.Add(
+		arg.Positional("src", 0, &src, arg.Usage("source path")),
+		arg.Positional("dst", 1, &dst, arg.Usage("destination path")),
+	)
 	return cmd, cl
 }
 

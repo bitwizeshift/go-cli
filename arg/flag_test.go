@@ -11,51 +11,68 @@ import (
 	"github.com/bitwizeshift/go-cli/arg/argtest"
 )
 
-// newFlag registers a string flag named name in a fresh registry.
-func newFlag(name string, options ...arg.Option) *arg.Flag {
-	return arg.AddFlag(argtest.NewCommandLine(), name, new(string), options...)
-}
-
-// newIntFlag registers an int flag named name in a fresh registry, to observe a
-// differing reported type.
-func newIntFlag(name string) *arg.Flag {
-	return arg.AddFlag(argtest.NewCommandLine(), name, new(int))
-}
-
-// newGroupedFlag registers a string flag named name that belongs to the named
-// display group.
-func newGroupedFlag(name, group string) *arg.Flag {
-	f := newFlag(name)
-	arg.AddToGroup(group, f)
+// addFlag constructs a flag named name bound to v and registers it on cl,
+// returning the constructed [arg.FlagArg].
+func addFlag[T any](cl *arg.CommandLine, name string, v *T, options ...arg.Option) *arg.FlagArg {
+	f := arg.Flag(name, v, options...)
+	cl.Add(f)
 	return f
 }
 
-// newExclusiveFlag registers a string flag named name that is mutually exclusive
-// with a second flag in the same registry.
-func newExclusiveFlag(name string) *arg.Flag {
-	cl := argtest.NewCommandLine()
-	f := arg.AddFlag(cl, name, new(string))
-	other := arg.AddFlag(cl, "other", new(string))
+// addPositional constructs a positional argument bound to v at index and
+// registers it on cl.
+func addPositional[T any](cl *arg.CommandLine, name string, index int, v *T, options ...arg.Option) {
+	cl.Add(arg.Positional(name, index, v, options...))
+}
+
+// addUnmatched constructs an unmatched-argument binding to out and registers it
+// on cl.
+func addUnmatched(cl *arg.CommandLine, out *[]string) {
+	cl.Add(arg.Unmatched(out))
+}
+
+// newFlag constructs a string flag named name.
+func newFlag(name string, options ...arg.Option) *arg.FlagArg {
+	return arg.Flag(name, new(string), options...)
+}
+
+// newIntFlag constructs an int flag named name, to observe a differing reported
+// type.
+func newIntFlag(name string) *arg.FlagArg {
+	return arg.Flag(name, new(int))
+}
+
+// newGroupedFlag constructs a string flag named name that belongs to the named
+// display group.
+func newGroupedFlag(name, group string) *arg.FlagArg {
+	f := newFlag(name)
+	arg.Group(group, f)
+	return f
+}
+
+// newExclusiveFlag constructs a string flag named name that is mutually
+// exclusive with a second flag.
+func newExclusiveFlag(name string) *arg.FlagArg {
+	f := newFlag(name)
+	other := newFlag("other")
 	arg.MarkMutuallyExclusive(f, other)
 	return f
 }
 
-// newRequiredTogetherFlag registers a string flag named name that is required
-// together with a second flag in the same registry.
-func newRequiredTogetherFlag(name string) *arg.Flag {
-	cl := argtest.NewCommandLine()
-	f := arg.AddFlag(cl, name, new(string))
-	other := arg.AddFlag(cl, "other", new(string))
+// newRequiredTogetherFlag constructs a string flag named name that is required
+// together with a second flag.
+func newRequiredTogetherFlag(name string) *arg.FlagArg {
+	f := newFlag(name)
+	other := newFlag("other")
 	arg.MarkRequiredTogether(f, other)
 	return f
 }
 
-// newOneRequiredFlag registers a string flag named name of which at least one of
-// it and a second flag in the same registry is required.
-func newOneRequiredFlag(name string) *arg.Flag {
-	cl := argtest.NewCommandLine()
-	f := arg.AddFlag(cl, name, new(string))
-	other := arg.AddFlag(cl, "other", new(string))
+// newOneRequiredFlag constructs a string flag named name of which at least one
+// of it and a second flag is required.
+func newOneRequiredFlag(name string) *arg.FlagArg {
+	f := newFlag(name)
+	other := newFlag("other")
 	arg.MarkOneRequired(f, other)
 	return f
 }
@@ -68,13 +85,13 @@ func pflagName(f *pflag.Flag) string {
 	return f.Name
 }
 
-func TestFlag_Equal(t *testing.T) {
+func TestFlagArg_Equal(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name string
-		lhs  *arg.Flag
-		rhs  *arg.Flag
+		lhs  *arg.FlagArg
+		rhs  *arg.FlagArg
 		want bool
 	}{
 		{
@@ -152,7 +169,7 @@ func TestFlag_Equal(t *testing.T) {
 		{
 			name: "NilEqualsZeroFlag",
 			lhs:  nil,
-			rhs:  &arg.Flag{},
+			rhs:  &arg.FlagArg{},
 			want: true,
 		},
 		{
@@ -181,18 +198,18 @@ func TestFlag_Equal(t *testing.T) {
 
 			// Assert
 			if got, want := equal, tc.want; !cmp.Equal(got, want) {
-				t.Errorf("Flag.Equal(...) = %t, want %t", got, want)
+				t.Errorf("FlagArg.Equal(...) = %t, want %t", got, want)
 			}
 		})
 	}
 }
 
-func TestFlag_Flag(t *testing.T) {
+func TestFlagArg_Flag(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name     string
-		flag     *arg.Flag
+		flag     *arg.FlagArg
 		wantNil  bool
 		wantName string
 	}{
@@ -204,7 +221,7 @@ func TestFlag_Flag(t *testing.T) {
 		},
 		{
 			name:     "ZeroFlagHasNoUnderlyingFlag",
-			flag:     &arg.Flag{},
+			flag:     &arg.FlagArg{},
 			wantNil:  true,
 			wantName: "",
 		},
@@ -230,32 +247,99 @@ func TestFlag_Flag(t *testing.T) {
 
 			// Assert
 			if got, want := isNil, tc.wantNil; !cmp.Equal(got, want) {
-				t.Errorf("Flag.Flag() = nil %t, want %t", got, want)
+				t.Errorf("FlagArg.Flag() = nil %t, want %t", got, want)
 			}
 			if got, want := name, tc.wantName; !cmp.Equal(got, want) {
-				t.Errorf("Flag.Flag().Name = %q, want %q", got, want)
+				t.Errorf("FlagArg.Flag().Name = %q, want %q", got, want)
 			}
 		})
 	}
 }
 
-func TestRegistry_Flags(t *testing.T) {
+func TestMarkRequired(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
 	cl := argtest.NewCommandLine()
-	arg.AddFlag(cl, "verbose", new(bool), arg.Shorthand("v"))
-	arg.AddFlag(cl, "name", new(string))
-	want := []*arg.Flag{
-		newFlag("name"),
-		arg.AddFlag(argtest.NewCommandLine(), "verbose", new(bool), arg.Shorthand("v")),
-	}
+	a := addFlag(cl, "a", new(bool))
+	addFlag(cl, "b", new(bool))
+	arg.MarkRequired(a)
 
 	// Act
-	flags := cl.Flags()
+	flags := argtest.AllFlags(cl)
 
 	// Assert
+	want := []*argtest.Flag{
+		{Long: "a", Type: "bool", Required: true},
+		{Long: "b", Type: "bool"},
+	}
 	if got, want := flags, want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-		t.Errorf("Registry.Flags() = %v, want %v\n%s", got, want, cmp.Diff(want, got))
+		t.Errorf("AllFlags(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got))
+	}
+}
+
+func TestMarkRequiredTogether(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	cl := argtest.NewCommandLine()
+	a := addFlag(cl, "a", new(bool))
+	b := addFlag(cl, "b", new(bool))
+	arg.MarkRequiredTogether(a, b)
+
+	// Act
+	flags := argtest.AllFlags(cl)
+
+	// Assert
+	want := []*argtest.Flag{
+		{Long: "a", Type: "bool", RequiredWith: []string{"a", "b"}},
+		{Long: "b", Type: "bool", RequiredWith: []string{"a", "b"}},
+	}
+	if got, want := flags, want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("AllFlags(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got))
+	}
+}
+
+func TestMarkMutuallyExclusive(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	cl := argtest.NewCommandLine()
+	a := addFlag(cl, "a", new(bool))
+	b := addFlag(cl, "b", new(bool))
+	arg.MarkMutuallyExclusive(a, b)
+
+	// Act
+	flags := argtest.AllFlags(cl)
+
+	// Assert
+	want := []*argtest.Flag{
+		{Long: "a", Type: "bool", ExclusiveWith: []string{"a", "b"}},
+		{Long: "b", Type: "bool", ExclusiveWith: []string{"a", "b"}},
+	}
+	if got, want := flags, want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("AllFlags(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got))
+	}
+}
+
+func TestMarkOneRequired(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	cl := argtest.NewCommandLine()
+	a := addFlag(cl, "a", new(bool))
+	b := addFlag(cl, "b", new(bool))
+	arg.MarkOneRequired(a, b)
+
+	// Act
+	flags := argtest.AllFlags(cl)
+
+	// Assert
+	want := []*argtest.Flag{
+		{Long: "a", Type: "bool", OneRequiredWith: []string{"a", "b"}},
+		{Long: "b", Type: "bool", OneRequiredWith: []string{"a", "b"}},
+	}
+	if got, want := flags, want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("AllFlags(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got))
 	}
 }

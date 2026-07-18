@@ -13,7 +13,7 @@ It assumes you have read [Your First `go-cli` Application][first-app].
 
 If you have used [`pflag`] directly, you will expect to implement [`pflag.Value`]:
 `Set`, `String`, `Type`. **Do not do that.** `go-cli` does not expose a `Value`
-interface, and `arg.AddFlag` constructs the `pflag.Value` internally. Implementing
+interface, and `arg.Flag` constructs the `pflag.Value` internally. Implementing
 one gains you nothing.
 
 The library instead splits the problem in two, and they are independently useful:
@@ -83,10 +83,10 @@ package included: `github.Visibility` renders as `github-visibility`. If this
 default is not preferable, you can override it:
 
 ```go
-arg.AddFlag(registry, "visibility", &f.visibility,
+cl.Add(arg.Flag("visibility", &f.visibility,
   arg.Type("visibility"),
   arg.Usage("visibility of the new repository (public,private,internal)"),
-)
+))
 ```
 
 `arg.Type` exists precisely so the type name is a property of the *flag*, not
@@ -133,21 +133,21 @@ type ClientFlags struct {
 }
 
 func (f *ClientFlags) RegisterArgs(cl *arg.CommandLine) {
-  arg.AddFlagToGroup("GitHub Flags",
-    arg.AddFlag(cl, "github-token", &f.token,
-      arg.Shorthand("T"),
-      arg.Type("api-token"),
-      arg.Usage("the GitHub API token to use for communication"),
-      arg.DefaultFromEnv("GITHUB_TOKEN"),
-      arg.DefaultFromEnv("GH_TOKEN"),
-    ),
-    arg.AddFlag(cl, "github-api-url", &f.baseURL,
-      arg.Type("url"),
-      arg.Usage("the base URL for the GitHub API"),
-      arg.DefaultFromEnv("GITHUB_API_URL"),
-      arg.Hidden(),
-    ),
+  token := arg.Flag("github-token", &f.token,
+    arg.Shorthand("T"),
+    arg.Type("api-token"),
+    arg.Usage("the GitHub API token to use for communication"),
+    arg.DefaultFromEnv("GITHUB_TOKEN"),
+    arg.DefaultFromEnv("GH_TOKEN"),
   )
+  apiURL := arg.Flag("github-api-url", &f.baseURL,
+    arg.Type("url"),
+    arg.Usage("the base URL for the GitHub API"),
+    arg.DefaultFromEnv("GITHUB_API_URL"),
+    arg.Hidden(),
+  )
+  cl.Add(token, apiURL)
+  arg.AddToGroup("GitHub Flags", token, apiURL)
 }
 
 var _ arg.Registrar = (*ClientFlags)(nil)
@@ -168,9 +168,9 @@ func (f *ClientFlags) Client() *github.Client {
 
 Three details in `RegisterArgs` are doing real work.
 
-**`arg.AddFlag` returns the `*pflag.Flag` it created**, which is why the whole body
-can nest inside a single `arg.AddFlagToGroup("GitHub Flags", ...)` call. The group
-is a help-output heading; ungrouped flags fall under "General Flags".
+**`arg.Flag` constructs a flag without registering it**, returning a handle that
+`cl.Add` registers and that `arg.AddToGroup` places under a help-output heading;
+ungrouped flags fall under "General Flags".
 
 **Defaults are layered.** `arg.DefaultFromEnv` can be applied more than once --
 above, `GITHUB_TOKEN` is consulted, then `GH_TOKEN`.
@@ -334,9 +334,9 @@ and assert the error, which is where a custom `UnmarshalArg` earns its keep.
 Completion is a flag property, registered alongside the flag:
 
 ```go
-arg.AddFlag(registry, "visibility", &f.visibility,
+cl.Add(arg.Flag("visibility", &f.visibility,
   arg.CompleteFrom("public", "private", "internal"),
-)
+))
 ```
 
 `arg.CompleterFunc` computes candidates dynamically, and `arg.CompleteFiles`,

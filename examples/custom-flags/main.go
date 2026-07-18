@@ -47,43 +47,44 @@ func (f *GitHubFlags) defaultRepo(context.Context) (string, error) {
 }
 
 func (f *GitHubFlags) RegisterArgs(cl *arg.CommandLine) {
-	arg.AddToGroup("GitHub Flags",
-		arg.AddFlag(cl, "github-token", &f.token,
-			arg.Shorthand("T"),
-			arg.Type("api-token"),
-			arg.Usage("the GitHub API token to use for communication"),
-			arg.DefaultFromEnv("GITHUB_TOKEN"),
-			arg.DefaultFromEnv("GH_TOKEN"),
-		),
-		arg.AddFlag(cl, "github-pr", &f.githubPR,
-			arg.Usage("the pull request number"),
-			arg.Type("pr-number"),
-		),
-		arg.AddFlag(cl, "github-owner", &f.owner,
-			arg.Usage("the user or org that owns the repostiory"),
-			arg.DefaultFromEnv("GITHUB_REPOSITORY_OWNER"),
-			arg.DefaultFromFunc(f.defaultOwner),
-		),
-		arg.AddFlag(cl, "github-repo", &f.repo,
-			arg.Usage("the user or org that owns the repostiory"),
-			arg.DefaultFromFunc(f.defaultRepo),
-		),
-		arg.AddFlag(cl, "github-api-url", &f.githubBaseURL,
-			arg.Type("url"),
-			arg.Usage("the base URL for the GitHub API"),
-			arg.DefaultFromEnv("GITHUB_API_URL"),
-			arg.Hidden(),
-		),
-		arg.AddFlag(cl, "github-upload-url", &f.githubUploadURL,
-			arg.Type("url"),
-			arg.Usage("the upload URL for the GitHub API"),
-			arg.DefaultFromEnv("GITHUB_API_URL"),
-			arg.Hidden(),
-		),
+	token := arg.Flag("github-token", &f.token,
+		arg.Shorthand("T"),
+		arg.Type("api-token"),
+		arg.Usage("the GitHub API token to use for communication"),
+		arg.DefaultFromEnv("GITHUB_TOKEN"),
+		arg.DefaultFromEnv("GH_TOKEN"),
 	)
-	arg.Positional(cl, "foo", 0, &f.githubBaseURL,
+	pr := arg.Flag("github-pr", &f.githubPR,
+		arg.Usage("the pull request number"),
+		arg.Type("pr-number"),
+	)
+	owner := arg.Flag("github-owner", &f.owner,
+		arg.Usage("the user or org that owns the repostiory"),
+		arg.DefaultFromEnv("GITHUB_REPOSITORY_OWNER"),
+		arg.DefaultFromFunc(f.defaultOwner),
+	)
+	repo := arg.Flag("github-repo", &f.repo,
+		arg.Usage("the user or org that owns the repostiory"),
+		arg.DefaultFromFunc(f.defaultRepo),
+	)
+	apiURL := arg.Flag("github-api-url", &f.githubBaseURL,
+		arg.Type("url"),
+		arg.Usage("the base URL for the GitHub API"),
+		arg.DefaultFromEnv("GITHUB_API_URL"),
+		arg.Hidden(),
+	)
+	uploadURL := arg.Flag("github-upload-url", &f.githubUploadURL,
+		arg.Type("url"),
+		arg.Usage("the upload URL for the GitHub API"),
+		arg.DefaultFromEnv("GITHUB_API_URL"),
+		arg.Hidden(),
+	)
+	foo := arg.Positional("foo", 0, &f.githubBaseURL,
 		arg.Usage("Mehhhh"),
 	)
+
+	cl.Add(token, pr, owner, repo, apiURL, uploadURL, foo)
+	arg.Group("GitHub Flags", token, pr, owner, repo, apiURL, uploadURL)
 }
 
 var _ arg.Registrar = (*GitHubFlags)(nil)

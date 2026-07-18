@@ -170,10 +170,10 @@ type GreetRunner struct {
 }
 
 func (g *GreetRunner) RegisterArgs(cl *arg.CommandLine) {
-  arg.AddFlag(cl, "loud", &g.loud,
+  cl.Add(arg.Flag("loud", &g.loud,
     arg.Shorthand("l"),
     arg.Usage("shout the greeting"),
-  )
+  ))
 }
 
 func (g *GreetRunner) Run(ctx context.Context, args ...string) error {
@@ -188,15 +188,16 @@ func (g *GreetRunner) Run(ctx context.Context, args ...string) error {
 var _ arg.Registrar = (*GreetRunner)(nil)
 ```
 
-`arg.AddFlag` is generic over the destination pointer, so the type of `&g.loud`
+`arg.Flag` is generic over the destination pointer, so the type of `&g.loud`
 determines how the flag parses. Because `loud` is a `bool`, `--loud` works as a
-bare flag with no value.
+bare flag with no value. `arg.Flag` only constructs the flag; `cl.Add` registers
+it on the command line.
 
 Registration happens automatically: when the framework binds a runner, it checks
 whether that runner implements `Registrar` and calls `RegisterArgs` if so. You
 never touch a `pflag.FlagSet` directly.
 
-Flags can be grouped in the help output with `arg.AddFlagToGroup`, and constrained
+Flags can be grouped in the help output with `arg.AddToGroup`, and constrained
 against each other with `arg.MarkRequired`, `arg.MarkMutuallyExclusive`,
 `arg.MarkRequiredTogether`, and `arg.MarkOneRequired`. Building genuinely
 reusable flag components is the subject of the [next tutorial][custom-flags].

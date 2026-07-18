@@ -54,15 +54,16 @@ type initRunner struct {
 }
 
 func (ir *initRunner) RegisterArgs(cl *arg.CommandLine) {
-	path := arg.AddFlag(cl, "path", &ir.path,
+	path := arg.Flag("path", &ir.path,
 		arg.Shorthand("p"),
 		arg.Usage("directory to create the vault in"),
 	)
-	force := arg.AddFlag(cl, "force", &ir.force,
+	force := arg.Flag("force", &ir.force,
 		arg.Shorthand("f"),
 		arg.Usage("recreate the vault if one already exists"),
 	)
-	arg.AddToGroup("Vault Flags", path, force)
+	cl.Add(path, force)
+	arg.Group("Vault Flags", path, force)
 }
 
 func (ir *initRunner) Run(context.Context) error {
@@ -96,21 +97,22 @@ type itemAddRunner struct {
 }
 
 func (iar *itemAddRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.Positional(cl, "name", 0, &iar.name,
+	name := arg.Positional("name", 0, &iar.name,
 		arg.Usage("name of the item to add"),
 	)
-	priority := arg.AddFlag(cl, "priority", &iar.priority,
+	priority := arg.Flag("priority", &iar.priority,
 		arg.Shorthand("p"),
 		arg.Usage("priority from 1 (highest) to 9"),
 	)
-	pin := arg.AddFlag(cl, "pin", &iar.pin,
+	pin := arg.Flag("pin", &iar.pin,
 		arg.Usage("pin the item to the top of the list"),
 	)
-	tag := arg.AddFlag(cl, "tag", &iar.tags,
+	tag := arg.Flag("tag", &iar.tags,
 		arg.Shorthand("t"), arg.Usage("attach a tag; may be repeated"),
 	)
-	arg.AddToGroup("Scheduling Flags", priority, pin)
-	arg.AddToGroup("Metadata Flags", tag)
+	cl.Add(name, priority, pin, tag)
+	arg.Group("Scheduling Flags", priority, pin)
+	arg.Group("Metadata Flags", tag)
 	arg.MarkMutuallyExclusive(priority, pin)
 }
 
@@ -135,23 +137,24 @@ type itemListRunner struct {
 }
 
 func (ilr *itemListRunner) RegisterArgs(cl *arg.CommandLine) {
-	all := arg.AddFlag(cl, "all", &ilr.all,
+	all := arg.Flag("all", &ilr.all,
 		arg.Shorthand("a"),
 		arg.Usage("include completed items"),
 	)
-	status := arg.AddFlag(cl, "status", &ilr.status,
+	status := arg.Flag("status", &ilr.status,
 		arg.Shorthand("s"),
 		arg.Usage("show only items with this status"),
 	)
-	limit := arg.AddFlag(cl, "limit", &ilr.limit,
+	limit := arg.Flag("limit", &ilr.limit,
 		arg.Shorthand("n"),
 		arg.Usage("maximum number of items to show"),
 	)
-	asJSON := arg.AddFlag(cl, "json", &ilr.asJSON,
+	asJSON := arg.Flag("json", &ilr.asJSON,
 		arg.Usage("emit the listing as JSON"),
 	)
-	arg.AddToGroup("Filtering Flags", all, status, limit)
-	arg.AddToGroup("Output Flags", asJSON)
+	cl.Add(all, status, limit, asJSON)
+	arg.Group("Filtering Flags", all, status, limit)
+	arg.Group("Output Flags", asJSON)
 	arg.MarkMutuallyExclusive(all, status)
 }
 
@@ -170,10 +173,12 @@ type itemRemoveRunner struct {
 }
 
 func (irr *itemRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.Unmatched(cl, &irr.names)
-	arg.AddFlag(cl, "yes", &irr.yes,
-		arg.Shorthand("y"),
-		arg.Usage("skip the confirmation prompt"),
+	cl.Add(
+		arg.Unmatched(&irr.names),
+		arg.Flag("yes", &irr.yes,
+			arg.Shorthand("y"),
+			arg.Usage("skip the confirmation prompt"),
+		),
 	)
 }
 
@@ -189,9 +194,9 @@ type configGetRunner struct {
 }
 
 func (cgr *configGetRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.Positional(cl, "key", 0, &cgr.key,
+	cl.Add(arg.Positional("key", 0, &cgr.key,
 		arg.Usage("configuration key to read"),
-	)
+	))
 }
 
 func (cgr *configGetRunner) Run(context.Context) error {
@@ -207,11 +212,13 @@ type configSetRunner struct {
 }
 
 func (csr *configSetRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.Positional(cl, "key", 0, &csr.key,
-		arg.Usage("configuration key to set"),
-	)
-	arg.Positional(cl, "value", 1, &csr.value,
-		arg.Usage("value to assign to the key"),
+	cl.Add(
+		arg.Positional("key", 0, &csr.key,
+			arg.Usage("configuration key to set"),
+		),
+		arg.Positional("value", 1, &csr.value,
+			arg.Usage("value to assign to the key"),
+		),
 	)
 }
 
@@ -227,9 +234,9 @@ type configListRunner struct {
 }
 
 func (clr *configListRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.AddFlag(cl, "json", &clr.asJSON,
+	cl.Add(arg.Flag("json", &clr.asJSON,
 		arg.Usage("emit the settings as JSON"),
-	)
+	))
 }
 
 func (clr *configListRunner) Run(context.Context) error {
@@ -247,20 +254,21 @@ type remoteAddRunner struct {
 }
 
 func (rar *remoteAddRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.Positional(cl, "name", 0, &rar.name,
+	name := arg.Positional("name", 0, &rar.name,
 		arg.Usage("name for the remote"),
 	)
-	arg.Positional(cl, "url", 1, &rar.url,
+	url := arg.Positional("url", 1, &rar.url,
 		arg.Usage("URL of the remote"),
 	)
-	token := arg.AddFlag(cl, "token", &rar.token,
+	token := arg.Flag("token", &rar.token,
 		arg.Shorthand("k"),
 		arg.Usage("authentication token for the remote"),
 	)
-	insecure := arg.AddFlag(cl, "insecure", &rar.insecure,
+	insecure := arg.Flag("insecure", &rar.insecure,
 		arg.Usage("permit insecure TLS connections"),
 	)
-	arg.AddToGroup("Connection Flags", token, insecure)
+	cl.Add(name, url, token, insecure)
+	arg.Group("Connection Flags", token, insecure)
 	arg.MarkRequired(token)
 }
 
@@ -284,13 +292,14 @@ type remoteRemoveRunner struct {
 }
 
 func (rrr *remoteRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.Positional(cl, "name", 0, &rrr.name,
+	name := arg.Positional("name", 0, &rrr.name,
 		arg.Usage("name of the remote to remove"),
 	)
-	arg.AddFlag(cl, "yes", &rrr.yes,
+	yes := arg.Flag("yes", &rrr.yes,
 		arg.Shorthand("y"),
 		arg.Usage("skip the confirmation prompt"),
 	)
+	cl.Add(name, yes)
 }
 
 func (rrr *remoteRemoveRunner) Run(context.Context) error {

@@ -186,7 +186,7 @@ func positionalsOf(cl *arg.CommandLine) []PositionalInfo {
 // are omitted, and hidden flags within a group are excluded.
 func flagGroupsOf(cl *arg.CommandLine) []FlagGroup {
 	var groups []FlagGroup
-	for _, group := range arg.Groups(cl) {
+	for _, group := range cl.Groups() {
 		if group.Hidden() {
 			continue
 		}
@@ -205,7 +205,7 @@ func flagGroupsOf(cl *arg.CommandLine) []FlagGroup {
 }
 
 // flagInfoOf extracts the display information for a single flag.
-func flagInfoOf(f *arg.Flag) FlagInfo {
+func flagInfoOf(f *arg.FlagArg) FlagInfo {
 	return FlagInfo{
 		Shorthand: f.Shorthand(),
 		Name:      f.Name(),
@@ -216,7 +216,7 @@ func flagInfoOf(f *arg.Flag) FlagInfo {
 
 // flagTypeOf returns the type name to display for f, or an empty string for
 // boolean flags, which take no value argument.
-func flagTypeOf(f *arg.Flag) string {
+func flagTypeOf(f *arg.FlagArg) string {
 	if t := f.Type(); t != "bool" {
 		return t
 	}

@@ -24,7 +24,7 @@ type completion struct {
 func completionOf(t testing.TB, option arg.Option, toComplete string) completion {
 	t.Helper()
 
-	f := arg.AddFlag(argtest.NewCommandLine(), "value", new(string), option)
+	f := addFlag(argtest.NewCommandLine(), "value", new(string), option)
 	complete := annotation.GetCompletionFunc(f.Flag())
 	if complete == nil {
 		t.Fatalf("Add(...) registered no completion function, want one")
@@ -169,7 +169,7 @@ func TestCompletionOptions_Conflict_Panics(t *testing.T) {
 			var dst string
 
 			// Act & Assert
-			requirePanic(t, func() { arg.AddFlag(cl, "value", &dst, tc.options...) })
+			requirePanic(t, func() { addFlag(cl, "value", &dst, tc.options...) })
 		})
 	}
 }

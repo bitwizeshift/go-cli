@@ -58,7 +58,7 @@ func TestParse(t *testing.T) {
 
 			// Arrange
 			cl := argtest.NewCommandLine()
-			arg.AddFlag(cl, "flag", new(bool))
+			cl.Add(arg.Flag("flag", new(bool)))
 			ft := &FakeT{}
 
 			// Act
@@ -77,15 +77,16 @@ func TestAllFlags(t *testing.T) {
 
 	// Arrange
 	cl := argtest.NewCommandLine()
-	verbose := arg.AddFlag(cl, "verbose", new(bool), arg.Shorthand("v"))
-	name := arg.AddFlag(cl, "name", new(string))
-	arg.AddFlag(cl, "region", new(string))
-	novalue := arg.AddFlag(cl, "novalue", new(int))
+	verbose := arg.Flag("verbose", new(bool), arg.Shorthand("v"))
+	name := arg.Flag("name", new(string))
+	region := arg.Flag("region", new(string))
+	novalue := arg.Flag("novalue", new(int))
+	cl.Add(verbose, name, region, novalue)
 	arg.MarkRequired(name)
 	arg.MarkRequiredTogether(verbose, name)
 	arg.MarkMutuallyExclusive(verbose, novalue)
 	arg.MarkOneRequired(name, novalue)
-	arg.AddToGroup("Location Flags", novalue)
+	arg.Group("Location Flags", novalue)
 
 	// Act
 	flags := argtest.AllFlags(cl)
@@ -129,8 +130,10 @@ func TestAllPositionals(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var src, dst string
-	arg.Positional(cl, "src", 0, &src, arg.Usage("source path"))
-	arg.Positional(cl, "dst", 1, &dst, arg.Type("path"), arg.Usage("destination path"))
+	cl.Add(
+		arg.Positional("src", 0, &src, arg.Usage("source path")),
+		arg.Positional("dst", 1, &dst, arg.Type("path"), arg.Usage("destination path")),
+	)
 
 	// Act
 	positionals := argtest.AllPositionals(cl)
@@ -162,8 +165,10 @@ func TestParse_BindsPositionals(t *testing.T) {
 	cl := argtest.NewCommandLine()
 	var name string
 	var rest []string
-	arg.Positional(cl, "name", 0, &name)
-	arg.Unmatched(cl, &rest)
+	cl.Add(
+		arg.Positional("name", 0, &name),
+		arg.Unmatched(&rest),
+	)
 	ft := &FakeT{}
 
 	// Act
@@ -186,7 +191,7 @@ func TestParse_BindError(t *testing.T) {
 
 	// Arrange
 	cl := argtest.NewCommandLine()
-	arg.Positional(cl, "value", 0, new(string), arg.UnmarshalWith(failDecode))
+	cl.Add(arg.Positional("value", 0, new(string), arg.UnmarshalWith(failDecode)))
 	ft := &FakeT{}
 
 	// Act
@@ -204,8 +209,10 @@ func TestLongFlags(t *testing.T) {
 	// Arrange
 	var b bool
 	cl := argtest.NewCommandLine()
-	arg.AddFlag(cl, "alpha", &b, arg.Shorthand("a"))
-	arg.AddFlag(cl, "beta", &b)
+	cl.Add(
+		arg.Flag("alpha", &b, arg.Shorthand("a")),
+		arg.Flag("beta", &b),
+	)
 
 	// Act
 	long := argtest.LongFlags(cl)
@@ -221,8 +228,10 @@ func TestShortFlags(t *testing.T) {
 
 	// Arrange
 	cl := argtest.NewCommandLine()
-	arg.AddFlag(cl, "alpha", new(bool), arg.Shorthand("a"))
-	arg.AddFlag(cl, "beta", new(bool))
+	cl.Add(
+		arg.Flag("alpha", new(bool), arg.Shorthand("a")),
+		arg.Flag("beta", new(bool)),
+	)
 
 	// Act
 	short := argtest.ShortFlags(cl)

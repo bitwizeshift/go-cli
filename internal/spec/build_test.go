@@ -24,8 +24,10 @@ type flaggedRunner struct {
 }
 
 func (fr *flaggedRunner) RegisterArgs(cl *arg.CommandLine) {
-	arg.AddFlag(cl, "verbose", &fr.verbose)
-	arg.AddFlag(cl, "format", &fr.format, arg.CompleteFrom("json", "yaml"))
+	cl.Add(
+		arg.Flag("verbose", &fr.verbose),
+		arg.Flag("format", &fr.format, arg.CompleteFrom("json", "yaml")),
+	)
 }
 
 func (fr *flaggedRunner) Run(context.Context) error {

@@ -55,7 +55,7 @@ func TestPositional_Set(t *testing.T) {
 			// Arrange
 			cl := argtest.NewCommandLine()
 			var dst string
-			arg.Positional(cl, "value", 0, &dst, tc.options...)
+			addPositional(cl, "value", 0, &dst, tc.options...)
 			positional := firstPositional(cl)
 
 			// Act
@@ -78,7 +78,7 @@ func TestPositional_SetDecodesTypedValue(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst int
-	arg.Positional(cl, "count", 0, &dst)
+	addPositional(cl, "count", 0, &dst)
 	positional := firstPositional(cl)
 
 	// Act
@@ -99,7 +99,7 @@ func TestPositional_SetInvokesCallback(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst, seen string
-	arg.Positional(cl, "value", 0, &dst, arg.Callback(func(s string) { seen = s }))
+	addPositional(cl, "value", 0, &dst, arg.Callback(func(s string) { seen = s }))
 	positional := firstPositional(cl)
 
 	// Act
@@ -120,7 +120,7 @@ func TestPositional_SetCallbackError(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst string
-	arg.Positional(cl, "value", 0, &dst, arg.Callback(func(string) error { return errDecode }))
+	addPositional(cl, "value", 0, &dst, arg.Callback(func(string) error { return errDecode }))
 	positional := firstPositional(cl)
 
 	// Act
@@ -139,8 +139,8 @@ func TestPositional_Metadata(t *testing.T) {
 	cl := argtest.NewCommandLine()
 	var name string
 	var count int
-	arg.Positional(cl, "name", 0, &name, arg.Usage("the name"))
-	arg.Positional(cl, "count", 1, &count, arg.Type("number"), arg.Usage("how many"))
+	addPositional(cl, "name", 0, &name, arg.Usage("the name"))
+	addPositional(cl, "count", 1, &count, arg.Type("number"), arg.Usage("how many"))
 
 	// Act
 	positionals := argtest.AllPositionals(cl)
@@ -161,7 +161,7 @@ func TestUnmatched_AssignsValues(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var rest []string
-	arg.Unmatched(cl, &rest)
+	addUnmatched(cl, &rest)
 	unmatched := argreg.GetUnmatched((*argreg.CommandLine)(cl))
 
 	// Act
