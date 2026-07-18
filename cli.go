@@ -29,9 +29,6 @@ var (
 	// ErrUsage is a sentinel error that, when returned from a [Runner], prints
 	// the command's usage message.
 	ErrUsage = spec.ErrUsage
-
-	// ErrPanic is the sentinel error a [PanicError] unwraps to.
-	ErrPanic = spec.ErrPanic
 )
 
 // CLI is a fully assembled command-line application ready to be executed.
@@ -88,7 +85,7 @@ func (c *CLI) Run(ctx context.Context) exit.Code {
 	switch err := spec.Execute(ctx, c.cmd); {
 	case err == nil:
 		return exit.CodeSuccess
-	case errors.Is(err, ErrPanic):
+	case errors.Is(err, spec.ErrPanic):
 		return exit.CodeSoftware
 	default:
 		if code := c.errClassifier.ClassifyError(err); code != exit.CodeUnknown {
