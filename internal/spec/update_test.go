@@ -83,8 +83,12 @@ func TestBuild_UndecodableUpdateSource_ReturnsError(t *testing.T) {
 func TestBuild_UpdateAdvisory(t *testing.T) {
 	// os.UserCacheDir is forced to fail so the cache never touches the real
 	// filesystem; the update check still runs against the in-memory provider.
+	// The backing environment variable is OS-specific: HOME/XDG_CACHE_HOME on
+	// Unix, LocalAppData on Windows. All are cleared so the cache is disabled on
+	// every platform, otherwise a working cache leaks state between subtests.
 	t.Setenv("HOME", "")
 	t.Setenv("XDG_CACHE_HOME", "")
+	t.Setenv("LocalAppData", "")
 
 	const (
 		currentVersion = "v1.0.0"
