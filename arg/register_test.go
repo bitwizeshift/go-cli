@@ -1,4 +1,4 @@
-package flag_test
+package arg_test
 
 import (
 	"strings"
@@ -7,24 +7,24 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/flag/flagtest"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/arg/argtest"
 )
 
-// boolFlag is a [flag.Registrar] that registers a single bool flag identified
+// boolFlag is a [arg.Registrar] that registers a single bool flag identified
 // by name.
 type boolFlag struct {
 	name string
 }
 
-func (b boolFlag) RegisterFlags(registry *flag.Registry) {
+func (b boolFlag) RegisterArgs(cl *arg.CommandLine) {
 	var v bool
-	flag.Add(registry, b.name, &v)
+	arg.AddFlag(cl, b.name, &v)
 }
 
-var _ flag.Registrar = boolFlag{}
+var _ arg.Registrar = boolFlag{}
 
-// container is a non-[flag.Registrar] struct that holds a [flag.Registrar]
+// container is a non-[arg.Registrar] struct that holds a [arg.Registrar]
 // field, used to exercise recursive registration through pointers and
 // interfaces.
 type container struct {
@@ -33,18 +33,18 @@ type container struct {
 
 // ifaceHolder holds an interface-typed field, used to exercise recursion
 // through a [reflect.Interface] value whose concrete type is not itself a
-// [flag.Registrar].
+// [arg.Registrar].
 type ifaceHolder struct {
 	Value any
 }
 
-// unexportedField holds an unexported [flag.Registrar] field, which must be
+// unexportedField holds an unexported [arg.Registrar] field, which must be
 // skipped because its value cannot be read reflectively.
 type unexportedField struct {
 	hidden boolFlag
 }
 
-// tagged holds a [flag.Registrar] field annotated to be ignored via a struct
+// tagged holds a [arg.Registrar] field annotated to be ignored via a struct
 // tag.
 type tagged struct {
 	Flag boolFlag `flag:"ignore"`
@@ -58,7 +58,7 @@ type mixed struct {
 	Count   int
 }
 
-// pair holds two [flag.Registrar] pointer fields, used to place the same
+// pair holds two [arg.Registrar] pointer fields, used to place the same
 // instance at more than one position within a tree.
 type pair struct {
 	First  *boolFlag
@@ -72,19 +72,19 @@ type ifacePair struct {
 	Second any
 }
 
-// manualParent is a [flag.Registrar] whose RegisterFlags re-enters registration
-// for the same child twice, exercising deduplication across the RegisterFlags
+// manualParent is a [arg.Registrar] whose RegisterArgs re-enters registration
+// for the same child twice, exercising deduplication across the RegisterArgs
 // boundary.
 type manualParent struct {
 	Child *boolFlag
 }
 
-func (m *manualParent) RegisterFlags(registry *flag.Registry) {
-	flag.Register(registry, m.Child)
-	flag.Register(registry, m.Child)
+func (m *manualParent) RegisterArgs(cl *arg.CommandLine) {
+	arg.Register(cl, m.Child)
+	arg.Register(cl, m.Child)
 }
 
-var _ flag.Registrar = (*manualParent)(nil)
+var _ arg.Registrar = (*manualParent)(nil)
 
 func TestRegister(t *testing.T) {
 	t.Parallel()
@@ -165,13 +165,13 @@ func TestRegister(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 
 			// Act
-			flag.Register(registry, tc.v)
+			arg.Register(cl, tc.v)
 
 			// Assert
-			names := flagtest.LongFlags(registry)
+			names := argtest.LongFlags(cl)
 			opts := cmp.Options{cmpopts.SortSlices(strings.Compare), cmpopts.EquateEmpty()}
 			if got, want := names, tc.want; !cmp.Equal(got, want, opts...) {
 				t.Errorf("Register(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got, opts...))
@@ -225,13 +225,13 @@ func TestRegister_UniqueInstances(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 
 			// Act
-			flag.Register(registry, tc.v)
+			arg.Register(cl, tc.v)
 
 			// Assert
-			names := flagtest.LongFlags(registry)
+			names := argtest.LongFlags(cl)
 			opts := cmp.Options{cmpopts.SortSlices(strings.Compare), cmpopts.EquateEmpty()}
 			if got, want := names, tc.want; !cmp.Equal(got, want, opts...) {
 				t.Errorf("Register(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got, opts...))

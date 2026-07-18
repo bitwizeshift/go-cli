@@ -1,4 +1,4 @@
-package flag
+package arg
 
 import (
 	"encoding"
@@ -12,11 +12,11 @@ import (
 )
 
 // Unmarshaler is implemented by types that decode themselves from the raw bytes
-// of a flag value.
+// of an arg value.
 type Unmarshaler interface {
-	// UnmarshalFlag decodes data into the receiver, returning an error if the
+	// UnmarshalArg decodes data into the receiver, returning an error if the
 	// input is not valid for the type.
-	UnmarshalFlag(data []byte) error
+	UnmarshalArg(data []byte) error
 }
 
 var (
@@ -99,7 +99,7 @@ func decode(ptr reflect.Value, data []byte) error {
 func tryUnmarshaler(v any, data []byte) (bool, error) {
 	switch u := v.(type) {
 	case Unmarshaler:
-		return true, u.UnmarshalFlag(data)
+		return true, u.UnmarshalArg(data)
 	case encoding.TextUnmarshaler:
 		return true, u.UnmarshalText(data)
 	}

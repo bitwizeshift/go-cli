@@ -1,4 +1,4 @@
-package flag_test
+package arg_test
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/flag/flagtest"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/arg/argtest"
 )
 
 // groupFlag is a declarative specification of a flag to register, along with
@@ -19,7 +19,7 @@ type groupFlag struct {
 	group string
 }
 
-// groupInfo captures a [flag.Group] as its name and the long names of its
+// groupInfo captures a [arg.FlagGroup] as its name and the long names of its
 // flags, so that groups may be compared as plain data.
 type groupInfo struct {
 	Name  string
@@ -27,7 +27,7 @@ type groupInfo struct {
 }
 
 // groupInfosOf reduces groups to their comparable form.
-func groupInfosOf(groups []*flag.Group) []groupInfo {
+func groupInfosOf(groups []*arg.FlagGroup) []groupInfo {
 	var result []groupInfo
 	for _, g := range groups {
 		info := groupInfo{Name: g.Name}
@@ -41,17 +41,17 @@ func groupInfosOf(groups []*flag.Group) []groupInfo {
 
 // hiddenFlags registers a bool flag for each entry in hidden, marking the flag
 // hidden when its entry is set.
-func hiddenFlags(t testing.TB, hidden []bool) []*flag.Flag {
+func hiddenFlags(t testing.TB, hidden []bool) []*arg.Flag {
 	t.Helper()
 
-	registry := flagtest.NewRegistry()
-	var flags []*flag.Flag
+	cl := argtest.NewCommandLine()
+	var flags []*arg.Flag
 	for i, h := range hidden {
-		var options []flag.Option
+		var options []arg.Option
 		if h {
-			options = append(options, flag.Hidden())
+			options = append(options, arg.Hidden())
 		}
-		flags = append(flags, flag.Add(registry, fmt.Sprintf("flag%d", i), new(bool), options...))
+		flags = append(flags, arg.AddFlag(cl, fmt.Sprintf("flag%d", i), new(bool), options...))
 	}
 	return flags
 }
@@ -153,14 +153,14 @@ func TestGroups(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			for _, f := range tc.flags {
-				added := flag.Add(registry, f.name, new(bool), flag.Usage(f.usage))
-				flag.AddToGroup(f.group, added)
+				added := arg.AddFlag(cl, f.name, new(bool), arg.Usage(f.usage))
+				arg.AddToGroup(f.group, added)
 			}
 
 			// Act
-			groups := groupInfosOf(flag.Groups(registry))
+			groups := groupInfosOf(arg.Groups(cl))
 
 			// Assert
 			if got, want := groups, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
@@ -176,14 +176,14 @@ func TestAddToGroup(t *testing.T) {
 	testCases := []struct {
 		name  string
 		flags []groupFlag
-		want  []*flagtest.Flag
+		want  []*argtest.Flag
 	}{
 		{
 			name: "GroupedFlagReportsItsGroup",
 			flags: []groupFlag{
 				{name: "region", group: "Location Flags"},
 			},
-			want: []*flagtest.Flag{
+			want: []*argtest.Flag{
 				{Long: "region", Type: "bool", Group: "Location Flags"},
 			},
 		},
@@ -192,7 +192,7 @@ func TestAddToGroup(t *testing.T) {
 			flags: []groupFlag{
 				{name: "verbose"},
 			},
-			want: []*flagtest.Flag{
+			want: []*argtest.Flag{
 				{Long: "verbose", Type: "bool"},
 			},
 		},
@@ -202,7 +202,7 @@ func TestAddToGroup(t *testing.T) {
 				{name: "host", group: "Connection Flags"},
 				{name: "port", group: "Connection Flags"},
 			},
-			want: []*flagtest.Flag{
+			want: []*argtest.Flag{
 				{Long: "host", Type: "bool", Group: "Connection Flags"},
 				{Long: "port", Type: "bool", Group: "Connection Flags"},
 			},
@@ -214,16 +214,16 @@ func TestAddToGroup(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			for _, f := range tc.flags {
-				fg := flag.Add(registry, f.name, new(bool), flag.Usage(f.usage))
+				fg := arg.AddFlag(cl, f.name, new(bool), arg.Usage(f.usage))
 
 				// Act
-				flag.AddToGroup(f.group, fg)
+				arg.AddToGroup(f.group, fg)
 			}
 
 			// Assert
-			names := flagtest.AllFlags(registry)
+			names := argtest.AllFlags(cl)
 			if got, want := names, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 				t.Errorf("AddToGroup(...) mismatch (-want +got):\n%s", cmp.Diff(want, got, cmpopts.EquateEmpty()))
 			}
@@ -271,7 +271,7 @@ func TestGroup_Hidden(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := &flag.Group{Flags: hiddenFlags(t, tc.hidden)}
+			sut := &arg.FlagGroup{Flags: hiddenFlags(t, tc.hidden)}
 
 			// Act
 			hidden := sut.Hidden()

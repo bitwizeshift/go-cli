@@ -70,13 +70,13 @@ commands:
       arity: 0
 
     - id: item-remove
-      use: remove <name>
+      use: remove <name>...
       aliases: [rm]
-      summary: Removes an item from the vault
+      summary: Removes one or more items from the vault
       description: |
-        Permanently removes the named item. The confirmation prompt can be
+        Permanently removes the named items. The confirmation prompt can be
         skipped with --yes.
-      arity: 1
+      arity: '>=1'
 
   Configuration Commands:
     - id: config

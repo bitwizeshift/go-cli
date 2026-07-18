@@ -5,9 +5,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/bitwizeshift/go-cli/arg/argtest"
 	"github.com/bitwizeshift/go-cli/clitest"
 	"github.com/bitwizeshift/go-cli/diagnostic"
-	"github.com/bitwizeshift/go-cli/flag/flagtest"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -17,9 +17,9 @@ import (
 func parseFormat(t *testing.T, lf *diagnostic.LoggerFlag, args ...string) {
 	t.Helper()
 
-	registry := flagtest.NewRegistry()
-	lf.RegisterFlags(registry)
-	flagtest.Parse(t, registry, args...)
+	cl := argtest.NewCommandLine()
+	lf.RegisterArgs(cl)
+	argtest.Parse(t, cl, args...)
 }
 
 func TestFormatType_UnmarshalText(t *testing.T) {
@@ -75,30 +75,30 @@ func TestFormatType_UnmarshalText(t *testing.T) {
 	}
 }
 
-func TestLoggerFlag_RegisterFlags(t *testing.T) {
+func TestLoggerFlag_RegisterArgs(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name string
 		flag diagnostic.LoggerFlag
-		want []*flagtest.Flag
+		want []*argtest.Flag
 	}{
 		{
 			name: "Defaults",
 			flag: diagnostic.LoggerFlag{},
-			want: []*flagtest.Flag{
+			want: []*argtest.Flag{
 				{Long: "output-format", Type: "format"},
 			},
 		}, {
 			name: "CustomLongFlag",
 			flag: diagnostic.LoggerFlag{LongFlag: "fmt"},
-			want: []*flagtest.Flag{
+			want: []*argtest.Flag{
 				{Long: "fmt", Type: "format"},
 			},
 		}, {
 			name: "CustomShortFlag",
 			flag: diagnostic.LoggerFlag{LongFlag: "fmt", ShortFlag: "f"},
-			want: []*flagtest.Flag{
+			want: []*argtest.Flag{
 				{Long: "fmt", Short: "f", Type: "format"},
 			},
 		},
@@ -109,16 +109,16 @@ func TestLoggerFlag_RegisterFlags(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			lf := tc.flag
 
 			// Act
-			lf.RegisterFlags(registry)
-			flags := flagtest.AllFlags(registry)
+			lf.RegisterArgs(cl)
+			flags := argtest.AllFlags(cl)
 
 			// Assert
 			if got, want := flags, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-				t.Errorf("RegisterFlags(...) flags = %+v, want %+v", got, want)
+				t.Errorf("RegisterArgs(...) flags = %+v, want %+v", got, want)
 			}
 		})
 	}

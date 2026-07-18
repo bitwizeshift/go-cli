@@ -78,6 +78,21 @@ func flagGrid(flags []FlagInfo, columns int) string {
 	return format.Grid(rows, columns, sectionIndent, gridGap, 0)
 }
 
+// positionalGrid renders positional arguments as an aligned grid, styling names
+// and their type arguments distinctly, matching the flag grid's layout.
+func positionalGrid(positionals []PositionalInfo, columns int) string {
+	rows := make([]format.Row, 0, len(positionals))
+	for _, p := range positionals {
+		var s span
+		s.add(p.Name, "label")
+		if p.Type != "" {
+			s.add(" "+p.Type, "value")
+		}
+		rows = append(rows, s.row(p.Usage))
+	}
+	return format.Grid(rows, columns, sectionIndent, gridGap, 0)
+}
+
 // flagMarker renders the name column of a flag, aligning long-only flags beneath
 // the position occupied by a shorthand.
 func flagMarker(f FlagInfo) string {
@@ -110,6 +125,9 @@ func funcs(columns int, view View) template.FuncMap {
 		return commandGrid(commands, columns, commandWidth)
 	}
 	f["flagGrid"] = func(flags []FlagInfo) string { return flagGrid(flags, columns) }
+	f["positionalGrid"] = func(positionals []PositionalInfo) string {
+		return positionalGrid(positionals, columns)
+	}
 	f["hint"] = func(path string) string { return hintLine(path, columns) }
 	return f
 }

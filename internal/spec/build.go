@@ -8,9 +8,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
-	"github.com/bitwizeshift/go-cli/internal/flagreg"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/bitwizeshift/go-cli/internal/storage"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/richtext"
@@ -73,7 +73,7 @@ func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 	unbound := make(map[string]Runner, len(opts.Runners))
 	maps.Copy(unbound, opts.Runners)
 	store := storage.NewAppStorage(app.resolveAppID())
-	cmd := app.toCobraCommand(unbound, store)
+	cmd, cl := app.toCobraCommand(unbound, store)
 	if len(unbound) > 0 {
 		return nil, fmt.Errorf("%w: %s", ErrUnboundRunner, strings.Join(sortedKeys(unbound), ", "))
 	}
@@ -83,7 +83,7 @@ func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 		return nil, err
 	}
 	if checker != nil {
-		installUpdateHelp(cmd, checker)
+		installUpdateHelp(cmd, checker, cl)
 	}
 	setStreams(cmd,
 		opts.newWriter(opts.Stdout, os.Stdout),
@@ -133,8 +133,10 @@ func sortedKeys(runners map[string]Runner) []string {
 
 // toCobraCommand converts the command info into a [github.com/spf13/cobra.Command],
 // removing each bound runner from runners as it is consumed. store is shared by
-// every command so a bound runner can reach the application's storage roots.
-func (i *CommandInfo) toCobraCommand(runners map[string]Runner, store *storage.AppStorage) *cobra.Command {
+// every command so a bound runner can reach the application's storage roots. It
+// returns the command alongside its argument cl, which is nil when no
+// runner is bound.
+func (i *CommandInfo) toCobraCommand(runners map[string]Runner, store *storage.AppStorage) (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{
 		Use:           i.Use,
 		Short:         i.Summary,
@@ -154,24 +156,25 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner, store *storage.A
 
 		SuggestionsMinimumDistance: 1,
 	}
+	var cl *arg.CommandLine
 	if runner := runners[i.ID]; runner != nil {
 		delete(runners, i.ID)
-		cmd.RunE = i.run(runner, store)
-		registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
-		flag.Register(registry, runner)
+		cl = (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+		arg.Register(cl, runner)
 		annotation.ConfigureFlags(cmd)
 		annotation.RegisterFlagCompletions(cmd)
+		cmd.RunE = i.run(runner, store, cl)
 	} else {
 		cmd.RunE = i.showHelp
 	}
-	cmd.SetHelpFunc(template.DefaultRenderEngine.HelpFunc())
+	cmd.SetHelpFunc(template.DefaultRenderEngine.HelpFunc(cl))
 	cmd.SetUsageFunc(template.DefaultRenderEngine.UsageFunc())
 	cmd.SetVersionTemplate(template.DefaultRenderEngine.VersionTemplate())
 
 	for _, group := range i.Commands {
 		i.addGroup(cmd, group, runners, store)
 	}
-	return cmd
+	return cmd, cl
 }
 
 // showHelp is the default action for a command with no bound runner. Printing
@@ -193,7 +196,7 @@ func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, runne
 		})
 	}
 	for _, c := range group.Commands {
-		command := c.toCobraCommand(runners, store)
+		command, _ := c.toCobraCommand(runners, store)
 		command.GroupID = groupID
 		cmd.AddCommand(command)
 	}

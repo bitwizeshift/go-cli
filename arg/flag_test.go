@@ -1,4 +1,4 @@
-package flag_test
+package arg_test
 
 import (
 	"testing"
@@ -7,56 +7,56 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/spf13/pflag"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/flag/flagtest"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/arg/argtest"
 )
 
 // newFlag registers a string flag named name in a fresh registry.
-func newFlag(name string, options ...flag.Option) *flag.Flag {
-	return flag.Add(flagtest.NewRegistry(), name, new(string), options...)
+func newFlag(name string, options ...arg.Option) *arg.Flag {
+	return arg.AddFlag(argtest.NewCommandLine(), name, new(string), options...)
 }
 
 // newIntFlag registers an int flag named name in a fresh registry, to observe a
 // differing reported type.
-func newIntFlag(name string) *flag.Flag {
-	return flag.Add(flagtest.NewRegistry(), name, new(int))
+func newIntFlag(name string) *arg.Flag {
+	return arg.AddFlag(argtest.NewCommandLine(), name, new(int))
 }
 
 // newGroupedFlag registers a string flag named name that belongs to the named
 // display group.
-func newGroupedFlag(name, group string) *flag.Flag {
+func newGroupedFlag(name, group string) *arg.Flag {
 	f := newFlag(name)
-	flag.AddToGroup(group, f)
+	arg.AddToGroup(group, f)
 	return f
 }
 
 // newExclusiveFlag registers a string flag named name that is mutually exclusive
 // with a second flag in the same registry.
-func newExclusiveFlag(name string) *flag.Flag {
-	registry := flagtest.NewRegistry()
-	f := flag.Add(registry, name, new(string))
-	other := flag.Add(registry, "other", new(string))
-	flag.MarkMutuallyExclusive(f, other)
+func newExclusiveFlag(name string) *arg.Flag {
+	cl := argtest.NewCommandLine()
+	f := arg.AddFlag(cl, name, new(string))
+	other := arg.AddFlag(cl, "other", new(string))
+	arg.MarkMutuallyExclusive(f, other)
 	return f
 }
 
 // newRequiredTogetherFlag registers a string flag named name that is required
 // together with a second flag in the same registry.
-func newRequiredTogetherFlag(name string) *flag.Flag {
-	registry := flagtest.NewRegistry()
-	f := flag.Add(registry, name, new(string))
-	other := flag.Add(registry, "other", new(string))
-	flag.MarkRequiredTogether(f, other)
+func newRequiredTogetherFlag(name string) *arg.Flag {
+	cl := argtest.NewCommandLine()
+	f := arg.AddFlag(cl, name, new(string))
+	other := arg.AddFlag(cl, "other", new(string))
+	arg.MarkRequiredTogether(f, other)
 	return f
 }
 
 // newOneRequiredFlag registers a string flag named name of which at least one of
 // it and a second flag in the same registry is required.
-func newOneRequiredFlag(name string) *flag.Flag {
-	registry := flagtest.NewRegistry()
-	f := flag.Add(registry, name, new(string))
-	other := flag.Add(registry, "other", new(string))
-	flag.MarkOneRequired(f, other)
+func newOneRequiredFlag(name string) *arg.Flag {
+	cl := argtest.NewCommandLine()
+	f := arg.AddFlag(cl, name, new(string))
+	other := arg.AddFlag(cl, "other", new(string))
+	arg.MarkOneRequired(f, other)
 	return f
 }
 
@@ -73,14 +73,14 @@ func TestFlag_Equal(t *testing.T) {
 
 	testCases := []struct {
 		name string
-		lhs  *flag.Flag
-		rhs  *flag.Flag
+		lhs  *arg.Flag
+		rhs  *arg.Flag
 		want bool
 	}{
 		{
 			name: "SameConfiguration",
-			lhs:  newFlag("name", flag.Shorthand("n"), flag.Usage("the name")),
-			rhs:  newFlag("name", flag.Shorthand("n"), flag.Usage("the name")),
+			lhs:  newFlag("name", arg.Shorthand("n"), arg.Usage("the name")),
+			rhs:  newFlag("name", arg.Shorthand("n"), arg.Usage("the name")),
 			want: true,
 		},
 		{
@@ -91,14 +91,14 @@ func TestFlag_Equal(t *testing.T) {
 		},
 		{
 			name: "DifferentShorthand",
-			lhs:  newFlag("name", flag.Shorthand("o")),
-			rhs:  newFlag("name", flag.Shorthand("n")),
+			lhs:  newFlag("name", arg.Shorthand("o")),
+			rhs:  newFlag("name", arg.Shorthand("n")),
 			want: false,
 		},
 		{
 			name: "DifferentUsage",
-			lhs:  newFlag("name", flag.Usage("something else")),
-			rhs:  newFlag("name", flag.Usage("the name")),
+			lhs:  newFlag("name", arg.Usage("something else")),
+			rhs:  newFlag("name", arg.Usage("the name")),
 			want: false,
 		},
 		{
@@ -109,13 +109,13 @@ func TestFlag_Equal(t *testing.T) {
 		},
 		{
 			name: "DifferentHidden",
-			lhs:  newFlag("name", flag.Hidden()),
+			lhs:  newFlag("name", arg.Hidden()),
 			rhs:  newFlag("name"),
 			want: false,
 		},
 		{
 			name: "DifferentRequired",
-			lhs:  newFlag("name", flag.Required()),
+			lhs:  newFlag("name", arg.Required()),
 			rhs:  newFlag("name"),
 			want: false,
 		},
@@ -152,7 +152,7 @@ func TestFlag_Equal(t *testing.T) {
 		{
 			name: "NilEqualsZeroFlag",
 			lhs:  nil,
-			rhs:  &flag.Flag{},
+			rhs:  &arg.Flag{},
 			want: true,
 		},
 		{
@@ -192,7 +192,7 @@ func TestFlag_Flag(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		flag     *flag.Flag
+		flag     *arg.Flag
 		wantNil  bool
 		wantName string
 	}{
@@ -204,13 +204,13 @@ func TestFlag_Flag(t *testing.T) {
 		},
 		{
 			name:     "ZeroFlagHasNoUnderlyingFlag",
-			flag:     &flag.Flag{},
+			flag:     &arg.Flag{},
 			wantNil:  true,
 			wantName: "",
 		},
 		{
 			name:     "RegisteredFlagExposesUnderlyingFlag",
-			flag:     newFlag("name", flag.Shorthand("n")),
+			flag:     newFlag("name", arg.Shorthand("n")),
 			wantNil:  false,
 			wantName: "name",
 		},
@@ -243,16 +243,16 @@ func TestRegistry_Flags(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
-	flag.Add(registry, "verbose", new(bool), flag.Shorthand("v"))
-	flag.Add(registry, "name", new(string))
-	want := []*flag.Flag{
+	cl := argtest.NewCommandLine()
+	arg.AddFlag(cl, "verbose", new(bool), arg.Shorthand("v"))
+	arg.AddFlag(cl, "name", new(string))
+	want := []*arg.Flag{
 		newFlag("name"),
-		flag.Add(flagtest.NewRegistry(), "verbose", new(bool), flag.Shorthand("v")),
+		arg.AddFlag(argtest.NewCommandLine(), "verbose", new(bool), arg.Shorthand("v")),
 	}
 
 	// Act
-	flags := registry.Flags()
+	flags := cl.Flags()
 
 	// Assert
 	if got, want := flags, want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {

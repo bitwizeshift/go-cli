@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/spf13/cobra"
 )
 
@@ -21,10 +22,10 @@ type Renderer struct {
 	Notice *Notice
 }
 
-// Render writes the formatted help for cmd to w. It reports any error from
-// writing to w.
-func (r Renderer) Render(w io.Writer, cmd *cobra.Command) error {
-	view := NewView(cmd)
+// Render writes the formatted help for cmd to w, listing the positional
+// arguments registered on cl. It reports any error from writing to w.
+func (r Renderer) Render(w io.Writer, cmd *cobra.Command, cl *arg.CommandLine) error {
+	view := NewView(cmd, cl)
 	data := struct {
 		View
 		Columns int

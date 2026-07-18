@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/bitwizeshift/go-cli"
-	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/arg"
 )
 
 //go:embed app.yaml
@@ -53,16 +53,16 @@ type initRunner struct {
 	force bool
 }
 
-func (ir *initRunner) RegisterFlags(registry *flag.Registry) {
-	path := flag.Add(registry, "path", &ir.path,
-		flag.Shorthand("p"),
-		flag.Usage("directory to create the vault in"),
+func (ir *initRunner) RegisterArgs(cl *arg.CommandLine) {
+	path := arg.AddFlag(cl, "path", &ir.path,
+		arg.Shorthand("p"),
+		arg.Usage("directory to create the vault in"),
 	)
-	force := flag.Add(registry, "force", &ir.force,
-		flag.Shorthand("f"),
-		flag.Usage("recreate the vault if one already exists"),
+	force := arg.AddFlag(cl, "force", &ir.force,
+		arg.Shorthand("f"),
+		arg.Usage("recreate the vault if one already exists"),
 	)
-	flag.AddToGroup("Vault Flags", path, force)
+	arg.AddToGroup("Vault Flags", path, force)
 }
 
 func (ir *initRunner) Run(context.Context, ...string) error {
@@ -89,31 +89,35 @@ func (*panicRunner) Run(context.Context, ...string) error {
 // slice flag, and a bare boolean spread across two named flag groups, with a
 // mutually-exclusive constraint between two of them.
 type itemAddRunner struct {
+	name     string
 	priority int
 	tags     []string
 	pin      bool
 }
 
-func (iar *itemAddRunner) RegisterFlags(registry *flag.Registry) {
-	priority := flag.Add(registry, "priority", &iar.priority,
-		flag.Shorthand("p"),
-		flag.Usage("priority from 1 (highest) to 9"),
+func (iar *itemAddRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.Positional(cl, "name", 0, &iar.name,
+		arg.Usage("name of the item to add"),
 	)
-	pin := flag.Add(registry, "pin", &iar.pin,
-		flag.Usage("pin the item to the top of the list"),
+	priority := arg.AddFlag(cl, "priority", &iar.priority,
+		arg.Shorthand("p"),
+		arg.Usage("priority from 1 (highest) to 9"),
 	)
-	tag := flag.Add(registry, "tag", &iar.tags,
-		flag.Shorthand("t"), flag.Usage("attach a tag; may be repeated"),
+	pin := arg.AddFlag(cl, "pin", &iar.pin,
+		arg.Usage("pin the item to the top of the list"),
 	)
-	flag.AddToGroup("Scheduling Flags", priority, pin)
-	flag.AddToGroup("Metadata Flags", tag)
-	flag.MarkMutuallyExclusive(priority, pin)
+	tag := arg.AddFlag(cl, "tag", &iar.tags,
+		arg.Shorthand("t"), arg.Usage("attach a tag; may be repeated"),
+	)
+	arg.AddToGroup("Scheduling Flags", priority, pin)
+	arg.AddToGroup("Metadata Flags", tag)
+	arg.MarkMutuallyExclusive(priority, pin)
 }
 
-func (iar *itemAddRunner) Run(_ context.Context, args ...string) error {
-	name := "untitled"
-	if len(args) > 0 {
-		name = args[0]
+func (iar *itemAddRunner) Run(context.Context, ...string) error {
+	name := iar.name
+	if name == "" {
+		name = "untitled"
 	}
 	fmt.Printf("added %q (priority=%d, pinned=%t, tags=[%s])\n",
 		name, iar.priority, iar.pin, strings.Join(iar.tags, ", "))
@@ -130,25 +134,25 @@ type itemListRunner struct {
 	asJSON bool
 }
 
-func (ilr *itemListRunner) RegisterFlags(registry *flag.Registry) {
-	all := flag.Add(registry, "all", &ilr.all,
-		flag.Shorthand("a"),
-		flag.Usage("include completed items"),
+func (ilr *itemListRunner) RegisterArgs(cl *arg.CommandLine) {
+	all := arg.AddFlag(cl, "all", &ilr.all,
+		arg.Shorthand("a"),
+		arg.Usage("include completed items"),
 	)
-	status := flag.Add(registry, "status", &ilr.status,
-		flag.Shorthand("s"),
-		flag.Usage("show only items with this status"),
+	status := arg.AddFlag(cl, "status", &ilr.status,
+		arg.Shorthand("s"),
+		arg.Usage("show only items with this status"),
 	)
-	limit := flag.Add(registry, "limit", &ilr.limit,
-		flag.Shorthand("n"),
-		flag.Usage("maximum number of items to show"),
+	limit := arg.AddFlag(cl, "limit", &ilr.limit,
+		arg.Shorthand("n"),
+		arg.Usage("maximum number of items to show"),
 	)
-	asJSON := flag.Add(registry, "json", &ilr.asJSON,
-		flag.Usage("emit the listing as JSON"),
+	asJSON := arg.AddFlag(cl, "json", &ilr.asJSON,
+		arg.Usage("emit the listing as JSON"),
 	)
-	flag.AddToGroup("Filtering Flags", all, status, limit)
-	flag.AddToGroup("Output Flags", asJSON)
-	flag.MarkMutuallyExclusive(all, status)
+	arg.AddToGroup("Filtering Flags", all, status, limit)
+	arg.AddToGroup("Output Flags", asJSON)
+	arg.MarkMutuallyExclusive(all, status)
 }
 
 func (ilr *itemListRunner) Run(context.Context, ...string) error {
@@ -158,36 +162,61 @@ func (ilr *itemListRunner) Run(context.Context, ...string) error {
 }
 
 // itemRemoveRunner backs "item remove" and demonstrates a single ungrouped
-// confirmation flag alongside a required positional argument.
+// confirmation flag alongside [arg.Unmatched], which collects every remaining
+// argument so the command can remove several items at once.
 type itemRemoveRunner struct {
-	yes bool
+	names []string
+	yes   bool
 }
 
-func (irr *itemRemoveRunner) RegisterFlags(registry *flag.Registry) {
-	flag.Add(registry, "yes", &irr.yes,
-		flag.Shorthand("y"),
-		flag.Usage("skip the confirmation prompt"),
+func (irr *itemRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.Unmatched(cl, &irr.names)
+	arg.AddFlag(cl, "yes", &irr.yes,
+		arg.Shorthand("y"),
+		arg.Usage("skip the confirmation prompt"),
 	)
 }
 
-func (irr *itemRemoveRunner) Run(_ context.Context, args ...string) error {
-	fmt.Printf("removed %q (confirmed=%t)\n", args[0], irr.yes)
+func (irr *itemRemoveRunner) Run(context.Context, ...string) error {
+	fmt.Printf("removed %s (confirmed=%t)\n", strings.Join(irr.names, ", "), irr.yes)
 	return nil
 }
 
-// configGetRunner backs "config get".
-type configGetRunner struct{}
+// configGetRunner backs "config get" and reads its single key from a positional
+// argument.
+type configGetRunner struct {
+	key string
+}
 
-func (*configGetRunner) Run(_ context.Context, args ...string) error {
-	fmt.Printf("%s = <unset>\n", args[0])
+func (cgr *configGetRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.Positional(cl, "key", 0, &cgr.key,
+		arg.Usage("configuration key to read"),
+	)
+}
+
+func (cgr *configGetRunner) Run(context.Context, ...string) error {
+	fmt.Printf("%s = <unset>\n", cgr.key)
 	return nil
 }
 
-// configSetRunner backs "config set".
-type configSetRunner struct{}
+// configSetRunner backs "config set" and demonstrates two ordered positional
+// arguments decoded into distinct fields.
+type configSetRunner struct {
+	key   string
+	value string
+}
 
-func (*configSetRunner) Run(_ context.Context, args ...string) error {
-	fmt.Printf("set %s = %s\n", args[0], args[1])
+func (csr *configSetRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.Positional(cl, "key", 0, &csr.key,
+		arg.Usage("configuration key to set"),
+	)
+	arg.Positional(cl, "value", 1, &csr.value,
+		arg.Usage("value to assign to the key"),
+	)
+}
+
+func (csr *configSetRunner) Run(context.Context, ...string) error {
+	fmt.Printf("set %s = %s\n", csr.key, csr.value)
 	return nil
 }
 
@@ -197,9 +226,9 @@ type configListRunner struct {
 	asJSON bool
 }
 
-func (clr *configListRunner) RegisterFlags(registry *flag.Registry) {
-	flag.Add(registry, "json", &clr.asJSON,
-		flag.Usage("emit the settings as JSON"),
+func (clr *configListRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.AddFlag(cl, "json", &clr.asJSON,
+		arg.Usage("emit the settings as JSON"),
 	)
 }
 
@@ -211,24 +240,32 @@ func (clr *configListRunner) Run(context.Context, ...string) error {
 // remoteAddRunner backs "remote add" and demonstrates a required value flag
 // grouped alongside a bare boolean.
 type remoteAddRunner struct {
+	name     string
+	url      string
 	token    string
 	insecure bool
 }
 
-func (rar *remoteAddRunner) RegisterFlags(registry *flag.Registry) {
-	token := flag.Add(registry, "token", &rar.token,
-		flag.Shorthand("k"),
-		flag.Usage("authentication token for the remote"),
+func (rar *remoteAddRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.Positional(cl, "name", 0, &rar.name,
+		arg.Usage("name for the remote"),
 	)
-	insecure := flag.Add(registry, "insecure", &rar.insecure,
-		flag.Usage("permit insecure TLS connections"),
+	arg.Positional(cl, "url", 1, &rar.url,
+		arg.Usage("URL of the remote"),
 	)
-	flag.AddToGroup("Connection Flags", token, insecure)
-	flag.MarkRequired(token)
+	token := arg.AddFlag(cl, "token", &rar.token,
+		arg.Shorthand("k"),
+		arg.Usage("authentication token for the remote"),
+	)
+	insecure := arg.AddFlag(cl, "insecure", &rar.insecure,
+		arg.Usage("permit insecure TLS connections"),
+	)
+	arg.AddToGroup("Connection Flags", token, insecure)
+	arg.MarkRequired(token)
 }
 
-func (rar *remoteAddRunner) Run(_ context.Context, args ...string) error {
-	fmt.Printf("added remote %q -> %s (insecure=%t)\n", args[0], args[1], rar.insecure)
+func (rar *remoteAddRunner) Run(context.Context, ...string) error {
+	fmt.Printf("added remote %q -> %s (insecure=%t)\n", rar.name, rar.url, rar.insecure)
 	return nil
 }
 
@@ -242,33 +279,37 @@ func (*remoteListRunner) Run(context.Context, ...string) error {
 
 // remoteRemoveRunner backs "remote remove".
 type remoteRemoveRunner struct {
-	yes bool
+	name string
+	yes  bool
 }
 
-func (rrr *remoteRemoveRunner) RegisterFlags(registry *flag.Registry) {
-	flag.Add(registry, "yes", &rrr.yes,
-		flag.Shorthand("y"),
-		flag.Usage("skip the confirmation prompt"),
+func (rrr *remoteRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.Positional(cl, "name", 0, &rrr.name,
+		arg.Usage("name of the remote to remove"),
+	)
+	arg.AddFlag(cl, "yes", &rrr.yes,
+		arg.Shorthand("y"),
+		arg.Usage("skip the confirmation prompt"),
 	)
 }
 
-func (rrr *remoteRemoveRunner) Run(_ context.Context, args ...string) error {
-	fmt.Printf("removed remote %q (confirmed=%t)\n", args[0], rrr.yes)
+func (rrr *remoteRemoveRunner) Run(context.Context, ...string) error {
+	fmt.Printf("removed remote %q (confirmed=%t)\n", rrr.name, rrr.yes)
 	return nil
 }
 
 var (
-	_ cli.Runner     = (*rootRunner)(nil)
-	_ cli.Runner     = (*statusRunner)(nil)
-	_ cli.Runner     = (*panicRunner)(nil)
-	_ cli.Runner     = (*configGetRunner)(nil)
-	_ cli.Runner     = (*configSetRunner)(nil)
-	_ cli.Runner     = (*remoteListRunner)(nil)
-	_ flag.Registrar = (*initRunner)(nil)
-	_ flag.Registrar = (*itemAddRunner)(nil)
-	_ flag.Registrar = (*itemListRunner)(nil)
-	_ flag.Registrar = (*itemRemoveRunner)(nil)
-	_ flag.Registrar = (*configListRunner)(nil)
-	_ flag.Registrar = (*remoteAddRunner)(nil)
-	_ flag.Registrar = (*remoteRemoveRunner)(nil)
+	_ cli.Runner    = (*rootRunner)(nil)
+	_ cli.Runner    = (*statusRunner)(nil)
+	_ cli.Runner    = (*panicRunner)(nil)
+	_ cli.Runner    = (*remoteListRunner)(nil)
+	_ arg.Registrar = (*initRunner)(nil)
+	_ arg.Registrar = (*itemAddRunner)(nil)
+	_ arg.Registrar = (*itemListRunner)(nil)
+	_ arg.Registrar = (*itemRemoveRunner)(nil)
+	_ arg.Registrar = (*configGetRunner)(nil)
+	_ arg.Registrar = (*configSetRunner)(nil)
+	_ arg.Registrar = (*configListRunner)(nil)
+	_ arg.Registrar = (*remoteAddRunner)(nil)
+	_ arg.Registrar = (*remoteRemoveRunner)(nil)
 )

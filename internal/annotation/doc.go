@@ -6,6 +6,6 @@ object where it's not needed. This helps to reduce the command-coupling with
 flag objects.
 
 Being an internal package also aids in visibility, since the shared logic can
-be reused in the flagtest package without needing duplication or high-coupling.
+be reused in the argtest package without needing duplication or high-coupling.
 */
 package annotation

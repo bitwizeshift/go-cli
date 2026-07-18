@@ -46,7 +46,7 @@ applications.
 ## Features
 
 * 🚦 **Highly testable surface-area**: Your flags become testable factories that
-  implement [`flag.Registrar`] and return high-level objects, and your commands
+  implement [`arg.Registrar`] and return high-level objects, and your commands
   become a simple [`cli.Runner`] that can use dependency-injected factories.
 
 * 📄 **Configurable commands using YAML**: No more overlong inline `string`s for
@@ -58,8 +58,8 @@ applications.
   readable and well-structured.
 
 * ⏩ **Simplified flag surface area**: No more dozens of `pflag.FlagSet` values;
-  just use [`flag.Add`], and it idiomatically uses Go to understand
-  either [`encoding.TextUnmarshaler`] or custom [`flag.Unmarshaler`].
+  just use [`arg.AddFlag`], and it idiomatically uses Go to understand
+  either [`encoding.TextUnmarshaler`] or custom [`arg.Unmarshaler`].
 
 * 🛟 **Support for flag fallback defaults**: Flags can now support falling back
   to either environment variables, or custom functions to derive a default value.
@@ -78,9 +78,9 @@ Overall, this library sacrifices Cobra's verbosity and flexibility for some
 opinionated and visually clear defaults.
 
 [`encoding.TextUnmarshaler`]: https://pkg.go.dev/encoding@go1.26.4#TextUnmarshaler
-[`flag.Unmarshaler`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/flag#Unmarshaler
-[`flag.Registrar`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/flag#Registrar
-[`flag.Add`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/flag#Add
+[`arg.Unmarshaler`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/arg#Unmarshaler
+[`arg.Registrar`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/arg#Registrar
+[`arg.AddFlag`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/arg#Add
 [`cli.Runner`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli#Runner
 
 ## Why `go-cli`?

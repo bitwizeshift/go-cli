@@ -1,4 +1,4 @@
-package flag_test
+package arg_test
 
 import (
 	"errors"
@@ -10,10 +10,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/arg"
 )
 
-// readTarget returns the value that a successful [flag.Unmarshal] wrote into
+// readTarget returns the value that a successful [arg.Unmarshal] wrote into
 // its target by fully dereferencing v. Targets that cannot receive a value --
 // non-pointers and nil pointers -- normalize to nil.
 func readTarget(t testing.TB, v any) any {
@@ -32,22 +32,22 @@ func readTarget(t testing.TB, v any) any {
 	return rv.Interface()
 }
 
-// recordingUnmarshaler records the bytes passed to UnmarshalFlag.
+// recordingUnmarshaler records the bytes passed to UnmarshalArg.
 type recordingUnmarshaler struct {
 	Data string
 }
 
-func (r *recordingUnmarshaler) UnmarshalFlag(data []byte) error {
+func (r *recordingUnmarshaler) UnmarshalArg(data []byte) error {
 	r.Data = string(data)
 	return nil
 }
 
-// errUnmarshaler always reports errUnmarshal from UnmarshalFlag.
+// errUnmarshaler always reports errUnmarshal from UnmarshalArg.
 type errUnmarshaler struct {
 	Err error
 }
 
-func (u errUnmarshaler) UnmarshalFlag([]byte) error {
+func (u errUnmarshaler) UnmarshalArg([]byte) error {
 	return u.Err
 }
 
@@ -61,13 +61,13 @@ func (r *recordingTextUnmarshaler) UnmarshalText(data []byte) error {
 	return nil
 }
 
-// dualUnmarshaler implements both [flag.Unmarshaler] and
+// dualUnmarshaler implements both [arg.Unmarshaler] and
 // [encoding.TextUnmarshaler], recording which method was invoked.
 type dualUnmarshaler struct {
 	Used string
 }
 
-func (d *dualUnmarshaler) UnmarshalFlag([]byte) error {
+func (d *dualUnmarshaler) UnmarshalArg([]byte) error {
 	d.Used = "flag"
 	return nil
 }
@@ -79,10 +79,10 @@ func (d *dualUnmarshaler) UnmarshalText([]byte) error {
 
 var errFailUnmarshal = errors.New("unmarshal failed")
 
-// failUnmarshaler fails UnmarshalFlag unconditionally with errFailUnmarshal.
+// failUnmarshaler fails UnmarshalArg unconditionally with errFailUnmarshal.
 type failUnmarshaler struct{}
 
-func (*failUnmarshaler) UnmarshalFlag([]byte) error {
+func (*failUnmarshaler) UnmarshalArg([]byte) error {
 	return errFailUnmarshal
 }
 
@@ -296,7 +296,7 @@ func TestUnmarshal(t *testing.T) {
 			target:  new(map[string]int),
 			data:    "x",
 			want:    map[string]int(nil),
-			wantErr: flag.ErrUnsupportedType,
+			wantErr: arg.ErrUnsupportedType,
 		},
 		{
 			name:   "SliceString",
@@ -353,25 +353,25 @@ func TestUnmarshal(t *testing.T) {
 			target:  new([]complex128),
 			data:    "1",
 			want:    []complex128(nil),
-			wantErr: flag.ErrUnsupportedType,
+			wantErr: arg.ErrUnsupportedType,
 		},
 		{
 			name:    "NonPointerTarget",
 			target:  42,
 			data:    "1",
-			wantErr: flag.ErrInvalidTarget,
+			wantErr: arg.ErrInvalidTarget,
 		},
 		{
 			name:    "NilPointerTarget",
 			target:  (*int)(nil),
 			data:    "1",
-			wantErr: flag.ErrInvalidTarget,
+			wantErr: arg.ErrInvalidTarget,
 		},
 		{
 			name:    "NilUnmarshalerTarget",
 			target:  (*recordingUnmarshaler)(nil),
 			data:    "payload",
-			wantErr: flag.ErrInvalidTarget,
+			wantErr: arg.ErrInvalidTarget,
 		},
 	}
 
@@ -383,7 +383,7 @@ func TestUnmarshal(t *testing.T) {
 			data := []byte(tc.data)
 
 			// Act
-			err := flag.Unmarshal(tc.target, data)
+			err := arg.Unmarshal(tc.target, data)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {

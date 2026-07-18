@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/internal/template/help"
 	"github.com/bitwizeshift/go-cli/update"
@@ -72,14 +73,15 @@ func (o UpdateOptions) checker(app *Application, cache update.Cache) (*update.Ch
 }
 
 // installUpdateHelp replaces cmd's help function with one that appends an update
-// advisory when a newer version is available. The check runs under a short
-// timeout and contributes nothing on error.
-func installUpdateHelp(cmd *cobra.Command, checker *update.Checker) {
+// advisory when a newer version is available. cl supplies cmd's positional
+// arguments for the rendered help. The check runs under a short timeout and
+// contributes nothing on error.
+func installUpdateHelp(cmd *cobra.Command, checker *update.Checker, cl *arg.CommandLine) {
 	cmd.SetHelpFunc(func(cmd *cobra.Command, _ []string) {
 		stdout := cmd.OutOrStdout()
 		renderer := template.DefaultRenderEngine.HelpRenderer(stdout)
 		renderer.Notice = updateNotice(cmd.Context(), checker)
-		_ = renderer.Render(stdout, cmd)
+		_ = renderer.Render(stdout, cmd, cl)
 	})
 }
 

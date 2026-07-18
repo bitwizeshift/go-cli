@@ -13,7 +13,7 @@ It assumes you have read [Your First `go-cli` Application][first-app].
 
 If you have used [`pflag`] directly, you will expect to implement [`pflag.Value`]:
 `Set`, `String`, `Type`. **Do not do that.** `go-cli` does not expose a `Value`
-interface, and `flag.Add` constructs the `pflag.Value` internally. Implementing
+interface, and `arg.AddFlag` constructs the `pflag.Value` internally. Implementing
 one gains you nothing.
 
 The library instead splits the problem in two, and they are independently useful:
@@ -30,18 +30,18 @@ The library instead splits the problem in two, and they are independently useful
 ## Part 1: A custom flag value
 
 To make a type usable as a flag destination, a type must either implement
-[`encoding.TextUnmarshaler`] or optionally `flag.Unmarshaler`:
+[`encoding.TextUnmarshaler`] or optionally `arg.Unmarshaler`:
 
 ```go
 type Unmarshaler interface {
-  UnmarshalFlag(data []byte) error
+  UnmarshalArg(data []byte) error
 }
 ```
 
 Typically `encoding.TextUnmarshaler` is the more idiomatic thing to follow here,
-but `flag.Unmarshaler` exists as an alternative to distinguish a custom encoding
+but `arg.Unmarshaler` exists as an alternative to distinguish a custom encoding
 that may only be used for flags. For this tutorial, we will implement a
-`flag.Unmarshaler`.
+`arg.Unmarshaler`.
 
 Here is a validated enum:
 
@@ -55,7 +55,7 @@ const (
   VisibilityInternal Visibility = "internal"
 )
 
-func (v *Visibility) UnmarshalFlag(data []byte) error {
+func (v *Visibility) UnmarshalArg(data []byte) error {
   switch Visibility(data) {
   case VisibilityPublic, VisibilityPrivate, VisibilityInternal:
     *v = Visibility(data)
@@ -69,11 +69,11 @@ func (v *Visibility) UnmarshalFlag(data []byte) error {
 Returning an error fails parsing, and the message reaches the user. That is the
 entire contract.
 
-You do not need `UnmarshalFlag` if your type already implements
-`encoding.TextUnmarshaler` -- the decoder tries `flag.Unmarshaler` first, then
+You do not need `UnmarshalArg` if your type already implements
+`encoding.TextUnmarshaler` -- the decoder tries `arg.Unmarshaler` first, then
 `encoding.TextUnmarshaler`, then falls back to built-in parsing for strings,
 bools, ints, floats, `time.Duration`, and slices of those. Implement
-`UnmarshalFlag` when you want flag decoding to differ from text decoding, and
+`UnmarshalArg` when you want flag decoding to differ from text decoding, and
 `UnmarshalText` when you want one rule everywhere.
 
 ### The type name in help output
@@ -83,23 +83,23 @@ package included: `github.Visibility` renders as `github-visibility`. If this
 default is not preferable, you can override it:
 
 ```go
-flag.Add(registry, "visibility", &f.visibility,
-  flag.Type("visibility"),
-  flag.Usage("visibility of the new repository (public,private,internal)"),
+arg.AddFlag(registry, "visibility", &f.visibility,
+  arg.Type("visibility"),
+  arg.Usage("visibility of the new repository (public,private,internal)"),
 )
 ```
 
-`flag.Type` exists precisely so the type name is a property of the *flag*, not
+`arg.Type` exists precisely so the type name is a property of the *flag*, not
 baked into the type. That is also what keeps the type testable: there is no
 `Type() string` method whose return value a test has to assert against.
 
 ## Part 2: The reusable component
 
-A flag component is any type implementing [`flag.Registrar`]:
+A flag component is any type implementing [`arg.Registrar`]:
 
 ```go
 type Registrar interface {
-  RegisterFlags(fs *Registry)
+  RegisterArgs(cl *arg.CommandLine)
 }
 ```
 
@@ -121,7 +121,7 @@ import (
   "strings"
   "time"
 
-  "github.com/bitwizeshift/go-cli/flag"
+  "github.com/bitwizeshift/go-cli/arg"
   "github.com/google/go-github/v88/github"
 )
 
@@ -132,25 +132,25 @@ type ClientFlags struct {
   baseURL string
 }
 
-func (f *ClientFlags) RegisterFlags(registry *flag.Registry) {
-  flag.AddToGroup("GitHub Flags",
-    flag.Add(registry, "github-token", &f.token,
-      flag.Shorthand("T"),
-      flag.Type("api-token"),
-      flag.Usage("the GitHub API token to use for communication"),
-      flag.DefaultFromEnv("GITHUB_TOKEN"),
-      flag.DefaultFromEnv("GH_TOKEN"),
+func (f *ClientFlags) RegisterArgs(cl *arg.CommandLine) {
+  arg.AddFlagToGroup("GitHub Flags",
+    arg.AddFlag(cl, "github-token", &f.token,
+      arg.Shorthand("T"),
+      arg.Type("api-token"),
+      arg.Usage("the GitHub API token to use for communication"),
+      arg.DefaultFromEnv("GITHUB_TOKEN"),
+      arg.DefaultFromEnv("GH_TOKEN"),
     ),
-    flag.Add(registry, "github-api-url", &f.baseURL,
-      flag.Type("url"),
-      flag.Usage("the base URL for the GitHub API"),
-      flag.DefaultFromEnv("GITHUB_API_URL"),
-      flag.Hidden(),
+    arg.AddFlag(cl, "github-api-url", &f.baseURL,
+      arg.Type("url"),
+      arg.Usage("the base URL for the GitHub API"),
+      arg.DefaultFromEnv("GITHUB_API_URL"),
+      arg.Hidden(),
     ),
   )
 }
 
-var _ flag.Registrar = (*ClientFlags)(nil)
+var _ arg.Registrar = (*ClientFlags)(nil)
 
 // Client returns a GitHub client configured from the parsed flags.
 func (f *ClientFlags) Client() *github.Client {
@@ -166,26 +166,26 @@ func (f *ClientFlags) Client() *github.Client {
 }
 ```
 
-Three details in `RegisterFlags` are doing real work.
+Three details in `RegisterArgs` are doing real work.
 
-**`flag.Add` returns the `*pflag.Flag` it created**, which is why the whole body
-can nest inside a single `flag.AddToGroup("GitHub Flags", ...)` call. The group
+**`arg.AddFlag` returns the `*pflag.Flag` it created**, which is why the whole body
+can nest inside a single `arg.AddFlagToGroup("GitHub Flags", ...)` call. The group
 is a help-output heading; ungrouped flags fall under "General Flags".
 
-**Defaults are layered.** `flag.DefaultFromEnv` can be applied more than once --
+**Defaults are layered.** `arg.DefaultFromEnv` can be applied more than once --
 above, `GITHUB_TOKEN` is consulted, then `GH_TOKEN`.
 
 Fallbacks only run when the flag was not given on the command line.
 
-**`flag.Hidden()`** keeps `--github-api-url` functional but out of the help
+**`arg.Hidden()`** keeps `--github-api-url` functional but out of the help
 output. Use it for escape hatches you support but do not advertise.
 
-[`flag.Registrar`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/flag#Registrar
+[`arg.Registrar`]: https://pkg.go.dev/github.com/bitwizeshift/go-cli/arg#Registrar
 
 ## Part 3: Wiring it into a command
 
 Here is the magical part: The runner does not have to implement
-`flag.Registrar`, and it does not have to know that flags exist.
+`arg.Registrar`, and it does not have to know that flags exist.
 
 See below:
 
@@ -219,8 +219,8 @@ func main() {
 }
 ```
 
-When the framework binds a runner, it calls `flag.Register` on it. If the runner
-implements `Registrar`, its `RegisterFlags` runs. If it does not, `Register`
+When the framework binds a runner, it calls `arg.Register` on it. If the runner
+implements `Registrar`, its `RegisterArgs` runs. If it does not, `Register`
 walks the runner's exported fields -- through structs, pointers, interfaces,
 slices, and maps -- and registers every `Registrar` it finds. `HelloRunner` gets
 its flags because its fields point at something that has them.
@@ -233,7 +233,7 @@ once.
 
 **A `Registrar` stops the recursion.** If your component has fields that are
 themselves `Registrar`s, `Register` will not descend into them -- your
-`RegisterFlags` owns that, and must call `flag.Register(registry, f.child)`
+`RegisterArgs` owns that, and must call `arg.Register(cl, f.child)`
 itself. Exclude a field from the walk entirely with a `flag:"ignore"` or
 `flag:"-"` struct tag.
 
@@ -244,14 +244,13 @@ not on a flag parser, so a test substitutes fakes and never touches a
 ## Part 4: Testing the component
 
 Split this the same way the component is split: assert the flags' *shape*, then
-assert the component's *behavior*. `flag/flagtest` covers both.
+assert the component's *behavior*. `arg/argtest` covers both.
 
-There is no helper that takes a `Registrar` directly. Build the flag set the same
-way the framework does:
+Build the `arg.CommandLine` using `argtest` and then call `arg.Register`:
 
 ```go
-pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
-flag.Register(flag.NewRegistry(pfs), sut)
+cl := argtest.NewCommandLine()
+arg.Register(cl, sut)
 ```
 
 ### Shape
@@ -270,19 +269,19 @@ import (
   "github.com/google/go-cmp/cmp/cmpopts"
   "github.com/spf13/pflag"
 
-  "github.com/bitwizeshift/go-cli/flag"
-  "github.com/bitwizeshift/go-cli/flag/flagtest"
+  "github.com/bitwizeshift/go-cli/arg"
+  "github.com/bitwizeshift/go-cli/arg/argtest"
 )
 
-func TestClientFlags_RegisterFlags(t *testing.T) {
+func TestClientFlags_RegisterArgs(t *testing.T) {
   t.Parallel()
 
   // Arrange
-  pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+  cl := argtest.NewCommandLine()
   sut := &githubflags.ClientFlags{}
 
   // Act
-  flag.Register(flag.NewRegistry(pfs), sut)
+  arg.Register(cl, sut)
 
   // Assert
   wantFlags := []string{"github-api-url", "api-token"}
@@ -313,7 +312,7 @@ func TestClientFlags_Client(t *testing.T) {
   // Arrange
   pfs := pflag.NewFlagSet("test", pflag.ContinueOnError)
   sut := &githubflags.ClientFlags{}
-  flag.Register(flag.NewRegistry(pfs), sut)
+  arg.Register(arg.NewRegistry(pfs), sut)
 
   // Act
   client := sut.Client()
@@ -328,20 +327,20 @@ func TestClientFlags_Client(t *testing.T) {
 ```
 
 Use the same structure to test a rejected value: parse an invalid `--visibility`
-and assert the error, which is where a custom `UnmarshalFlag` earns its keep.
+and assert the error, which is where a custom `UnmarshalArg` earns its keep.
 
 ## Shell completion
 
 Completion is a flag property, registered alongside the flag:
 
 ```go
-flag.Add(registry, "visibility", &f.visibility,
-  flag.CompleteFrom("public", "private", "internal"),
+arg.AddFlag(registry, "visibility", &f.visibility,
+  arg.CompleteFrom("public", "private", "internal"),
 )
 ```
 
-`flag.CompleterFunc` computes candidates dynamically, and `flag.CompleteFiles`,
-`flag.CompleteFilesMatching`, and `flag.CompleteDirs` defer to the shell.
+`arg.CompleterFunc` computes candidates dynamically, and `arg.CompleteFiles`,
+`arg.CompleteFilesMatching`, and `arg.CompleteDirs` defer to the shell.
 Applying two completion options to one flag panics.
 
 ## Where to go next

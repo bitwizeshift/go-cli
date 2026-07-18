@@ -27,7 +27,7 @@ func run() error {
 	for _, c := range helptest.Cases() {
 		var buf bytes.Buffer
 		renderer := help.Renderer{Columns: c.Columns}
-		if err := renderer.Render(&buf, c.Command); err != nil {
+		if err := renderer.Render(&buf, c.Command, c.CL); err != nil {
 			return err
 		}
 		rendered, err := plain.Render(buf.String())

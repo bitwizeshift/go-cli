@@ -7,17 +7,20 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/spf13/cobra"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/internal/flagreg"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/bitwizeshift/go-cli/internal/template/help"
 )
 
 func TestNewView(t *testing.T) {
 	t.Parallel()
 
+	positionalCmd, positionalCL := commandWithPositionals()
+
 	testCases := []struct {
 		name    string
 		command *cobra.Command
+		cl      *arg.CommandLine
 		want    help.View
 	}{
 		{
@@ -93,6 +96,19 @@ func TestNewView(t *testing.T) {
 					},
 				},
 			},
+		}, {
+			name:    "PositionalsListedInRegistrationOrder",
+			command: positionalCmd,
+			cl:      positionalCL,
+			want: help.View{
+				Name:        "cp",
+				Description: "cp",
+				Usage:       "cp <src> <dst> [flags]",
+				Positionals: []help.PositionalInfo{
+					{Name: "src", Type: "string", Usage: "source path"},
+					{Name: "dst", Type: "string", Usage: "destination path"},
+				},
+			},
 		},
 	}
 
@@ -104,7 +120,7 @@ func TestNewView(t *testing.T) {
 			command := tc.command
 
 			// Act
-			view := help.NewView(command)
+			view := help.NewView(command, tc.cl)
 
 			// Assert
 			if got, want := view, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
@@ -148,17 +164,26 @@ func commandWithGroups() *cobra.Command {
 
 func commandWithFlagGroups() *cobra.Command {
 	cmd := &cobra.Command{Use: "svc", Short: "svc", Run: noop}
-	registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
+	cl := (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
 	var force bool
 	var zulu, yankee, beta, gamma string
-	forceFlag := flag.Add(registry, "force", &force, flag.Shorthand("f"), flag.Usage("force it"))
-	zuluFlag := flag.Add(registry, "zulu", &zulu, flag.Usage("z option"))
-	betaFlag := flag.Add(registry, "beta", &beta, flag.Usage("b option"), flag.Hidden())
-	flag.Add(registry, "yankee", &yankee, flag.Usage("y option"))
-	gammaFlag := flag.Add(registry, "gamma", &gamma, flag.Usage("g option"), flag.Hidden())
-	flag.AddToGroup("Zeta Flags", forceFlag, zuluFlag, betaFlag)
-	flag.AddToGroup("Secret Flags", gammaFlag)
+	forceFlag := arg.AddFlag(cl, "force", &force, arg.Shorthand("f"), arg.Usage("force it"))
+	zuluFlag := arg.AddFlag(cl, "zulu", &zulu, arg.Usage("z option"))
+	betaFlag := arg.AddFlag(cl, "beta", &beta, arg.Usage("b option"), arg.Hidden())
+	arg.AddFlag(cl, "yankee", &yankee, arg.Usage("y option"))
+	gammaFlag := arg.AddFlag(cl, "gamma", &gamma, arg.Usage("g option"), arg.Hidden())
+	arg.AddToGroup("Zeta Flags", forceFlag, zuluFlag, betaFlag)
+	arg.AddToGroup("Secret Flags", gammaFlag)
 	return cmd
+}
+
+func commandWithPositionals() (*cobra.Command, *arg.CommandLine) {
+	cmd := &cobra.Command{Use: "cp <src> <dst>", Short: "cp", Run: noop}
+	cl := (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+	var src, dst string
+	arg.Positional(cl, "src", 0, &src, arg.Usage("source path"))
+	arg.Positional(cl, "dst", 1, &dst, arg.Usage("destination path"))
+	return cmd, cl
 }
 
 func noop(*cobra.Command, []string) {}

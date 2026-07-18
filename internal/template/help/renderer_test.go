@@ -41,7 +41,7 @@ func TestRenderer_Render_Notice(t *testing.T) {
 			var buf bytes.Buffer
 
 			// Act
-			renderErr := sut.Render(&buf, command)
+			renderErr := sut.Render(&buf, command, nil)
 			rendered, stripErr := plain.Render(buf.String())
 
 			// Assert

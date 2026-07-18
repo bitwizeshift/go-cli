@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/format"
 	"github.com/bitwizeshift/go-cli/internal/template/help"
 	"github.com/bitwizeshift/go-cli/internal/template/panichandler"
@@ -37,11 +38,12 @@ func (re RenderEngine) HelpRenderer(w io.Writer) *help.Renderer {
 }
 
 // HelpFunc returns a cobra func that can be installed with
-// cobra.Command.SetHelpFunc
-func (re RenderEngine) HelpFunc() func(cmd *cobra.Command, _ []string) {
+// cobra.Command.SetHelpFunc. cl supplies the command's positional
+// arguments for the rendered help; it may be nil for a command without any.
+func (re RenderEngine) HelpFunc(cl *arg.CommandLine) func(cmd *cobra.Command, _ []string) {
 	return func(cmd *cobra.Command, _ []string) {
 		stdout := cmd.OutOrStdout()
-		_ = re.HelpRenderer(stdout).Render(stdout, cmd)
+		_ = re.HelpRenderer(stdout).Render(stdout, cmd, cl)
 	}
 }
 

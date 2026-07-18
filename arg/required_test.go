@@ -1,4 +1,4 @@
-package flag_test
+package arg_test
 
 import (
 	"testing"
@@ -6,24 +6,24 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/flag/flagtest"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/arg/argtest"
 )
 
 func TestMarkRequired(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
-	a := flag.Add(registry, "a", new(bool))
-	flag.Add(registry, "b", new(bool))
-	flag.MarkRequired(a)
+	cl := argtest.NewCommandLine()
+	a := arg.AddFlag(cl, "a", new(bool))
+	arg.AddFlag(cl, "b", new(bool))
+	arg.MarkRequired(a)
 
 	// Act
-	flags := flagtest.AllFlags(registry)
+	flags := argtest.AllFlags(cl)
 
 	// Assert
-	want := []*flagtest.Flag{
+	want := []*argtest.Flag{
 		{Long: "a", Type: "bool", Required: true},
 		{Long: "b", Type: "bool"},
 	}
@@ -36,16 +36,16 @@ func TestMarkRequiredTogether(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
-	a := flag.Add(registry, "a", new(bool))
-	b := flag.Add(registry, "b", new(bool))
-	flag.MarkRequiredTogether(a, b)
+	cl := argtest.NewCommandLine()
+	a := arg.AddFlag(cl, "a", new(bool))
+	b := arg.AddFlag(cl, "b", new(bool))
+	arg.MarkRequiredTogether(a, b)
 
 	// Act
-	flags := flagtest.AllFlags(registry)
+	flags := argtest.AllFlags(cl)
 
 	// Assert
-	want := []*flagtest.Flag{
+	want := []*argtest.Flag{
 		{Long: "a", Type: "bool", RequiredWith: []string{"a", "b"}},
 		{Long: "b", Type: "bool", RequiredWith: []string{"a", "b"}},
 	}
@@ -58,16 +58,16 @@ func TestMarkMutuallyExclusive(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
-	a := flag.Add(registry, "a", new(bool))
-	b := flag.Add(registry, "b", new(bool))
-	flag.MarkMutuallyExclusive(a, b)
+	cl := argtest.NewCommandLine()
+	a := arg.AddFlag(cl, "a", new(bool))
+	b := arg.AddFlag(cl, "b", new(bool))
+	arg.MarkMutuallyExclusive(a, b)
 
 	// Act
-	flags := flagtest.AllFlags(registry)
+	flags := argtest.AllFlags(cl)
 
 	// Assert
-	want := []*flagtest.Flag{
+	want := []*argtest.Flag{
 		{Long: "a", Type: "bool", ExclusiveWith: []string{"a", "b"}},
 		{Long: "b", Type: "bool", ExclusiveWith: []string{"a", "b"}},
 	}
@@ -80,16 +80,16 @@ func TestMarkOneRequired(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
-	a := flag.Add(registry, "a", new(bool))
-	b := flag.Add(registry, "b", new(bool))
-	flag.MarkOneRequired(a, b)
+	cl := argtest.NewCommandLine()
+	a := arg.AddFlag(cl, "a", new(bool))
+	b := arg.AddFlag(cl, "b", new(bool))
+	arg.MarkOneRequired(a, b)
 
 	// Act
-	flags := flagtest.AllFlags(registry)
+	flags := argtest.AllFlags(cl)
 
 	// Assert
-	want := []*flagtest.Flag{
+	want := []*argtest.Flag{
 		{Long: "a", Type: "bool", OneRequiredWith: []string{"a", "b"}},
 		{Long: "b", Type: "bool", OneRequiredWith: []string{"a", "b"}},
 	}

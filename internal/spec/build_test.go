@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/flag/flagtest"
-	"github.com/bitwizeshift/go-cli/internal/flagreg"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/arg/argtest"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/spec/spectest"
 	"github.com/google/go-cmp/cmp"
@@ -23,9 +23,9 @@ type flaggedRunner struct {
 	format  string
 }
 
-func (fr *flaggedRunner) RegisterFlags(registry *flag.Registry) {
-	flag.Add(registry, "verbose", &fr.verbose)
-	flag.Add(registry, "format", &fr.format, flag.CompleteFrom("json", "yaml"))
+func (fr *flaggedRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.AddFlag(cl, "verbose", &fr.verbose)
+	arg.AddFlag(cl, "format", &fr.format, arg.CompleteFrom("json", "yaml"))
 }
 
 func (fr *flaggedRunner) Run(context.Context, ...string) error {
@@ -34,7 +34,7 @@ func (fr *flaggedRunner) Run(context.Context, ...string) error {
 
 var (
 	_ spec.Runner    = (*flaggedRunner)(nil)
-	_ flag.Registrar = (*flaggedRunner)(nil)
+	_ arg.Registrar = (*flaggedRunner)(nil)
 )
 
 const rootWithChild = `
@@ -222,13 +222,13 @@ func TestBuild_BoundRunner_RegistersFlags(t *testing.T) {
 			"root": &flaggedRunner{},
 		},
 	})
-	registry := (*flag.Registry)(flagreg.FromFlagSet(sut.Flags()))
+	cl := (*arg.CommandLine)(argreg.FromFlagSet(sut.Flags()))
 
 	// Assert
 	if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("spec.Build(...) = _, %v, want nil", err)
 	}
-	flags := flagtest.LongFlags(registry)
+	flags := argtest.LongFlags(cl)
 	if got, want := flags, []string{"format", "verbose"}; !cmp.Equal(got, want) {
 		t.Errorf("flags = %v, want %v", got, want)
 	}

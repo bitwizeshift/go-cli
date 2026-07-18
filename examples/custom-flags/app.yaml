@@ -5,7 +5,7 @@ app-id: com.rodusek.flags-demo
 version: 1.0.0
 summary: A small example CLI using custom GitHub flags
 description: |
-  flags-demo acts as an example for custom flag.Registrar types in the go-cli
+  flags-demo acts as an example for custom arg.Registrar types in the go-cli
   library.
 
   The code defines various flags that have custom fallback behavior to both

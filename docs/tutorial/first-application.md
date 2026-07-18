@@ -152,27 +152,27 @@ the destination is not a terminal.
 ## Step 4: Add a flag
 
 Flags are declared in Go, not in YAML. A runner opts into flags by also
-implementing `flag.Registrar`:
+implementing `arg.Registrar`:
 
 ```go
 type Registrar interface {
-  RegisterFlags(fs *Registry)
+  RegisterArgs(fs *Registry)
 }
 ```
 
 Give `GreetRunner` a `--loud` flag:
 
 ```go
-import "github.com/bitwizeshift/go-cli/flag"
+import "github.com/bitwizeshift/go-cli/arg"
 
 type GreetRunner struct {
   loud bool
 }
 
-func (g *GreetRunner) RegisterFlags(registry *flag.Registry) {
-  flag.Add(registry, "loud", &g.loud,
-    flag.Shorthand("l"),
-    flag.Usage("shout the greeting"),
+func (g *GreetRunner) RegisterArgs(cl *arg.CommandLine) {
+  arg.AddFlag(cl, "loud", &g.loud,
+    arg.Shorthand("l"),
+    arg.Usage("shout the greeting"),
   )
 }
 
@@ -185,20 +185,20 @@ func (g *GreetRunner) Run(ctx context.Context, args ...string) error {
   return nil
 }
 
-var _ flag.Registrar = (*GreetRunner)(nil)
+var _ arg.Registrar = (*GreetRunner)(nil)
 ```
 
-`flag.Add` is generic over the destination pointer, so the type of `&g.loud`
+`arg.AddFlag` is generic over the destination pointer, so the type of `&g.loud`
 determines how the flag parses. Because `loud` is a `bool`, `--loud` works as a
 bare flag with no value.
 
 Registration happens automatically: when the framework binds a runner, it checks
-whether that runner implements `Registrar` and calls `RegisterFlags` if so. You
+whether that runner implements `Registrar` and calls `RegisterArgs` if so. You
 never touch a `pflag.FlagSet` directly.
 
-Flags can be grouped in the help output with `flag.AddToGroup`, and constrained
-against each other with `flag.MarkRequired`, `flag.MarkMutuallyExclusive`,
-`flag.MarkRequiredTogether`, and `flag.MarkOneRequired`. Building genuinely
+Flags can be grouped in the help output with `arg.AddFlagToGroup`, and constrained
+against each other with `arg.MarkRequired`, `arg.MarkMutuallyExclusive`,
+`arg.MarkRequiredTogether`, and `arg.MarkOneRequired`. Building genuinely
 reusable flag components is the subject of the [next tutorial][custom-flags].
 
 ## Step 5: Test the runner

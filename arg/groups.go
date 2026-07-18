@@ -1,4 +1,4 @@
-package flag
+package arg
 
 import (
 	"slices"
@@ -7,8 +7,8 @@ import (
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 )
 
-// Group represents a grouping of flags denoted by the name of a given group
-type Group struct {
+// FlagGroup represents a grouping of flags denoted by the name of a given group
+type FlagGroup struct {
 	// Name is the name of the flag group.
 	Name string
 
@@ -17,7 +17,7 @@ type Group struct {
 }
 
 // Hidden returns true if all flags in the group are marked as Hidden.
-func (g *Group) Hidden() bool {
+func (g *FlagGroup) Hidden() bool {
 	allHidden := true
 	for _, f := range g.Flags {
 		allHidden = allHidden && f.Hidden()
@@ -35,20 +35,20 @@ func AddToGroup(name string, flags ...*Flag) {
 
 const generalFlagsGroup = "General Flags"
 
-// Groups returns a slice containing all flag [Group]s in the registry, sorted
+// Groups returns a slice containing all flag [FlagGroup]s in the registry, sorted
 // by group name and subsorted by flag name. Flags that are not part of a named
 // group get added to the group "General Flags" -- which is always sorted last.
-func Groups(registry *Registry) []*Group {
-	var result []*Group
-	dedup := map[string]*Group{}
-	for _, f := range registry.Flags() {
+func Groups(cl *CommandLine) []*FlagGroup {
+	var result []*FlagGroup
+	dedup := map[string]*FlagGroup{}
+	for _, f := range cl.Flags() {
 		name := f.Group()
 		if name == "" {
 			name = generalFlagsGroup
 		}
 		g, ok := dedup[name]
 		if !ok {
-			g = &Group{
+			g = &FlagGroup{
 				Name: name,
 			}
 			dedup[name] = g
@@ -61,7 +61,7 @@ func Groups(registry *Registry) []*Group {
 			return strings.Compare(lhs.Name(), rhs.Name())
 		})
 	}
-	slices.SortFunc(result, func(lhs, rhs *Group) int {
+	slices.SortFunc(result, func(lhs, rhs *FlagGroup) int {
 		if lhs.Name == generalFlagsGroup {
 			return 1
 		}

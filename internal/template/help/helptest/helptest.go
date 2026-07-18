@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/internal/flagreg"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +20,10 @@ type Case struct {
 
 	// Command is the command to render.
 	Command *cobra.Command
+
+	// CL is the argument registry supplying Command's positional arguments. It is
+	// nil for a command with none.
+	CL *arg.CommandLine
 }
 
 // Cases returns the golden scenarios shared by the generator and the golden
@@ -36,10 +40,12 @@ func Cases() []Case {
 		})
 	}
 	for _, width := range widths {
+		sub, cl := Subcommand()
 		cases = append(cases, Case{
 			Name:    fmt.Sprintf("sub_%d.golden.txt", width),
 			Columns: width,
-			Command: Subcommand(),
+			Command: sub,
+			CL:      cl,
 		})
 	}
 	return cases
@@ -56,6 +62,26 @@ const (
 
 // Root returns the root command of the fixture hierarchy.
 func Root() *cobra.Command {
+	root, _ := buildRoot()
+	return root
+}
+
+// Subcommand returns the flag-rich "sync" subcommand of a freshly built root,
+// with its parent linkage intact, alongside the argument registry supplying its
+// positional arguments.
+func Subcommand() (*cobra.Command, *arg.CommandLine) {
+	root, cl := buildRoot()
+	for _, c := range root.Commands() {
+		if c.Name() == subcommandName {
+			return c, cl
+		}
+	}
+	return nil, nil
+}
+
+// buildRoot assembles the fixture hierarchy, returning the root command and the
+// argument registry of its flag-rich "sync" subcommand.
+func buildRoot() (*cobra.Command, *arg.CommandLine) {
 	root := &cobra.Command{
 		Use:   "example-cli <command>",
 		Short: "example-cli is a small CLI that demonstrates the help renderer",
@@ -69,24 +95,14 @@ example-cli sync origin main --remote https://vault.example.org`,
 		&cobra.Group{ID: itemGroup, Title: "Item Commands"},
 		&cobra.Group{ID: remoteGroup, Title: "Remote Commands"},
 	)
+	sync, cl := syncCommand()
 	root.AddCommand(
 		initCommand(),
 		addCommand(),
-		syncCommand(),
+		sync,
 		completionCommand(),
 	)
-	return root
-}
-
-// Subcommand returns the flag-rich "sync" subcommand of a freshly built [Root],
-// with its parent linkage intact.
-func Subcommand() *cobra.Command {
-	for _, c := range Root().Commands() {
-		if c.Name() == subcommandName {
-			return c
-		}
-	}
-	return nil
+	return root, cl
 }
 
 func initCommand() *cobra.Command {
@@ -115,7 +131,7 @@ func completionCommand() *cobra.Command {
 	}
 }
 
-func syncCommand() *cobra.Command {
+func syncCommand() (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{
 		Use:     subcommandName + " <remote> <ref>",
 		GroupID: remoteGroup,
@@ -127,13 +143,24 @@ func syncCommand() *cobra.Command {
 example-cli sync origin v1.2.0 --force --timeout 1m`,
 		Run: noop,
 	}
-	registerFlags(cmd)
-	return cmd
+	return cmd, registerArgs(cmd)
 }
 
-// registerFlags registers the sync command's flags across two named groups.
-func registerFlags(cmd *cobra.Command) {
-	registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
+// registerArgs registers the sync command's positional arguments and its flags,
+// the latter across two named groups. It returns the argument registry so the
+// positional arguments can be rendered in help.
+func registerArgs(cmd *cobra.Command) *arg.CommandLine {
+	cl := (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+	var (
+		remoteRef string
+		ref       string
+	)
+	arg.Positional(cl, "remote", 0, &remoteRef,
+		arg.Usage("name of the remote to synchronize with"),
+	)
+	arg.Positional(cl, "ref", 1, &ref,
+		arg.Usage("reference within the remote to synchronize"),
+	)
 	var (
 		authToken string
 		force     bool
@@ -148,47 +175,48 @@ func registerFlags(cmd *cobra.Command) {
 		verbose     bool
 	)
 
-	flag.AddToGroup("Connection Flags",
-		flag.Add(registry, "auth-token", &authToken,
-			flag.Shorthand("T"),
-			flag.Usage("auth token used to authenticate with the remote"),
+	arg.AddToGroup("Connection Flags",
+		arg.AddFlag(cl, "auth-token", &authToken,
+			arg.Shorthand("T"),
+			arg.Usage("auth token used to authenticate with the remote"),
 		),
-		flag.Add(registry, "force", &force,
-			flag.Shorthand("f"),
-			flag.Usage("overwrite any item already present in the vault"),
+		arg.AddFlag(cl, "force", &force,
+			arg.Shorthand("f"),
+			arg.Usage("overwrite any item already present in the vault"),
 		),
-		flag.Add(registry, "parallel", &parallel,
-			flag.Shorthand("p"),
-			flag.Usage("number of transfers to run at once"),
+		arg.AddFlag(cl, "parallel", &parallel,
+			arg.Shorthand("p"),
+			arg.Usage("number of transfers to run at once"),
 		),
-		flag.Add(registry, "remote", &remote,
-			flag.Shorthand("r"),
-			flag.Usage("base URL of the remote to synchronize with"),
+		arg.AddFlag(cl, "remote", &remote,
+			arg.Shorthand("r"),
+			arg.Usage("base URL of the remote to synchronize with"),
 		),
-		flag.Add(registry, "timeout", &timeout,
-			flag.Shorthand("t"),
-			flag.Type("duration"),
-			flag.Usage("maximum time to wait for the sync to finish"),
-		),
-	)
-	flag.AddToGroup("Output Flags",
-		flag.Add(registry, "exclude-dependencies", &excludeDeps,
-			flag.Usage("skip synchronizing the transitive dependencies of the item"),
-		),
-		flag.Add(registry, "state-dir", &stateDir,
-			flag.Usage("directory in which sync state is stored"),
-		),
-		flag.Add(registry, "log", &logFile,
-			flag.Usage("file to write sync progress logs to"),
-		),
-		flag.Add(registry, "no-progress", &noProgress,
-			flag.Usage("disable the interactive progress bar"),
-		),
-		flag.Add(registry, "verbose", &verbose,
-			flag.Shorthand("v"),
-			flag.Usage("print additional diagnostic output while running"),
+		arg.AddFlag(cl, "timeout", &timeout,
+			arg.Shorthand("t"),
+			arg.Type("duration"),
+			arg.Usage("maximum time to wait for the sync to finish"),
 		),
 	)
+	arg.AddToGroup("Output Flags",
+		arg.AddFlag(cl, "exclude-dependencies", &excludeDeps,
+			arg.Usage("skip synchronizing the transitive dependencies of the item"),
+		),
+		arg.AddFlag(cl, "state-dir", &stateDir,
+			arg.Usage("directory in which sync state is stored"),
+		),
+		arg.AddFlag(cl, "log", &logFile,
+			arg.Usage("file to write sync progress logs to"),
+		),
+		arg.AddFlag(cl, "no-progress", &noProgress,
+			arg.Usage("disable the interactive progress bar"),
+		),
+		arg.AddFlag(cl, "verbose", &verbose,
+			arg.Shorthand("v"),
+			arg.Usage("print additional diagnostic output while running"),
+		),
+	)
+	return cl
 }
 
 func noop(*cobra.Command, []string) {}

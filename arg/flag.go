@@ -1,4 +1,4 @@
-package flag
+package arg
 
 import (
 	"slices"
@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Flag is a flag registered in a [Registry]. It exposes the properties that
+// Flag is a flag registered in a [CommandLine]. It exposes the properties that
 // describe the flag to a user -- how it is named and documented, and the
 // constraints it participates in -- while keeping the underlying flag
 // representation opaque.

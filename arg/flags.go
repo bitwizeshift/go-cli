@@ -1,4 +1,4 @@
-package flag
+package arg
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/bitwizeshift/go-cli/internal/annotation"
-	"github.com/bitwizeshift/go-cli/internal/flagreg"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/bitwizeshift/go-cli/internal/strcase"
 	"github.com/spf13/pflag"
 )
@@ -48,7 +48,7 @@ func typeToName(v any) string {
 	return strings.Join(parts, "-")
 }
 
-// Option configures an optional property of a flag registered by [Add].
+// Option configures an optional property of a flag registered by [AddFlag].
 type Option interface {
 	apply(*config)
 }
@@ -261,7 +261,7 @@ func invokeCallback(fn reflect.Value, arg reflect.Value) error {
 	return nil
 }
 
-// value is a closure-backed [pflag.Value] used by [Add].
+// value is a closure-backed [pflag.Value] used by [AddFlag].
 type value struct {
 	set func(string) error
 	str func() string
@@ -274,8 +274,8 @@ func (v *value) Type() string       { return v.typ() }
 
 var _ pflag.Value = (*value)(nil)
 
-// Add registers a flag named name whose value is decoded into v, returning the
-// created [Flag].
+// AddFlag registers a flag named name whose value is decoded into v, returning
+// the created [Flag].
 //
 // By default the flag is decoded with [Unmarshal] and reports a kebab-case type
 // name derived from T; both may be adjusted with [Option] values. A bool-kinded
@@ -287,7 +287,7 @@ var _ pflag.Value = (*value)(nil)
 // caps it, reporting [ErrTooManyOccurrences] beyond the cap; a repeated non-slice
 // flag keeps the last value. [Callback] options are invoked with the decoded
 // value on each occurrence.
-func Add[T any](registry *Registry, name string, v *T, options ...Option) *Flag {
+func AddFlag[T any](cl *CommandLine, name string, v *T, options ...Option) *Flag {
 	cfg := newConfig(options...)
 	slice := isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Slice
 	limit := 1
@@ -326,13 +326,13 @@ func Add[T any](registry *Registry, name string, v *T, options ...Option) *Flag 
 		str: func() string { return defaultString(v) },
 		typ: func() string { return cfg.typeName(v) },
 	}
-	return registerFlag[T](registry, val, name, cfg)
+	return registerFlag[T](cl, val, name, cfg)
 }
 
 // register adds val to fs under name, applying the bool bare-flag default for an
 // unnamed bool T.
-func registerFlag[T any](registry *Registry, val *value, name string, cfg *config) *Flag {
-	flags := flagreg.Flags((*flagreg.Registry)(registry))
+func registerFlag[T any](cl *CommandLine, val *value, name string, cfg *config) *Flag {
+	flags := argreg.Flags((*argreg.CommandLine)(cl))
 	f := flags.VarPF(val, name, cfg.shorthand, cfg.usage)
 	f.Hidden = cfg.hidden
 	if cfg.required {

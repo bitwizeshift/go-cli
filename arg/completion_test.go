@@ -1,4 +1,4 @@
-package flag_test
+package arg_test
 
 import (
 	"testing"
@@ -6,8 +6,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/flag/flagtest"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/arg/argtest"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 )
 
@@ -21,10 +21,10 @@ type completion struct {
 // completionOf registers a string flag carrying option, and completes it with
 // the partial word toComplete. It fails the test if option registered no
 // completion on the flag.
-func completionOf(t testing.TB, option flag.Option, toComplete string) completion {
+func completionOf(t testing.TB, option arg.Option, toComplete string) completion {
 	t.Helper()
 
-	f := flag.Add(flagtest.NewRegistry(), "value", new(string), option)
+	f := arg.AddFlag(argtest.NewCommandLine(), "value", new(string), option)
 	complete := annotation.GetCompletionFunc(f.Flag())
 	if complete == nil {
 		t.Fatalf("Add(...) registered no completion function, want one")
@@ -37,7 +37,7 @@ func completionOf(t testing.TB, option flag.Option, toComplete string) completio
 }
 
 // suffixCompleter completes the word being completed by suffixing it, to observe
-// that the word reaches a [flag.CompleterFunc] unaltered.
+// that the word reaches a [arg.CompleterFunc] unaltered.
 func suffixCompleter(toComplete string) []string {
 	return []string{toComplete + "-done"}
 }
@@ -52,13 +52,13 @@ func TestCompletionOptions(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		option     flag.Option
+		option     arg.Option
 		toComplete string
 		want       completion
 	}{
 		{
 			name:       "CompleteFromMatchesPrefix",
-			option:     flag.CompleteFrom("json", "yaml", "jsonl"),
+			option:     arg.CompleteFrom("json", "yaml", "jsonl"),
 			toComplete: "js",
 			want: completion{
 				Candidates: []string{"json", "jsonl"},
@@ -67,7 +67,7 @@ func TestCompletionOptions(t *testing.T) {
 		},
 		{
 			name:       "CompleteFromEmptyPrefixMatchesAll",
-			option:     flag.CompleteFrom("json", "yaml"),
+			option:     arg.CompleteFrom("json", "yaml"),
 			toComplete: "",
 			want: completion{
 				Candidates: []string{"json", "yaml"},
@@ -76,7 +76,7 @@ func TestCompletionOptions(t *testing.T) {
 		},
 		{
 			name:       "CompleteFromNoMatchOffersNothing",
-			option:     flag.CompleteFrom("json", "yaml"),
+			option:     arg.CompleteFrom("json", "yaml"),
 			toComplete: "x",
 			want: completion{
 				Candidates: nil,
@@ -85,7 +85,7 @@ func TestCompletionOptions(t *testing.T) {
 		},
 		{
 			name:       "CompleterFuncOffersItsCandidates",
-			option:     flag.CompleterFunc(suffixCompleter),
+			option:     arg.CompleterFunc(suffixCompleter),
 			toComplete: "value",
 			want: completion{
 				Candidates: []string{"value-done"},
@@ -94,7 +94,7 @@ func TestCompletionOptions(t *testing.T) {
 		},
 		{
 			name:       "CompleteFilesDefersToShell",
-			option:     flag.CompleteFiles(),
+			option:     arg.CompleteFiles(),
 			toComplete: "",
 			want: completion{
 				Candidates: nil,
@@ -103,7 +103,7 @@ func TestCompletionOptions(t *testing.T) {
 		},
 		{
 			name:       "CompleteFilesMatchingNormalizesExtensions",
-			option:     flag.CompleteFilesMatching(".json", "yaml"),
+			option:     arg.CompleteFilesMatching(".json", "yaml"),
 			toComplete: "",
 			want: completion{
 				Candidates: []string{"json", "yaml"},
@@ -112,7 +112,7 @@ func TestCompletionOptions(t *testing.T) {
 		},
 		{
 			name:       "CompleteDirsFiltersDirectories",
-			option:     flag.CompleteDirs(),
+			option:     arg.CompleteDirs(),
 			toComplete: "",
 			want: completion{
 				Candidates: nil,
@@ -144,19 +144,19 @@ func TestCompletionOptions_Conflict_Panics(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []flag.Option
+		options []arg.Option
 	}{
 		{
 			name:    "TwoCompleteFrom",
-			options: []flag.Option{flag.CompleteFrom("a"), flag.CompleteFrom("b")},
+			options: []arg.Option{arg.CompleteFrom("a"), arg.CompleteFrom("b")},
 		},
 		{
 			name:    "CompleteFilesAndDirs",
-			options: []flag.Option{flag.CompleteFiles(), flag.CompleteDirs()},
+			options: []arg.Option{arg.CompleteFiles(), arg.CompleteDirs()},
 		},
 		{
 			name:    "CompleterFuncAndCompleteFrom",
-			options: []flag.Option{flag.CompleterFunc(noCompleter), flag.CompleteFrom("a")},
+			options: []arg.Option{arg.CompleterFunc(noCompleter), arg.CompleteFrom("a")},
 		},
 	}
 
@@ -165,11 +165,11 @@ func TestCompletionOptions_Conflict_Panics(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst string
 
 			// Act & Assert
-			requirePanic(t, func() { flag.Add(registry, "value", &dst, tc.options...) })
+			requirePanic(t, func() { arg.AddFlag(cl, "value", &dst, tc.options...) })
 		})
 	}
 }

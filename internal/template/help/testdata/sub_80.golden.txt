@@ -10,6 +10,10 @@ EXAMPLES
   example-cli sync origin main
   example-cli sync origin v1.2.0 --force --timeout 1m
 
+POSITIONAL ARGUMENTS
+  remote string   name of the remote to synchronize with
+  ref string      reference within the remote to synchronize
+
 CONNECTION FLAGS
   -T, --auth-token string   auth token used to authenticate with the remote
   -f, --force               overwrite any item already present in the vault

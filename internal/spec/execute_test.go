@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/spec"
@@ -199,6 +200,89 @@ func TestExecute_InjectsStorage(t *testing.T) {
 				t.Errorf("storage injected = %t, want %t", got, want)
 			}
 		})
+	}
+}
+
+// positionalCapture is a [spec.Runner] and [arg.Registrar] that binds a leading
+// positional argument and collects the remaining unmatched arguments.
+type positionalCapture struct {
+	first string
+	rest  []string
+}
+
+func (pc *positionalCapture) RegisterArgs(cl *arg.CommandLine) {
+	arg.Positional(cl, "first", 0, &pc.first)
+	arg.Unmatched(cl, &pc.rest)
+}
+
+func (pc *positionalCapture) Run(context.Context, ...string) error {
+	return nil
+}
+
+func TestExecute_BindsPositionalArguments(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	runner := &positionalCapture{}
+	sut := build(t, "id: root\nuse: root\n", spec.Options{
+		Runners: map[string]spec.Runner{"root": runner},
+		Stdout:  io.Discard,
+		Stderr:  io.Discard,
+	})
+	sut.SetArgs([]string{"alpha", "beta", "gamma"})
+	ctx := context.Background()
+
+	// Act
+	err := spec.Execute(ctx, sut)
+
+	// Assert
+	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("spec.Execute(...) = %v, want %v", got, want)
+	}
+	if got, want := runner.first, "alpha"; !cmp.Equal(got, want) {
+		t.Errorf("positional first = %q, want %q", got, want)
+	}
+	if got, want := runner.rest, []string{"beta", "gamma"}; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+		t.Errorf("unmatched arguments = %v, want %v", got, want)
+	}
+}
+
+// positionalFailure is a [spec.Runner] and [arg.Registrar] whose positional
+// argument fails to decode a non-numeric value.
+type positionalFailure struct {
+	count int
+}
+
+func (pf *positionalFailure) RegisterArgs(cl *arg.CommandLine) {
+	arg.Positional(cl, "count", 0, &pf.count)
+}
+
+func (pf *positionalFailure) Run(context.Context, ...string) error {
+	return nil
+}
+
+func TestExecute_PositionalBindError_ShowsUsage(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	var stderr strings.Builder
+	sut := build(t, "id: root\nuse: root\n", spec.Options{
+		Runners: map[string]spec.Runner{"root": &positionalFailure{}},
+		Stdout:  io.Discard,
+		Stderr:  &stderr,
+	})
+	sut.SetArgs([]string{"not-a-number"})
+	ctx := context.Background()
+
+	// Act
+	err := spec.Execute(ctx, sut)
+
+	// Assert
+	if got, want := err, spec.ErrUsage; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("spec.Execute(...) = %v, want %v", got, want)
+	}
+	if got, want := strings.Contains(stderr.String(), "--help"), true; got != want {
+		t.Errorf("stderr shows usage = %t, want %t", got, want)
 	}
 }
 

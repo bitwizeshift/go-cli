@@ -1,4 +1,4 @@
-package flag_test
+package arg_test
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/flag/flagtest"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/arg/argtest"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 )
 
@@ -43,13 +43,13 @@ func parseHexInt(data []byte) (int, error) {
 }
 
 // set assigns value to f, mirroring a single flag occurrence.
-func set(f *flag.Flag, value string) error {
+func set(f *arg.Flag, value string) error {
 	return f.Flag().Value.Set(value)
 }
 
 // setEach applies each value to f in order, mirroring one flag occurrence per
 // value, and returns the first error encountered.
-func setEach(f *flag.Flag, values []string) error {
+func setEach(f *arg.Flag, values []string) error {
 	for _, s := range values {
 		if err := set(f, s); err != nil {
 			return err
@@ -59,7 +59,7 @@ func setEach(f *flag.Flag, values []string) error {
 }
 
 // valueOf renders the value currently assigned to f.
-func valueOf(f *flag.Flag) string {
+func valueOf(f *arg.Flag) string {
 	return f.Flag().Value.String()
 }
 
@@ -84,7 +84,7 @@ type flagInfo struct {
 }
 
 // infoOf reads the observable properties of f into a [flagInfo].
-func infoOf(f *flag.Flag) flagInfo {
+func infoOf(f *arg.Flag) flagInfo {
 	return flagInfo{
 		Short: f.Shorthand(),
 		Type:  f.Type(),
@@ -98,7 +98,7 @@ func TestAdd_String(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []flag.Option
+		options []arg.Option
 		sets    []string
 		want    string
 		wantErr error
@@ -112,24 +112,24 @@ func TestAdd_String(t *testing.T) {
 			name:    "RejectsSecondValue",
 			sets:    []string{"a", "b"},
 			want:    "a",
-			wantErr: flag.ErrAlreadySet,
+			wantErr: arg.ErrAlreadySet,
 		},
 		{
 			name:    "UnmarshalWithOverridesDecoder",
-			options: []flag.Option{flag.UnmarshalWith(yell)},
+			options: []arg.Option{arg.UnmarshalWith(yell)},
 			sets:    []string{"hi"},
 			want:    "HI",
 		},
 		{
 			name:    "UnmarshalWithPropagatesError",
-			options: []flag.Option{flag.UnmarshalWith(failString)},
+			options: []arg.Option{arg.UnmarshalWith(failString)},
 			sets:    []string{"x"},
 			want:    "",
 			wantErr: errDecode,
 		},
 		{
 			name:    "UnmarshalWithTypeMismatch",
-			options: []flag.Option{flag.UnmarshalWith(parseHexInt)},
+			options: []arg.Option{arg.UnmarshalWith(parseHexInt)},
 			sets:    []string{"ff"},
 			want:    "",
 			wantErr: cmpopts.AnyError,
@@ -141,11 +141,11 @@ func TestAdd_String(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst string
 
 			// Act
-			f := flag.Add(registry, "value", &dst, tc.options...)
+			f := arg.AddFlag(cl, "value", &dst, tc.options...)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -164,7 +164,7 @@ func TestAdd_Int(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []flag.Option
+		options []arg.Option
 		sets    []string
 		want    int
 		wantErr error
@@ -182,7 +182,7 @@ func TestAdd_Int(t *testing.T) {
 		},
 		{
 			name:    "HexViaUnmarshalWith",
-			options: []flag.Option{flag.UnmarshalWith(parseHexInt)},
+			options: []arg.Option{arg.UnmarshalWith(parseHexInt)},
 			sets:    []string{"ff"},
 			want:    255,
 		},
@@ -193,11 +193,11 @@ func TestAdd_Int(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst int
 
 			// Act
-			f := flag.Add(registry, "n", &dst, tc.options...)
+			f := arg.AddFlag(cl, "n", &dst, tc.options...)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -234,7 +234,7 @@ func TestAdd_Bool(t *testing.T) {
 			name:    "RejectsSecondValue",
 			sets:    []string{"true", "false"},
 			want:    true,
-			wantErr: flag.ErrAlreadySet,
+			wantErr: arg.ErrAlreadySet,
 		},
 	}
 
@@ -243,11 +243,11 @@ func TestAdd_Bool(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst bool
 
 			// Act
-			f := flag.Add(registry, "verbose", &dst)
+			f := arg.AddFlag(cl, "verbose", &dst)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -291,11 +291,11 @@ func TestAdd_Slice(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst []int
 
 			// Act
-			f := flag.Add(registry, "n", &dst)
+			f := arg.AddFlag(cl, "n", &dst)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -327,7 +327,7 @@ func TestAdd_DefinedSlice(t *testing.T) {
 			name:    "RejectsSecondValue",
 			sets:    []string{"a", "b"},
 			want:    stringList{"a"},
-			wantErr: flag.ErrAlreadySet,
+			wantErr: arg.ErrAlreadySet,
 		},
 	}
 
@@ -336,11 +336,11 @@ func TestAdd_DefinedSlice(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst stringList
 
 			// Act
-			f := flag.Add(registry, "n", &dst)
+			f := arg.AddFlag(cl, "n", &dst)
 			err := setEach(f, tc.sets)
 
 			// Assert
@@ -359,7 +359,7 @@ func TestAdd_Options(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []flag.Option
+		options []arg.Option
 		want    flagInfo
 	}{
 		{
@@ -368,17 +368,17 @@ func TestAdd_Options(t *testing.T) {
 		},
 		{
 			name:    "Shorthand",
-			options: []flag.Option{flag.Shorthand("v")},
+			options: []arg.Option{arg.Shorthand("v")},
 			want:    flagInfo{Short: "v", Type: "string"},
 		},
 		{
 			name:    "TypeOverride",
-			options: []flag.Option{flag.Type("custom")},
+			options: []arg.Option{arg.Type("custom")},
 			want:    flagInfo{Type: "custom"},
 		},
 		{
 			name:    "Usage",
-			options: []flag.Option{flag.Usage("the value")},
+			options: []arg.Option{arg.Usage("the value")},
 			want:    flagInfo{Type: "string", Usage: "the value"},
 		},
 	}
@@ -388,11 +388,11 @@ func TestAdd_Options(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst string
 
 			// Act
-			f := flag.Add(registry, "value", &dst, tc.options...)
+			f := arg.AddFlag(cl, "value", &dst, tc.options...)
 			info := infoOf(f)
 
 			// Assert
@@ -407,22 +407,22 @@ func TestAdd_TypeNameAndBareFlag(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var opDst opCode
 	var boolDst bool
 	var toggleDst toggle
 
 	// Act
-	opFlag := flag.Add(registry, "op", &opDst)
-	boolFlag := flag.Add(registry, "bool", &boolDst)
-	toggleFlag := flag.Add(registry, "toggle", &toggleDst)
+	opFlag := arg.AddFlag(cl, "op", &opDst)
+	boolFlag := arg.AddFlag(cl, "bool", &boolDst)
+	toggleFlag := arg.AddFlag(cl, "toggle", &toggleDst)
 	infos := []flagInfo{infoOf(opFlag), infoOf(boolFlag), infoOf(toggleFlag)}
 
 	// Assert
 	want := []flagInfo{
-		{Type: "flag-test-op-code"},
+		{Type: "arg-test-op-code"},
 		{Type: "bool", NoOpt: "true"},
-		{Type: "flag-test-toggle"},
+		{Type: "arg-test-toggle"},
 	}
 	if got, want := infos, want; !cmp.Equal(got, want) {
 		t.Errorf("Add(...) flags = %+v, want %+v", got, want)
@@ -433,9 +433,9 @@ func TestAdd_NilPointerRendersEmptyString(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var dst *int
-	f := flag.Add(registry, "n", &dst)
+	f := arg.AddFlag(cl, "n", &dst)
 
 	// Act
 	str := valueOf(f)
@@ -451,7 +451,7 @@ func TestCallback(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		options   []flag.Option
+		options   []arg.Option
 		sets      []string
 		want      []int
 		wantValue int
@@ -465,7 +465,7 @@ func TestCallback(t *testing.T) {
 		},
 		{
 			name:      "InvokedPerOccurrenceWhenRepeatable",
-			options:   []flag.Option{flag.Repeatable()},
+			options:   []arg.Option{arg.Repeatable()},
 			sets:      []string{"1", "2"},
 			want:      []int{1, 2},
 			wantValue: 2,
@@ -488,7 +488,7 @@ func TestCallback(t *testing.T) {
 			sets:      []string{"1", "2"},
 			want:      []int{1},
 			wantValue: 1,
-			wantErr:   flag.ErrAlreadySet,
+			wantErr:   arg.ErrAlreadySet,
 		},
 	}
 
@@ -497,15 +497,15 @@ func TestCallback(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var seen []int
 			var dst int
 			cb := func(v int) error {
 				seen = append(seen, v)
 				return nil
 			}
-			options := append([]flag.Option{flag.Callback(cb)}, tc.options...)
-			f := flag.Add(registry, "n", &dst, options...)
+			options := append([]arg.Option{arg.Callback(cb)}, tc.options...)
+			f := arg.AddFlag(cl, "n", &dst, options...)
 
 			// Act
 			err := setEach(f, tc.sets)
@@ -528,14 +528,14 @@ func TestCallback_Shapes(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var nullary, nullaryErr bool
 	var unary, unaryErr int
 	var d1, d2, d3, d4 int
-	fNullary := flag.Add(registry, "a", &d1, flag.Callback(func() { nullary = true }))
-	fUnary := flag.Add(registry, "b", &d2, flag.Callback(func(v int) { unary = v }))
-	fNullaryErr := flag.Add(registry, "c", &d3, flag.Callback(func() error { nullaryErr = true; return nil }))
-	fUnaryErr := flag.Add(registry, "d", &d4, flag.Callback(func(v int) error { unaryErr = v; return nil }))
+	fNullary := arg.AddFlag(cl, "a", &d1, arg.Callback(func() { nullary = true }))
+	fUnary := arg.AddFlag(cl, "b", &d2, arg.Callback(func(v int) { unary = v }))
+	fNullaryErr := arg.AddFlag(cl, "c", &d3, arg.Callback(func() error { nullaryErr = true; return nil }))
+	fUnaryErr := arg.AddFlag(cl, "d", &d4, arg.Callback(func(v int) error { unaryErr = v; return nil }))
 
 	// Act
 	err := errors.Join(
@@ -567,13 +567,13 @@ func TestCallback_ConvertibleArgument(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var anyDst any
 	var wideDst int64
 	var s string
 	var n int
-	fAny := flag.Add(registry, "s", &s, flag.Callback(func(v any) { anyDst = v }))
-	fWide := flag.Add(registry, "n", &n, flag.Callback(func(v int64) { wideDst = v }))
+	fAny := arg.AddFlag(cl, "s", &s, arg.Callback(func(v any) { anyDst = v }))
+	fWide := arg.AddFlag(cl, "n", &n, arg.Callback(func(v int64) { wideDst = v }))
 
 	// Act
 	err := errors.Join(set(fAny, "hello"), set(fWide, "42"))
@@ -594,9 +594,9 @@ func TestCallback_InconvertibleArgument(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var s string
-	f := flag.Add(registry, "s", &s, flag.Callback(func(chan int) {}))
+	f := arg.AddFlag(cl, "s", &s, arg.Callback(func(chan int) {}))
 
 	// Act
 	err := set(f, "hello")
@@ -611,14 +611,14 @@ func TestCallback_BoolBareInvokesTrue(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var seen []bool
 	var dst bool
 	cb := func(v bool) error {
 		seen = append(seen, v)
 		return nil
 	}
-	f := flag.Add(registry, "verbose", &dst, flag.Callback(cb))
+	f := arg.AddFlag(cl, "verbose", &dst, arg.Callback(cb))
 
 	// Act
 	err := set(f, "true")
@@ -640,11 +640,11 @@ func TestCallback_ErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	cbErr := errors.New("callback failed")
 	var dst int
 	cb := func(int) error { return cbErr }
-	f := flag.Add(registry, "n", &dst, flag.Callback(cb))
+	f := arg.AddFlag(cl, "n", &dst, arg.Callback(cb))
 
 	// Act
 	err := set(f, "5")
@@ -693,7 +693,7 @@ func TestCallback_MalformedShapePanics(t *testing.T) {
 			t.Parallel()
 
 			// Act & Assert
-			requirePanic(t, func() { flag.Callback(tc.fn) })
+			requirePanic(t, func() { arg.Callback(tc.fn) })
 		})
 	}
 }
@@ -702,9 +702,9 @@ func TestRepeatable_ScalarKeepsLastValue(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var dst string
-	f := flag.Add(registry, "v", &dst, flag.Repeatable())
+	f := arg.AddFlag(cl, "v", &dst, arg.Repeatable())
 
 	// Act
 	err := setEach(f, []string{"a", "b", "c"})
@@ -722,9 +722,9 @@ func TestRepeatable_SliceAccumulates(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var dst []int
-	f := flag.Add(registry, "n", &dst, flag.Repeatable())
+	f := arg.AddFlag(cl, "n", &dst, arg.Repeatable())
 
 	// Act
 	err := setEach(f, []string{"1", "2"})
@@ -765,14 +765,14 @@ func TestRepeatableUpTo(t *testing.T) {
 			cap:     3,
 			sets:    []string{"a", "b", "c", "d"},
 			want:    "c",
-			wantErr: flag.ErrTooManyOccurrences,
+			wantErr: arg.ErrTooManyOccurrences,
 		},
 		{
 			name:    "CapOfOneRejectsSecond",
 			cap:     1,
 			sets:    []string{"a", "b"},
 			want:    "a",
-			wantErr: flag.ErrTooManyOccurrences,
+			wantErr: arg.ErrTooManyOccurrences,
 		},
 	}
 
@@ -781,9 +781,9 @@ func TestRepeatableUpTo(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst string
-			f := flag.Add(registry, "v", &dst, flag.RepeatableUpTo(tc.cap))
+			f := arg.AddFlag(cl, "v", &dst, arg.RepeatableUpTo(tc.cap))
 
 			// Act
 			err := setEach(f, tc.sets)
@@ -803,15 +803,15 @@ func TestRepeatableUpTo_CapsSliceOccurrences(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var dst []int
-	f := flag.Add(registry, "n", &dst, flag.RepeatableUpTo(2))
+	f := arg.AddFlag(cl, "n", &dst, arg.RepeatableUpTo(2))
 
 	// Act
 	err := setEach(f, []string{"1,2", "3", "4"})
 
 	// Assert
-	if got, want := err, flag.ErrTooManyOccurrences; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+	if got, want := err, arg.ErrTooManyOccurrences; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("Set(...) error = %v, want %v", got, want)
 	}
 	if got, want := dst, []int{1, 2, 3}; !cmp.Equal(got, want) {
@@ -841,7 +841,7 @@ func TestRepeatableUpTo_NonPositivePanics(t *testing.T) {
 			t.Parallel()
 
 			// Act & Assert
-			requirePanic(t, func() { flag.RepeatableUpTo(tc.cap) })
+			requirePanic(t, func() { arg.RepeatableUpTo(tc.cap) })
 		})
 	}
 }
@@ -851,12 +851,12 @@ func TestHidden(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []flag.Option
+		options []arg.Option
 		want    bool
 	}{
 		{
 			name:    "HiddenOptionMarksFlagHidden",
-			options: []flag.Option{flag.Hidden()},
+			options: []arg.Option{arg.Hidden()},
 			want:    true,
 		},
 		{
@@ -871,11 +871,11 @@ func TestHidden(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst string
 
 			// Act
-			f := flag.Add(registry, "flag", &dst, tc.options...)
+			f := arg.AddFlag(cl, "flag", &dst, tc.options...)
 			hidden := f.Hidden()
 
 			// Assert
@@ -891,12 +891,12 @@ func TestRequired(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []flag.Option
+		options []arg.Option
 		want    bool
 	}{
 		{
 			name:    "RequiredOptionMarksFlagRequired",
-			options: []flag.Option{flag.Required()},
+			options: []arg.Option{arg.Required()},
 			want:    true,
 		},
 		{
@@ -911,11 +911,11 @@ func TestRequired(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			registry := flagtest.NewRegistry()
+			cl := argtest.NewCommandLine()
 			var dst string
 
 			// Act
-			f := flag.Add(registry, "flag", &dst, tc.options...)
+			f := arg.AddFlag(cl, "flag", &dst, tc.options...)
 			required := f.Required()
 
 			// Assert
@@ -928,14 +928,14 @@ func TestRequired(t *testing.T) {
 
 func TestDefaultFromEnv(t *testing.T) {
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var dst string
-	flag.Add(registry, "flag", &dst, flag.DefaultFromEnv("FLAG_ENV"))
+	arg.AddFlag(cl, "flag", &dst, arg.DefaultFromEnv("FLAG_ENV"))
 	t.Setenv("FLAG_ENV", "from-env")
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, registry.FlagSet())
+	err := annotation.SetFlagFallbacks(ctx, cl.FlagSet())
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -950,14 +950,14 @@ func TestDefaultFromFunc(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	registry := flagtest.NewRegistry()
+	cl := argtest.NewCommandLine()
 	var dst string
 	fn := func(context.Context) (string, error) { return "from-func", nil }
-	flag.Add(registry, "flag", &dst, flag.DefaultFromFunc(fn))
+	arg.AddFlag(cl, "flag", &dst, arg.DefaultFromFunc(fn))
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, registry.FlagSet())
+	err := annotation.SetFlagFallbacks(ctx, cl.FlagSet())
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {

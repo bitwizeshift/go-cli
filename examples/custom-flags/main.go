@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/bitwizeshift/go-cli"
-	"github.com/bitwizeshift/go-cli/flag"
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/google/go-github/v88/github"
 )
 
@@ -46,42 +46,47 @@ func (f *GitHubFlags) defaultRepo(context.Context) (string, error) {
 	return repo, nil
 }
 
-func (f *GitHubFlags) RegisterFlags(registry *flag.Registry) {
-	flag.AddToGroup("GitHub Flags",
-		flag.Add(registry, "github-token", &f.token,
-			flag.Shorthand("T"),
-			flag.Type("api-token"),
-			flag.Usage("the GitHub API token to use for communication"),
-			flag.DefaultFromEnv("GITHUB_TOKEN"),
-			flag.DefaultFromEnv("GH_TOKEN"),
+func (f *GitHubFlags) RegisterArgs(cl *arg.CommandLine) {
+	arg.AddToGroup("GitHub Flags",
+		arg.AddFlag(cl, "github-token", &f.token,
+			arg.Shorthand("T"),
+			arg.Type("api-token"),
+			arg.Usage("the GitHub API token to use for communication"),
+			arg.DefaultFromEnv("GITHUB_TOKEN"),
+			arg.DefaultFromEnv("GH_TOKEN"),
 		),
-		flag.Add(registry, "github-pr", &f.githubPR,
-			flag.Usage("the pull request number"),
-			flag.Type("pr-number"),
+		arg.AddFlag(cl, "github-pr", &f.githubPR,
+			arg.Usage("the pull request number"),
+			arg.Type("pr-number"),
 		),
-		flag.Add(registry, "github-owner", &f.owner,
-			flag.Usage("the user or org that owns the repostiory"),
-			flag.DefaultFromEnv("GITHUB_REPOSITORY_OWNER"),
-			flag.DefaultFromFunc(f.defaultOwner),
+		arg.AddFlag(cl, "github-owner", &f.owner,
+			arg.Usage("the user or org that owns the repostiory"),
+			arg.DefaultFromEnv("GITHUB_REPOSITORY_OWNER"),
+			arg.DefaultFromFunc(f.defaultOwner),
 		),
-		flag.Add(registry, "github-repo", &f.repo,
-			flag.Usage("the user or org that owns the repostiory"),
-			flag.DefaultFromFunc(f.defaultRepo),
+		arg.AddFlag(cl, "github-repo", &f.repo,
+			arg.Usage("the user or org that owns the repostiory"),
+			arg.DefaultFromFunc(f.defaultRepo),
 		),
-		flag.Add(registry, "github-api-url", &f.githubBaseURL,
-			flag.Type("url"),
-			flag.Usage("the base URL for the GitHub API"),
-			flag.DefaultFromEnv("GITHUB_API_URL"),
-			flag.Hidden(),
+		arg.AddFlag(cl, "github-api-url", &f.githubBaseURL,
+			arg.Type("url"),
+			arg.Usage("the base URL for the GitHub API"),
+			arg.DefaultFromEnv("GITHUB_API_URL"),
+			arg.Hidden(),
 		),
-		flag.Add(registry, "github-upload-url", &f.githubUploadURL,
-			flag.Type("url"),
-			flag.Usage("the upload URL for the GitHub API"),
-			flag.DefaultFromEnv("GITHUB_API_URL"),
-			flag.Hidden(),
+		arg.AddFlag(cl, "github-upload-url", &f.githubUploadURL,
+			arg.Type("url"),
+			arg.Usage("the upload URL for the GitHub API"),
+			arg.DefaultFromEnv("GITHUB_API_URL"),
+			arg.Hidden(),
 		),
 	)
+	arg.Positional(cl, "foo", 0, &f.githubBaseURL,
+		arg.Usage("Mehhhh"),
+	)
 }
+
+var _ arg.Registrar = (*GitHubFlags)(nil)
 
 // Client returns a constructed GitHub Client from the given flags
 func (f *GitHubFlags) Client() *github.Client {

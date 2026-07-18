@@ -3,8 +3,8 @@ package help
 import (
 	"strings"
 
-	"github.com/bitwizeshift/go-cli/flag"
-	"github.com/bitwizeshift/go-cli/internal/flagreg"
+	"github.com/bitwizeshift/go-cli/arg"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/spf13/cobra"
 )
 
@@ -22,8 +22,16 @@ type View struct {
 	Usage         string
 	Examples      []string
 	CommandGroups []CommandGroup
+	Positionals   []PositionalInfo
 	FlagGroups    []FlagGroup
 	Hint          Hint
+}
+
+// PositionalInfo is a single positional-argument entry in a help listing.
+type PositionalInfo struct {
+	Name  string
+	Type  string
+	Usage string
 }
 
 // CommandGroup is a titled list of subcommands.
@@ -69,15 +77,20 @@ type Notice struct {
 	Latest  string
 }
 
-// NewView builds the help [View] for cmd.
-func NewView(cmd *cobra.Command) View {
+// NewView builds the help [View] for cmd. cl supplies the command's
+// positional arguments.
+func NewView(cmd *cobra.Command, cl *arg.CommandLine) View {
+	if cl == nil {
+		cl = (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+	}
 	return View{
 		Name:          cmd.CommandPath(),
 		Description:   descriptionOf(cmd),
 		Usage:         usageLineOf(cmd),
 		Examples:      examplesOf(cmd),
 		CommandGroups: commandGroupsOf(cmd),
-		FlagGroups:    flagGroupsOf(cmd),
+		Positionals:   positionalsOf(cl),
+		FlagGroups:    flagGroupsOf(cl),
 		Hint:          hintOf(cmd),
 	}
 }
@@ -155,18 +168,30 @@ func visibleCommand(c *cobra.Command) bool {
 	return c.IsAvailableCommand() && !c.IsAdditionalHelpTopicCommand()
 }
 
-// flagGroupsOf returns the visible flag groups of cmd. Fully hidden groups are
-// omitted, and hidden flags within a group are excluded.
-func flagGroupsOf(cmd *cobra.Command) []FlagGroup {
-	registry := (*flag.Registry)(flagreg.FromFlagSet(cmd.Flags()))
+// positionalsOf returns the positional arguments registered on cl, in
+// registration order.
+func positionalsOf(cl *arg.CommandLine) []PositionalInfo {
+	var positionals []PositionalInfo
+	for _, p := range argreg.Positionals((*argreg.CommandLine)(cl)) {
+		positionals = append(positionals, PositionalInfo{
+			Name:  p.Name,
+			Type:  p.Type,
+			Usage: p.Usage,
+		})
+	}
+	return positionals
+}
 
+// flagGroupsOf returns the visible flag groups of cl. Fully hidden groups
+// are omitted, and hidden flags within a group are excluded.
+func flagGroupsOf(cl *arg.CommandLine) []FlagGroup {
 	var groups []FlagGroup
-	for _, group := range flag.Groups(registry) {
+	for _, group := range arg.Groups(cl) {
 		if group.Hidden() {
 			continue
 		}
 		// A non-hidden group always has at least one non-hidden flag, since
-		// [flag.Group.Hidden] reports true only when every flag is hidden.
+		// [arg.FlagGroup.Hidden] reports true only when every flag is hidden.
 		var flags []FlagInfo
 		for _, f := range group.Flags {
 			if f.Hidden() {
@@ -180,7 +205,7 @@ func flagGroupsOf(cmd *cobra.Command) []FlagGroup {
 }
 
 // flagInfoOf extracts the display information for a single flag.
-func flagInfoOf(f *flag.Flag) FlagInfo {
+func flagInfoOf(f *arg.Flag) FlagInfo {
 	return FlagInfo{
 		Shorthand: f.Shorthand(),
 		Name:      f.Name(),
@@ -191,7 +216,7 @@ func flagInfoOf(f *flag.Flag) FlagInfo {
 
 // flagTypeOf returns the type name to display for f, or an empty string for
 // boolean flags, which take no value argument.
-func flagTypeOf(f *flag.Flag) string {
+func flagTypeOf(f *arg.Flag) string {
 	if t := f.Type(); t != "bool" {
 		return t
 	}

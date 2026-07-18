@@ -1,23 +1,23 @@
-package flag
+package arg
 
 import (
 	"reflect"
 	"strings"
 	"unsafe"
 
-	"github.com/bitwizeshift/go-cli/internal/flagreg"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 )
 
 // Registrar abstracts objects that have flags that need to be registered to
-// a [Registry].
+// a [CommandLine].
 //
 // Registrars are queried as part of the [Register] operation, which allows for
 // recursive and conditional registration of custom flag types.
 type Registrar interface {
-	RegisterFlags(fs *Registry)
+	RegisterArgs(cl *CommandLine)
 }
 
-// Register adds all flags associated to v into fs.
+// Register adds all arguments associated to v into cl.
 //
 // If v implements [Registrar] directly, it will be registered immediately.
 //
@@ -30,10 +30,10 @@ type Registrar interface {
 // If an object implements [Registrar] and contains fields of other types
 // that may be [Registrar] types, the object is responsible for manually
 // registering those fields.
-func Register(registry *Registry, v any) {
+func Register(cl *CommandLine, v any) {
 	rv := reflect.ValueOf(v)
 	rt := rv.Type()
-	register(registry, rv, rt)
+	register(cl, rv, rt)
 }
 
 type tags struct {
@@ -55,11 +55,11 @@ func parseTags(tag reflect.StructTag) tags {
 	return result
 }
 
-func register(registry *Registry, rv reflect.Value, rt reflect.Type) {
+func register(cl *CommandLine, rv reflect.Value, rt reflect.Type) {
 	if !rv.CanInterface() {
 		return
 	}
-	visited := flagreg.Visited((*flagreg.Registry)(registry))
+	visited := argreg.Visited((*argreg.CommandLine)(cl))
 	for {
 		if registrar, ok := rv.Interface().(Registrar); ok {
 			if id, ok := instanceID(rv); ok {
@@ -68,7 +68,7 @@ func register(registry *Registry, rv reflect.Value, rt reflect.Type) {
 				}
 				visited[id] = struct{}{}
 			}
-			registrar.RegisterFlags(registry)
+			registrar.RegisterArgs(cl)
 			return
 		}
 		kind := rt.Kind()
@@ -81,11 +81,11 @@ func register(registry *Registry, rv reflect.Value, rt reflect.Type) {
 
 	switch rt.Kind() {
 	case reflect.Struct:
-		registerStruct(registry, rv, rt)
+		registerStruct(cl, rv, rt)
 	case reflect.Slice, reflect.Array:
-		registerSlice(registry, rv)
+		registerSlice(cl, rv)
 	case reflect.Map:
-		registerMap(registry, rv)
+		registerMap(cl, rv)
 	}
 }
 
@@ -102,7 +102,7 @@ func instanceID(rv reflect.Value) (unsafe.Pointer, bool) {
 	return nil, false
 }
 
-func registerStruct(registry *Registry, rv reflect.Value, rt reflect.Type) {
+func registerStruct(cl *CommandLine, rv reflect.Value, rt reflect.Type) {
 	for _, field := range reflect.VisibleFields(rt) {
 		tag := parseTags(field.Tag)
 		if tag.ignore {
@@ -110,26 +110,26 @@ func registerStruct(registry *Registry, rv reflect.Value, rt reflect.Type) {
 		}
 		fieldV := rv.FieldByIndex(field.Index)
 		fieldT := field.Type
-		register(registry, fieldV, fieldT)
+		register(cl, fieldV, fieldT)
 	}
 }
 
-func registerSlice(registry *Registry, rv reflect.Value) {
+func registerSlice(cl *CommandLine, rv reflect.Value) {
 	length := rv.Len()
 	for i := range length {
 		fieldV := rv.Index(i)
 		fieldT := fieldV.Type()
-		register(registry, fieldV, fieldT)
+		register(cl, fieldV, fieldT)
 	}
 }
 
-func registerMap(registry *Registry, rv reflect.Value) {
+func registerMap(cl *CommandLine, rv reflect.Value) {
 	if rv.IsNil() {
 		return
 	}
 	for _, key := range rv.MapKeys() {
-		register(registry, key, key.Type())
+		register(cl, key, key.Type())
 		value := rv.MapIndex(key)
-		register(registry, value, value.Type())
+		register(cl, value, value.Type())
 	}
 }

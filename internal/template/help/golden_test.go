@@ -28,7 +28,7 @@ func TestRenderer_Render_Golden(t *testing.T) {
 			var buf bytes.Buffer
 
 			// Act
-			renderErr := sut.Render(&buf, tc.Command)
+			renderErr := sut.Render(&buf, tc.Command, tc.CL)
 			rendered, stripErr := plain.Render(buf.String())
 
 			// Assert

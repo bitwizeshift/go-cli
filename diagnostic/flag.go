@@ -7,8 +7,8 @@ import (
 	"log/slog"
 
 	"github.com/bitwizeshift/go-cli"
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/diagnostic/internal/diagslog"
-	"github.com/bitwizeshift/go-cli/flag"
 	"github.com/bitwizeshift/go-cli/internal/term"
 )
 
@@ -43,8 +43,8 @@ type LoggerFlag struct {
 	format FormatType
 }
 
-// RegisterFlags registers the LoggerFlag's flags with the provided FlagSet.
-func (lf *LoggerFlag) RegisterFlags(registry *flag.Registry) {
+// RegisterArgs registers the LoggerFlag's flags with the provided FlagSet.
+func (lf *LoggerFlag) RegisterArgs(cl *arg.CommandLine) {
 	flagName := lf.LongFlag
 	if flagName == "" {
 		flagName = "output-format"
@@ -53,18 +53,18 @@ func (lf *LoggerFlag) RegisterFlags(registry *flag.Registry) {
 	if usage == "" {
 		usage = "The output format for diagnostics to be printed in"
 	}
-	opts := []flag.Option{
-		flag.Usage(usage),
-		flag.Type("format"),
-		flag.CompleteFrom(string(FormatText), string(FormatGitHub), string(FormatJSON)),
+	opts := []arg.Option{
+		arg.Usage(usage),
+		arg.Type("format"),
+		arg.CompleteFrom(string(FormatText), string(FormatGitHub), string(FormatJSON)),
 	}
 	if lf.ShortFlag != "" {
-		opts = append(opts, flag.Shorthand(lf.ShortFlag))
+		opts = append(opts, arg.Shorthand(lf.ShortFlag))
 	}
-	flag.Add(registry, flagName, &lf.format, opts...)
+	arg.AddFlag(cl, flagName, &lf.format, opts...)
 }
 
-var _ flag.Registrar = (*LoggerFlag)(nil)
+var _ arg.Registrar = (*LoggerFlag)(nil)
 
 // LoggerFor returns a [Logger] for the given writer.
 func (lf *LoggerFlag) LoggerFor(w io.Writer) *Logger {

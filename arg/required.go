@@ -1,4 +1,4 @@
-package flag
+package arg
 
 import (
 	"github.com/bitwizeshift/go-cli/internal/annotation"

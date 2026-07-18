@@ -9,7 +9,9 @@ import (
 	"os/signal"
 	"runtime/debug"
 
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/argreg"
 	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/storage"
 	"github.com/bitwizeshift/go-cli/internal/template"
@@ -74,7 +76,7 @@ func fromRunner(err error) bool {
 // as a [PanicError]; any other error is wrapped so that [Execute] can tell it
 // apart from an argument-parsing failure. store is placed on the context so the
 // runner can reach the application's storage roots.
-func (i *CommandInfo) run(runner Runner, store *storage.AppStorage) func(cmd *cobra.Command, args []string) error {
+func (i *CommandInfo) run(runner Runner, store *storage.AppStorage, cl *arg.CommandLine) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) (err error) {
 		ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 		defer cancel()
@@ -101,6 +103,11 @@ func (i *CommandInfo) run(runner Runner, store *storage.AppStorage) func(cmd *co
 		// Compute fallback defaults for flags that aren't set, and assign the
 		// values.
 		if e := annotation.SetFlagFallbacks(ctx, cmd.Flags()); e != nil {
+			return fmt.Errorf("%w: %w", ErrUsage, e)
+		}
+
+		// Bind positional and unmatched arguments into the runner before it runs.
+		if e := argreg.Bind((*argreg.CommandLine)(cl), args); e != nil {
 			return fmt.Errorf("%w: %w", ErrUsage, e)
 		}
 

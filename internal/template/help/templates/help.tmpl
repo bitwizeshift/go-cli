@@ -18,6 +18,10 @@
 {{ template "commands.tmpl" . }}
 
 {{ end -}}
+{{ if .Positionals -}}
+{{ template "positionals.tmpl" . }}
+
+{{ end -}}
 {{ range .FlagGroups -}}
 {{ template "flags.tmpl" . }}
 

@@ -64,7 +64,7 @@ func TestRenderEngine_HelpFunc_WritesStyledHelp(t *testing.T) {
 	cmd.SetOut(&buf)
 
 	// Act
-	sut.HelpFunc()(cmd, nil)
+	sut.HelpFunc(nil)(cmd, nil)
 
 	// Assert
 	if got, want := strings.Contains(buf.String(), "[theme:title]app[/theme]"), true; !cmp.Equal(got, want) {
