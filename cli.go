@@ -11,14 +11,37 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Builder constructs a [Runner] to use for execution.
+//
+// This abstraction is the intended pattern for implementing runners in go-cli.
+// The Builder acts as the "collector" of all the collaborators that the
+// [Runner] will need for execution. This effectively wrangles all
+// dependency-injectable types that are often driven by flags, positional
+// arguments, environment variables, etc -- and builds a high-level driver for
+// the main command's execution.
+//
+// The separation from Builder and Runner allows for each part of the hierarchy
+// to have its own separation-of-concerns -- and is what makes this library
+// testable. The implementation of Builder becomes a hierarchy of
+// Builder/Factory/Repository/Provider-patterned objects, whose responsibility
+// is to yield objects, whereas the Runner is responsible for driving that high
+// level execution logic. See [Runner] for more details.
+//
+// If the [Builder] type optionally implements [arg.Registrar], the flags will
+// be added to the overall command's construction -- which is what enables the
+// composition of flag-based factories.
+type Builder interface {
+	// Build takes the application context and attempts to construct a [Runner].
+	Build(ctx context.Context) (Runner, error)
+}
+
 // Runner is the generalized "run" behavior that each bound command executes.
 //
-// Implementations may additionally implement [arg.Registrar],
-// or expose reachable fields that do, so that arguments are registered
-// automatically when the command tree is built.
+// Implementations should work from a high-level, leveraging dependency-injected
+// types constructed as part of the [Builder] construction phase.
 type Runner interface {
 	// Run executes the command with the resolved positional arguments.
-	Run(ctx context.Context, args ...string) error
+	Run(ctx context.Context) error
 }
 
 // PanicError is the error produced when a [Runner] terminates by panicking,
@@ -47,9 +70,9 @@ type CLI struct {
 func FromReader(r io.Reader, options ...Option) *CLI {
 	cfg := newConfig(options...)
 	cmd, err := spec.Build(r, spec.Options{
-		Runners: cfg.runners,
-		Theme:   cfg.theme,
-		Colour:  cfg.colour,
+		Builders: cfg.builders,
+		Theme:    cfg.theme,
+		Colour:   cfg.colour,
 		Update: spec.UpdateOptions{
 			Version:   cfg.buildVersion,
 			Source:    cfg.buildSource,

@@ -32,7 +32,7 @@ func TestBuild_UpdateSourceConfig_ConfiguresProvider(t *testing.T) {
 		"    repo: go-cli",
 	))
 	opts := spec.Options{
-		Runners: map[string]spec.Runner{"root": spectest.NoOpRunner()},
+		Builders: toBuilders(map[string]spec.Runner{"root": spectest.NoOpRunner()}),
 		Update: spec.UpdateOptions{
 			Version:   "v1.0.0",
 			Source:    "github",
@@ -63,7 +63,7 @@ func TestBuild_UndecodableUpdateSource_ReturnsError(t *testing.T) {
 		"  github: not-a-mapping",
 	))
 	opts := spec.Options{
-		Runners: map[string]spec.Runner{"root": spectest.NoOpRunner()},
+		Builders: toBuilders(map[string]spec.Runner{"root": spectest.NoOpRunner()}),
 		Update: spec.UpdateOptions{
 			Version:   "v1.0.0",
 			Source:    "github",
@@ -179,8 +179,8 @@ func TestBuild_UpdateAdvisory(t *testing.T) {
 			// Arrange
 			input := strings.NewReader(yamlDoc(tc.lines...))
 			opts := spec.Options{
-				Runners: map[string]spec.Runner{"root": spectest.NoOpRunner()},
-				Update:  tc.update,
+				Builders: toBuilders(map[string]spec.Runner{"root": spectest.NoOpRunner()}),
+				Update:   tc.update,
 			}
 			cmd, buildErr := spec.Build(input, opts)
 

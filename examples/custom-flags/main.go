@@ -129,7 +129,7 @@ type rootRunner struct {
 	PRSource     PRSource
 }
 
-func (ghr *rootRunner) Run(ctx context.Context, _ ...string) error {
+func (ghr *rootRunner) Run(ctx context.Context) error {
 	client := ghr.ClientSource.Client()
 	owner, repo := ghr.RepoSource.Repo()
 	pr := ghr.PRSource.PullRequest()

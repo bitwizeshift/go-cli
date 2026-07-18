@@ -27,7 +27,7 @@ type rootRunner struct {
 	LoggerProvider loggerProvider
 }
 
-func (r *rootRunner) Run(ctx context.Context, _ ...string) error {
+func (r *rootRunner) Run(ctx context.Context) error {
 	logger := r.LoggerProvider.Logger(ctx)
 
 	logger.Error(ctx, &diagnostic.Diagnostic{

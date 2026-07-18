@@ -36,8 +36,8 @@ const (
 
 // Options configures how a command tree is built and how its output is styled.
 type Options struct {
-	// Runners binds each command id to the runner that executes it.
-	Runners map[string]Runner
+	// Builders binds each command id to the runner that executes it.
+	Builders map[string]Builder
 
 	// Theme resolves the styling tags emitted by the output templates. A nil
 	// Theme uses [richtext.DefaultTheme].
@@ -70,8 +70,8 @@ func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 		return nil, err
 	}
 
-	unbound := make(map[string]Runner, len(opts.Runners))
-	maps.Copy(unbound, opts.Runners)
+	unbound := make(map[string]Builder, len(opts.Builders))
+	maps.Copy(unbound, opts.Builders)
 	store := storage.NewAppStorage(app.resolveAppID())
 	cmd, cl := app.toCobraCommand(unbound, store)
 	if len(unbound) > 0 {
@@ -122,9 +122,9 @@ func setStreams(cmd *cobra.Command, out, err io.Writer) {
 }
 
 // sortedKeys returns the keys of runners in sorted order.
-func sortedKeys(runners map[string]Runner) []string {
-	keys := make([]string, 0, len(runners))
-	for id := range runners {
+func sortedKeys(builders map[string]Builder) []string {
+	keys := make([]string, 0, len(builders))
+	for id := range builders {
 		keys = append(keys, id)
 	}
 	slices.Sort(keys)
@@ -136,7 +136,7 @@ func sortedKeys(runners map[string]Runner) []string {
 // every command so a bound runner can reach the application's storage roots. It
 // returns the command alongside its argument cl, which is nil when no
 // runner is bound.
-func (i *CommandInfo) toCobraCommand(runners map[string]Runner, store *storage.AppStorage) (*cobra.Command, *arg.CommandLine) {
+func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage.AppStorage) (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{
 		Use:           i.Use,
 		Short:         i.Summary,
@@ -157,13 +157,13 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner, store *storage.A
 		SuggestionsMinimumDistance: 1,
 	}
 	var cl *arg.CommandLine
-	if runner := runners[i.ID]; runner != nil {
-		delete(runners, i.ID)
+	if builder := builders[i.ID]; builder != nil {
+		delete(builders, i.ID)
 		cl = (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
-		arg.Register(cl, runner)
+		arg.Register(cl, builder)
 		annotation.ConfigureFlags(cmd)
 		annotation.RegisterFlagCompletions(cmd)
-		cmd.RunE = i.run(runner, store, cl)
+		cmd.RunE = i.run(builder, store, cl)
 	} else {
 		cmd.RunE = i.showHelp
 	}
@@ -172,7 +172,7 @@ func (i *CommandInfo) toCobraCommand(runners map[string]Runner, store *storage.A
 	cmd.SetVersionTemplate(template.DefaultRenderEngine.VersionTemplate())
 
 	for _, group := range i.Commands {
-		i.addGroup(cmd, group, runners, store)
+		i.addGroup(cmd, group, builders, store)
 	}
 	return cmd, cl
 }
@@ -186,7 +186,7 @@ func (*CommandInfo) showHelp(cmd *cobra.Command, _ []string) error {
 
 // addGroup adds the commands of group to cmd. A group named [DefaultGroup] is
 // left ungrouped; any other group is registered as a titled cobra group.
-func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, runners map[string]Runner, store *storage.AppStorage) {
+func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, builders map[string]Builder, store *storage.AppStorage) {
 	groupID := ""
 	if group.Name != DefaultGroup {
 		groupID = strings.ReplaceAll(group.Name, " ", "-")
@@ -196,7 +196,7 @@ func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, runne
 		})
 	}
 	for _, c := range group.Commands {
-		command, _ := c.toCobraCommand(runners, store)
+		command, _ := c.toCobraCommand(builders, store)
 		command.GroupID = groupID
 		cmd.AddCommand(command)
 	}

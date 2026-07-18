@@ -146,7 +146,7 @@ type storageCapture struct {
 	injected bool
 }
 
-func (sc *storageCapture) Run(ctx context.Context, _ ...string) error {
+func (sc *storageCapture) Run(ctx context.Context) error {
 	sc.injected = clictx.Storage(ctx) != nil
 	return nil
 }
@@ -183,9 +183,9 @@ func TestExecute_InjectsStorage(t *testing.T) {
 			// Arrange
 			runner := &storageCapture{}
 			sut := build(t, tc.spec, spec.Options{
-				Runners: map[string]spec.Runner{"root": runner},
-				Stdout:  io.Discard,
-				Stderr:  io.Discard,
+				Builders: toBuilders(map[string]spec.Runner{"root": runner}),
+				Stdout:   io.Discard,
+				Stderr:   io.Discard,
 			})
 			ctx := context.Background()
 
@@ -215,7 +215,7 @@ func (pc *positionalCapture) RegisterArgs(cl *arg.CommandLine) {
 	arg.Unmatched(cl, &pc.rest)
 }
 
-func (pc *positionalCapture) Run(context.Context, ...string) error {
+func (pc *positionalCapture) Run(context.Context) error {
 	return nil
 }
 
@@ -225,9 +225,9 @@ func TestExecute_BindsPositionalArguments(t *testing.T) {
 	// Arrange
 	runner := &positionalCapture{}
 	sut := build(t, "id: root\nuse: root\n", spec.Options{
-		Runners: map[string]spec.Runner{"root": runner},
-		Stdout:  io.Discard,
-		Stderr:  io.Discard,
+		Builders: toBuilders(map[string]spec.Runner{"root": runner}),
+		Stdout:   io.Discard,
+		Stderr:   io.Discard,
 	})
 	sut.SetArgs([]string{"alpha", "beta", "gamma"})
 	ctx := context.Background()
@@ -257,7 +257,7 @@ func (pf *positionalFailure) RegisterArgs(cl *arg.CommandLine) {
 	arg.Positional(cl, "count", 0, &pf.count)
 }
 
-func (pf *positionalFailure) Run(context.Context, ...string) error {
+func (pf *positionalFailure) Run(context.Context) error {
 	return nil
 }
 
@@ -267,9 +267,9 @@ func TestExecute_PositionalBindError_ShowsUsage(t *testing.T) {
 	// Arrange
 	var stderr strings.Builder
 	sut := build(t, "id: root\nuse: root\n", spec.Options{
-		Runners: map[string]spec.Runner{"root": &positionalFailure{}},
-		Stdout:  io.Discard,
-		Stderr:  &stderr,
+		Builders: toBuilders(map[string]spec.Runner{"root": &positionalFailure{}}),
+		Stdout:   io.Discard,
+		Stderr:   &stderr,
 	})
 	sut.SetArgs([]string{"not-a-number"})
 	ctx := context.Background()
@@ -291,9 +291,9 @@ func TestExecute_PositionalBindError_ShowsUsage(t *testing.T) {
 func newRootCommand(t testing.TB, runner spec.Runner, w io.Writer) *cobra.Command {
 	t.Helper()
 	cmd, err := spec.Build(strings.NewReader("id: root\nuse: root\n"), spec.Options{
-		Runners: map[string]spec.Runner{"root": runner},
-		Stdout:  w,
-		Stderr:  w,
+		Builders: toBuilders(map[string]spec.Runner{"root": runner}),
+		Stdout:   w,
+		Stderr:   w,
 	})
 	if err != nil {
 		t.Fatalf("spec.Build(...) = _, %v, want nil", err)

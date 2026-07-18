@@ -28,12 +28,12 @@ func (fr *flaggedRunner) RegisterArgs(cl *arg.CommandLine) {
 	arg.AddFlag(cl, "format", &fr.format, arg.CompleteFrom("json", "yaml"))
 }
 
-func (fr *flaggedRunner) Run(context.Context, ...string) error {
+func (fr *flaggedRunner) Run(context.Context) error {
 	return nil
 }
 
 var (
-	_ spec.Runner    = (*flaggedRunner)(nil)
+	_ spec.Runner   = (*flaggedRunner)(nil)
 	_ arg.Registrar = (*flaggedRunner)(nil)
 )
 
@@ -45,6 +45,14 @@ commands:
     - id: child
       use: child
 `
+
+func toBuilders(runners map[string]spec.Runner) map[string]spec.Builder {
+	result := map[string]spec.Builder{}
+	for key, runner := range runners {
+		result[key] = spectest.PassThroughBuilder(runner)
+	}
+	return result
+}
 
 func TestBuild(t *testing.T) {
 	t.Parallel()
@@ -84,7 +92,7 @@ func TestBuild(t *testing.T) {
 			reader := strings.NewReader(tc.input)
 
 			// Act
-			cmd, err := spec.Build(reader, spec.Options{Runners: tc.runners})
+			cmd, err := spec.Build(reader, spec.Options{Builders: toBuilders(tc.runners)})
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -131,9 +139,9 @@ func TestBuild_Colour(t *testing.T) {
 			// Arrange
 			var out bytes.Buffer
 			sut := build(t, "id: root\nuse: root\n", spec.Options{
-				Runners: map[string]spec.Runner{
+				Builders: toBuilders(map[string]spec.Runner{
 					"root": spectest.NoOpRunner(),
-				},
+				}),
 				Colour: tc.colour,
 				Stdout: &out,
 				Stderr: &out,
@@ -161,9 +169,9 @@ func TestBuild_DefaultGroup_LeavesChildUngrouped(t *testing.T) {
 
 	// Act
 	sut, err := spec.Build(reader, spec.Options{
-		Runners: map[string]spec.Runner{
+		Builders: toBuilders(map[string]spec.Runner{
 			"root": spectest.NoOpRunner(),
-		},
+		}),
 	})
 
 	// Assert
@@ -192,9 +200,9 @@ commands:
 
 	// Act
 	sut, err := spec.Build(reader, spec.Options{
-		Runners: map[string]spec.Runner{
+		Builders: toBuilders(map[string]spec.Runner{
 			"root": spectest.NoOpRunner(),
-		},
+		}),
 	})
 
 	// Assert
@@ -218,9 +226,9 @@ func TestBuild_BoundRunner_RegistersFlags(t *testing.T) {
 
 	// Act
 	sut, err := spec.Build(reader, spec.Options{
-		Runners: map[string]spec.Runner{
+		Builders: toBuilders(map[string]spec.Runner{
 			"root": &flaggedRunner{},
-		},
+		}),
 	})
 	cl := (*arg.CommandLine)(argreg.FromFlagSet(sut.Flags()))
 
@@ -242,9 +250,9 @@ func TestBuild_BoundRunner_RegistersCompletions(t *testing.T) {
 
 	// Act
 	sut, err := spec.Build(reader, spec.Options{
-		Runners: map[string]spec.Runner{
+		Builders: toBuilders(map[string]spec.Runner{
 			"root": &flaggedRunner{},
-		},
+		}),
 	})
 
 	// Assert
@@ -272,9 +280,9 @@ commands:
 `
 	var out bytes.Buffer
 	sut := build(t, input, spec.Options{
-		Runners: map[string]spec.Runner{
+		Builders: toBuilders(map[string]spec.Runner{
 			"root": spectest.NoOpRunner(),
-		},
+		}),
 		Stdout: &out,
 		Stderr: &out,
 	})

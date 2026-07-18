@@ -76,7 +76,7 @@ func fromRunner(err error) bool {
 // as a [PanicError]; any other error is wrapped so that [Execute] can tell it
 // apart from an argument-parsing failure. store is placed on the context so the
 // runner can reach the application's storage roots.
-func (i *CommandInfo) run(runner Runner, store *storage.AppStorage, cl *arg.CommandLine) func(cmd *cobra.Command, args []string) error {
+func (i *CommandInfo) run(builder Builder, store *storage.AppStorage, cl *arg.CommandLine) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) (err error) {
 		ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 		defer cancel()
@@ -111,7 +111,12 @@ func (i *CommandInfo) run(runner Runner, store *storage.AppStorage, cl *arg.Comm
 			return fmt.Errorf("%w: %w", ErrUsage, e)
 		}
 
-		if e := runner.Run(ctx, args...); e != nil {
+		runner, e := builder.Build(ctx)
+		if e != nil {
+			return e
+		}
+
+		if e := runner.Run(ctx); e != nil {
 			return runnerError{err: e}
 		}
 		return nil

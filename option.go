@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -18,7 +19,7 @@ type Option interface {
 
 // config holds the resolved options used to build a [CLI].
 type config struct {
-	runners    map[string]spec.Runner
+	builders   map[string]spec.Builder
 	theme      *richtext.Theme
 	colour     spec.ColourMode
 	sizer      term.Sizer
@@ -34,7 +35,7 @@ type config struct {
 // runner to the same command id.
 func newConfig(options ...Option) *config {
 	cfg := &config{
-		runners:         map[string]spec.Runner{},
+		builders:        map[string]spec.Builder{},
 		classifier:      exit.POSIXClassifier,
 		updateProviders: map[string]update.Provider{},
 	}
@@ -52,13 +53,42 @@ func (o option) apply(c *config) { o(c) }
 //
 // It panics if id has already been bound by an earlier option; a bound id that
 // matches no command is reported when the [CLI] is constructed.
+// Prefer [BindBuilder] for binding builders instead though.
 func BindRunner(id string, runner Runner) Option {
+	return BindBuilder(id, inlineRunner{Runner: runner})
+}
+
+// BindBuilder binds builder to the command identified by id in the
+// specification.
+//
+// It panics if id has already been bound by an earlier option; a bound id that
+// matches no command is reported whne the [CLI] is constructed.
+// Binding a [Builder] is the preferred way of building CLI runners because this
+// preserves a separation-of-concerns on responsibility (building vs executing).
+func BindBuilder(id string, builder Builder) Option {
 	return option(func(c *config) {
-		if _, ok := c.runners[id]; ok {
-			panic(fmt.Sprintf("cli: duplicate runner bound to id %q", id))
+		if _, ok := c.builders[id]; ok {
+			panic(fmt.Sprintf("cli: duplicate builder bound to id %q", id))
 		}
-		c.runners[id] = runner
+		c.builders[id] = builderWrapper{Builder: builder}
 	})
+}
+
+type builderWrapper struct {
+	Builder Builder
+}
+
+func (w builderWrapper) Build(ctx context.Context) (spec.Runner, error) {
+	runner, err := w.Builder.Build(ctx)
+	return spec.Runner(runner), err
+}
+
+type inlineRunner struct {
+	Runner Runner
+}
+
+func (r inlineRunner) Build(context.Context) (Runner, error) {
+	return r.Runner, nil
 }
 
 // Theme sets the [richtext.Theme] used to resolve the styling tags in the CLI's

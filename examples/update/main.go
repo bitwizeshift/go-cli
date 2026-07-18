@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/bitwizeshift/go-cli"
+	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/update"
 )
 
@@ -28,12 +29,20 @@ func main() {
 }
 
 // greetRunner backs the "greet" subcommand.
-type greetRunner struct{}
+type greetRunner struct {
+	name string
+}
 
-func (*greetRunner) Run(_ context.Context, args ...string) error {
+func (r *greetRunner) RegisterArgs(cl *arg.CommandLine) {
+	arg.Positional(cl, "name", 0, &r.name,
+		arg.Usage("Optional name to greet"),
+	)
+}
+
+func (r *greetRunner) Run(_ context.Context) error {
 	name := "world"
-	if len(args) > 0 {
-		name = args[0]
+	if r.name != "" {
+		name = r.name
 	}
 	fmt.Printf("hello, %s\n", name)
 	return nil

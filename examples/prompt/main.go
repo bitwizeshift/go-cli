@@ -36,14 +36,14 @@ func main() {
 // subcommand.
 type rootRunner struct{}
 
-func (*rootRunner) Run(context.Context, ...string) error {
+func (*rootRunner) Run(context.Context) error {
 	return cli.ErrUsage
 }
 
 // lineRunner backs "line" and reads a plain, echoed line.
 type lineRunner struct{}
 
-func (*lineRunner) Run(ctx context.Context, _ ...string) error {
+func (*lineRunner) Run(ctx context.Context) error {
 	name, err := prompt.Line(ctx, "What is your name? ")
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (*lineRunner) Run(ctx context.Context, _ ...string) error {
 // confirmRunner backs "confirm" and reads a yes/no answer.
 type confirmRunner struct{}
 
-func (*confirmRunner) Run(ctx context.Context, _ ...string) error {
+func (*confirmRunner) Run(ctx context.Context) error {
 	ok, err := prompt.Confirm(ctx, "Do you want to continue?")
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (*confirmRunner) Run(ctx context.Context, _ ...string) error {
 // secretRunner backs "secret" and reads a masked value without revealing it.
 type secretRunner struct{}
 
-func (*secretRunner) Run(ctx context.Context, _ ...string) error {
+func (*secretRunner) Run(ctx context.Context) error {
 	secret, err := prompt.Secret(ctx, "Enter a password: ")
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ type valueRunner[T any] struct {
 	label string
 }
 
-func (r *valueRunner[T]) Run(ctx context.Context, _ ...string) error {
+func (r *valueRunner[T]) Run(ctx context.Context) error {
 	var value T
 	if err := prompt.Value(ctx, r.label, &value); err != nil {
 		return err

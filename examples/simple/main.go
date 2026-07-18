@@ -42,7 +42,7 @@ func main() {
 // contrast, left unbound so cobra prints their help directly.
 type rootRunner struct{}
 
-func (*rootRunner) Run(context.Context, ...string) error {
+func (*rootRunner) Run(context.Context) error {
 	return cli.ErrUsage
 }
 
@@ -65,7 +65,7 @@ func (ir *initRunner) RegisterArgs(cl *arg.CommandLine) {
 	arg.AddToGroup("Vault Flags", path, force)
 }
 
-func (ir *initRunner) Run(context.Context, ...string) error {
+func (ir *initRunner) Run(context.Context) error {
 	fmt.Printf("initialized vault at %q (force=%t)\n", ir.path, ir.force)
 	return nil
 }
@@ -73,7 +73,7 @@ func (ir *initRunner) Run(context.Context, ...string) error {
 // statusRunner backs "status" and takes no flags or arguments.
 type statusRunner struct{}
 
-func (*statusRunner) Run(context.Context, ...string) error {
+func (*statusRunner) Run(context.Context) error {
 	fmt.Println("vault: ready (0 items, 0 remotes)")
 	return nil
 }
@@ -81,7 +81,7 @@ func (*statusRunner) Run(context.Context, ...string) error {
 // panicRunner backs the hidden "panic" command and always crashes.
 type panicRunner struct{}
 
-func (*panicRunner) Run(context.Context, ...string) error {
+func (*panicRunner) Run(context.Context) error {
 	panic("the vault collapsed in on itself")
 }
 
@@ -114,7 +114,7 @@ func (iar *itemAddRunner) RegisterArgs(cl *arg.CommandLine) {
 	arg.MarkMutuallyExclusive(priority, pin)
 }
 
-func (iar *itemAddRunner) Run(context.Context, ...string) error {
+func (iar *itemAddRunner) Run(context.Context) error {
 	name := iar.name
 	if name == "" {
 		name = "untitled"
@@ -155,7 +155,7 @@ func (ilr *itemListRunner) RegisterArgs(cl *arg.CommandLine) {
 	arg.MarkMutuallyExclusive(all, status)
 }
 
-func (ilr *itemListRunner) Run(context.Context, ...string) error {
+func (ilr *itemListRunner) Run(context.Context) error {
 	fmt.Printf("listing items (all=%t, status=%q, limit=%d, json=%t)\n",
 		ilr.all, ilr.status, ilr.limit, ilr.asJSON)
 	return nil
@@ -177,7 +177,7 @@ func (irr *itemRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
 	)
 }
 
-func (irr *itemRemoveRunner) Run(context.Context, ...string) error {
+func (irr *itemRemoveRunner) Run(context.Context) error {
 	fmt.Printf("removed %s (confirmed=%t)\n", strings.Join(irr.names, ", "), irr.yes)
 	return nil
 }
@@ -194,7 +194,7 @@ func (cgr *configGetRunner) RegisterArgs(cl *arg.CommandLine) {
 	)
 }
 
-func (cgr *configGetRunner) Run(context.Context, ...string) error {
+func (cgr *configGetRunner) Run(context.Context) error {
 	fmt.Printf("%s = <unset>\n", cgr.key)
 	return nil
 }
@@ -215,7 +215,7 @@ func (csr *configSetRunner) RegisterArgs(cl *arg.CommandLine) {
 	)
 }
 
-func (csr *configSetRunner) Run(context.Context, ...string) error {
+func (csr *configSetRunner) Run(context.Context) error {
 	fmt.Printf("set %s = %s\n", csr.key, csr.value)
 	return nil
 }
@@ -232,7 +232,7 @@ func (clr *configListRunner) RegisterArgs(cl *arg.CommandLine) {
 	)
 }
 
-func (clr *configListRunner) Run(context.Context, ...string) error {
+func (clr *configListRunner) Run(context.Context) error {
 	fmt.Printf("no configuration values set (json=%t)\n", clr.asJSON)
 	return nil
 }
@@ -264,7 +264,7 @@ func (rar *remoteAddRunner) RegisterArgs(cl *arg.CommandLine) {
 	arg.MarkRequired(token)
 }
 
-func (rar *remoteAddRunner) Run(context.Context, ...string) error {
+func (rar *remoteAddRunner) Run(context.Context) error {
 	fmt.Printf("added remote %q -> %s (insecure=%t)\n", rar.name, rar.url, rar.insecure)
 	return nil
 }
@@ -272,7 +272,7 @@ func (rar *remoteAddRunner) Run(context.Context, ...string) error {
 // remoteListRunner backs "remote list".
 type remoteListRunner struct{}
 
-func (*remoteListRunner) Run(context.Context, ...string) error {
+func (*remoteListRunner) Run(context.Context) error {
 	fmt.Println("no remotes configured")
 	return nil
 }
@@ -293,7 +293,7 @@ func (rrr *remoteRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
 	)
 }
 
-func (rrr *remoteRemoveRunner) Run(context.Context, ...string) error {
+func (rrr *remoteRemoveRunner) Run(context.Context) error {
 	fmt.Printf("removed remote %q (confirmed=%t)\n", rrr.name, rrr.yes)
 	return nil
 }
