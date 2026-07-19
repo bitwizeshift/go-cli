@@ -73,12 +73,12 @@ func TestFromReader_Version(t *testing.T) {
 		},
 		{
 			name:    "ReportsConfiguredVersion",
-			options: []cli.Option{cli.CurrentVersion("v1.2.3")},
+			options: []cli.Option{cli.Version("v1.2.3")},
 			want:    "v1.2.3",
 		},
 		{
 			name:    "EmptyVersionKeepsDefault",
-			options: []cli.Option{cli.CurrentVersion("")},
+			options: []cli.Option{cli.Version("")},
 			want:    "snapshot",
 		},
 	}

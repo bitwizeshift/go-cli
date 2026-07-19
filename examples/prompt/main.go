@@ -20,7 +20,7 @@ var configYAML []byte
 
 func main() {
 	cli.FromBytes(configYAML,
-		cli.CurrentVersion("1.0.0"),
+		cli.Version("1.0.0"),
 		cli.BindRunner("prompt-demo", &rootRunner{}),
 		cli.BindRunner("prompt-demo.line", &lineRunner{}),
 		cli.BindRunner("prompt-demo.confirm", &confirmRunner{}),

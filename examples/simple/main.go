@@ -21,7 +21,7 @@ var configYAML []byte
 
 func main() {
 	cli.FromBytes(configYAML,
-		cli.CurrentVersion("1.4.0"),
+		cli.Version("1.4.0"),
 		cli.BindRunner("example-cli", &rootRunner{}),
 		cli.BindRunner("example-cli.init", &initRunner{path: "."}),
 		cli.BindRunner("example-cli.status", &statusRunner{}),

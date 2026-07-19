@@ -145,10 +145,10 @@ func ExitClassifier(classifier exit.Classifier) Option {
 	})
 }
 
-// CurrentVersion sets the running build's version, typically injected at build
+// Version sets the running build's version, typically injected at build
 // time with -ldflags. A build that sets none reports the module version the Go
 // toolchain embedded in it, or "snapshot" when it carries none.
-func CurrentVersion(version string) Option {
+func Version(version string) Option {
 	return option(func(c *config) {
 		if version == "" {
 			return
@@ -162,6 +162,9 @@ func CurrentVersion(version string) Option {
 // consulted for updates.
 func BuildSource(source string) Option {
 	return option(func(c *config) {
+		if source == "" {
+			return
+		}
 		c.buildSource = source
 	})
 }
