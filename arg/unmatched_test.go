@@ -192,15 +192,13 @@ func TestUnmatched_Metadata(t *testing.T) {
 			options: []arg.Option{arg.Usage("the rest")},
 			want: &argtest.Unmatched{
 				Name:  "rest",
-				Type:  "string",
 				Usage: "the rest",
 			},
 		}, {
 			name:    "TypeOverridesReportedName",
-			options: []arg.Option{arg.Type("path"), arg.Usage("paths to read")},
+			options: []arg.Option{arg.Usage("paths to read")},
 			want: &argtest.Unmatched{
 				Name:  "rest",
-				Type:  "path",
 				Usage: "paths to read",
 			},
 		}, {
@@ -208,7 +206,6 @@ func TestUnmatched_Metadata(t *testing.T) {
 			options: nil,
 			want: &argtest.Unmatched{
 				Name:  "rest",
-				Type:  "string",
 				Usage: "",
 			},
 		},
@@ -246,7 +243,7 @@ func TestUnmatched_MetadataReportsTypedElement(t *testing.T) {
 	unmatched := argtest.GetUnmatched(cl)
 
 	// Assert
-	want := &argtest.Unmatched{Name: "rest", Type: "int", Usage: ""}
+	want := &argtest.Unmatched{Name: "rest", Usage: ""}
 	if got, want := unmatched, want; !cmp.Equal(got, want) {
 		t.Errorf("GetUnmatched(...) = %+v, want %+v", got, want)
 	}

@@ -55,7 +55,7 @@ func (lf *LoggerFlag) RegisterArgs(cl *arg.CommandLine) {
 	}
 	opts := []arg.FlagOption{
 		arg.Usage(usage),
-		arg.Type("format"),
+		arg.ValueLabel("format"),
 		arg.CompleteFrom(string(FormatText), string(FormatGitHub), string(FormatJSON)),
 	}
 	if lf.ShortFlag != "" {

@@ -33,7 +33,6 @@ func Positional[T any](name string, index int, v *T, options ...Option) *Positio
 	return &PositionalArg{positional: &argdef.Positional{
 		Index:         index,
 		Name:          name,
-		Type:          cfg.typeName(v),
 		Usage:         cfg.usage,
 		Required:      cfg.required,
 		Complete:      cfg.completer,

@@ -46,7 +46,6 @@ type CommandLine struct {
 type Positional struct {
 	Index int
 	Name  string
-	Type  string
 	Usage string
 	Set   func(value string) error
 
@@ -65,7 +64,6 @@ type Positional struct {
 // [Positional].
 type Unmatched struct {
 	Name  string
-	Type  string
 	Usage string
 	Set   func(values []string) error
 

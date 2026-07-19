@@ -179,7 +179,6 @@ func (irr *itemRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
 	cl.Add(
 		arg.Unmatched("names", &irr.names,
 			arg.Usage("names of the items to remove"),
-			arg.Type("name"),
 			arg.CompleteFrom("alpha", "beta", "gamma"),
 			arg.DefaultFromEnv("SIMPLE_ITEMS"),
 		),

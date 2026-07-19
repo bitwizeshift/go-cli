@@ -373,7 +373,7 @@ func TestAdd_Options(t *testing.T) {
 		},
 		{
 			name:    "TypeOverride",
-			options: []arg.FlagOption{arg.Type("custom")},
+			options: []arg.FlagOption{arg.ValueLabel("custom")},
 			want:    flagInfo{Type: "custom"},
 		},
 		{

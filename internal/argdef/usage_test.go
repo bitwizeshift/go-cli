@@ -132,11 +132,11 @@ func TestUsage(t *testing.T) {
 			want: "<src> [dst]",
 		}, {
 			name:      "RequiredUnmatchedIsVariadic",
-			unmatched: &argdef.Unmatched{Name: "names", Type: "string", Required: true},
+			unmatched: &argdef.Unmatched{Name: "names", Required: true},
 			want:      "<names>...",
 		}, {
 			name:      "OptionalUnmatchedIsVariadic",
-			unmatched: &argdef.Unmatched{Name: "names", Type: "string"},
+			unmatched: &argdef.Unmatched{Name: "names"},
 			want:      "[names...]",
 		}, {
 			name:     "OperandRenderedAlone",
@@ -158,7 +158,7 @@ func TestUsage(t *testing.T) {
 				{Name: "src", Index: 0, Required: true},
 				{Name: "dst", Index: 1},
 			},
-			unmatched: &argdef.Unmatched{Name: "names", Type: "string"},
+			unmatched: &argdef.Unmatched{Name: "names"},
 			want:      "--token <string> <src> [dst] [names...] [flags]",
 		},
 	}

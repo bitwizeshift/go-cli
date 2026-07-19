@@ -53,9 +53,8 @@ type DefaultFunc func(ctx context.Context) (string, error)
 
 // config holds the resolved options for a single flag registration.
 type config struct {
-	usage    string
-	typeName func(any) string
-	set      func(any, []byte) error
+	usage string
+	set   func(any, []byte) error
 
 	// Callbacks invoked with the decoded value each time the flag is set.
 	callbacks []reflect.Value
@@ -75,6 +74,8 @@ type config struct {
 type flagConfig struct {
 	config
 
+	typeName func(any) string
+
 	shorthand string
 	hidden    bool
 
@@ -88,7 +89,7 @@ type flagConfig struct {
 // newConfig builds a config from options, defaulting the type name to
 // [typeToName] and the decoder to [Unmarshal].
 func newConfig(options ...Option) *config {
-	cfg := &config{typeName: typeToName, set: Unmarshal}
+	cfg := &config{set: Unmarshal}
 	for _, opt := range options {
 		opt.apply(cfg)
 	}
@@ -97,7 +98,8 @@ func newConfig(options ...Option) *config {
 
 func newFlagConfig(options ...FlagOption) *flagConfig {
 	cfg := &flagConfig{
-		config: config{typeName: typeToName, set: Unmarshal},
+		typeName: typeToName,
+		config:   config{set: Unmarshal},
 	}
 	for _, opt := range options {
 		opt.applyFlag(cfg)
@@ -126,10 +128,11 @@ func Required() Option {
 	return option(func(c *config) { c.required = true })
 }
 
-// Type overrides the reported flag type name, bypassing the default kebab-case
-// name derived from the Go type.
-func Type(name string) Option {
-	return option(func(c *config) {
+// ValueLabel overrides the reported flag value name, bypassing the default
+// kebab-case name derived from the Go type. This is used to control what
+// appears in help usage, in the form of `--flag=<value label>`.
+func ValueLabel(name string) FlagOption {
+	return flagOption(func(c *flagConfig) {
 		c.typeName = func(any) string { return name }
 	})
 }

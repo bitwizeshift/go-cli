@@ -31,7 +31,6 @@ type View struct {
 // argument claims every remaining argument rather than a single slot.
 type ArgumentInfo struct {
 	Name     string
-	Type     string
 	Usage    string
 	Required bool
 	Variadic bool
@@ -176,7 +175,6 @@ func argumentsOf(cl *arg.CommandLine) []ArgumentInfo {
 	for _, p := range argdef.Positionals((*argdef.CommandLine)(cl)) {
 		arguments = append(arguments, ArgumentInfo{
 			Name:     p.Name,
-			Type:     p.Type,
 			Usage:    p.Usage,
 			Required: p.Required,
 		})
@@ -184,7 +182,6 @@ func argumentsOf(cl *arg.CommandLine) []ArgumentInfo {
 	if u := argdef.GetUnmatched((*argdef.CommandLine)(cl)); u != nil {
 		arguments = append(arguments, ArgumentInfo{
 			Name:     u.Name,
-			Type:     u.Type,
 			Usage:    u.Usage,
 			Required: u.Required,
 			Variadic: true,

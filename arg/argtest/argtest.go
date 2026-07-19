@@ -95,7 +95,6 @@ func ShortFlags(cl *arg.CommandLine) []string {
 type Positional struct {
 	Index int
 	Name  string
-	Type  string
 	Usage string
 }
 
@@ -107,7 +106,6 @@ func AllPositionals(cl *arg.CommandLine) []*Positional {
 		result = append(result, &Positional{
 			Index: p.Index,
 			Name:  p.Name,
-			Type:  p.Type,
 			Usage: p.Usage,
 		})
 	}
@@ -118,7 +116,6 @@ func AllPositionals(cl *arg.CommandLine) []*Positional {
 // for property-testing purposes.
 type Unmatched struct {
 	Name  string
-	Type  string
 	Usage string
 }
 
@@ -131,7 +128,6 @@ func GetUnmatched(cl *arg.CommandLine) *Unmatched {
 	}
 	return &Unmatched{
 		Name:  u.Name,
-		Type:  u.Type,
 		Usage: u.Usage,
 	}
 }

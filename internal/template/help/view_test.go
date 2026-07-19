@@ -107,8 +107,8 @@ func TestNewView(t *testing.T) {
 				Description: "cp",
 				Usage:       "cp <src> <dst>",
 				Arguments: []help.ArgumentInfo{
-					{Name: "src", Type: "string", Usage: "source path", Required: true},
-					{Name: "dst", Type: "string", Usage: "destination path"},
+					{Name: "src", Usage: "source path", Required: true},
+					{Name: "dst", Usage: "destination path"},
 				},
 			},
 		}, {
@@ -120,8 +120,8 @@ func TestNewView(t *testing.T) {
 				Description: "rm",
 				Usage:       "rm <src>",
 				Arguments: []help.ArgumentInfo{
-					{Name: "src", Type: "string", Usage: "source path"},
-					{Name: "rest", Type: "string", Usage: "additional paths", Variadic: true},
+					{Name: "src", Usage: "source path"},
+					{Name: "rest", Usage: "additional paths", Variadic: true},
 				},
 			},
 		}, {
@@ -133,7 +133,7 @@ func TestNewView(t *testing.T) {
 				Description: "sum",
 				Usage:       "sum",
 				Arguments: []help.ArgumentInfo{
-					{Name: "values", Type: "int", Usage: "values to sum", Required: true, Variadic: true},
+					{Name: "values", Usage: "values to sum", Required: true, Variadic: true},
 				},
 			},
 		},

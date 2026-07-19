@@ -50,14 +50,14 @@ func (f *GitHubFlags) defaultRepo(context.Context) (string, error) {
 func (f *GitHubFlags) RegisterArgs(cl *arg.CommandLine) {
 	token := arg.Flag("github-token", &f.token,
 		arg.Shorthand("T"),
-		arg.Type("api-token"),
+		arg.ValueLabel("api-token"),
 		arg.Usage("the GitHub API token to use for communication"),
 		arg.DefaultFromEnv("GITHUB_TOKEN"),
 		arg.DefaultFromEnv("GH_TOKEN"),
 	)
 	pr := arg.Flag("github-pr", &f.githubPR,
 		arg.Usage("the pull request number"),
-		arg.Type("pr-number"),
+		arg.ValueLabel("pr-number"),
 	)
 	owner := arg.Flag("github-owner", &f.owner,
 		arg.Usage("the user or org that owns the repostiory"),
@@ -69,13 +69,13 @@ func (f *GitHubFlags) RegisterArgs(cl *arg.CommandLine) {
 		arg.DefaultFromFunc(f.defaultRepo),
 	)
 	apiURL := arg.Flag("github-api-url", &f.githubBaseURL,
-		arg.Type("url"),
+		arg.ValueLabel("url"),
 		arg.Usage("the base URL for the GitHub API"),
 		arg.DefaultFromEnv("GITHUB_API_URL"),
 		arg.Hidden(),
 	)
 	uploadURL := arg.Flag("github-upload-url", &f.githubUploadURL,
-		arg.Type("url"),
+		arg.ValueLabel("url"),
 		arg.Usage("the upload URL for the GitHub API"),
 		arg.DefaultFromEnv("GITHUB_API_URL"),
 		arg.Hidden(),

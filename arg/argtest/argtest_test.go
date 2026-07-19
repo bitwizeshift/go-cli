@@ -132,7 +132,7 @@ func TestAllPositionals(t *testing.T) {
 	var src, dst string
 	cl.Add(
 		arg.Positional("src", 0, &src, arg.Usage("source path")),
-		arg.Positional("dst", 1, &dst, arg.Type("path"), arg.Usage("destination path")),
+		arg.Positional("dst", 1, &dst, arg.Usage("destination path")),
 	)
 
 	// Act
@@ -143,13 +143,11 @@ func TestAllPositionals(t *testing.T) {
 		{
 			Index: 0,
 			Name:  "src",
-			Type:  "string",
 			Usage: "source path",
 		},
 		{
 			Index: 1,
 			Name:  "dst",
-			Type:  "path",
 			Usage: "destination path",
 		},
 	}
@@ -171,15 +169,13 @@ func TestGetUnmatched(t *testing.T) {
 			options: []arg.Option{arg.Usage("remaining paths")},
 			want: &argtest.Unmatched{
 				Name:  "rest",
-				Type:  "string",
 				Usage: "remaining paths",
 			},
 		}, {
 			name:    "ReportsOverriddenType",
-			options: []arg.Option{arg.Type("path"), arg.Usage("remaining paths")},
+			options: []arg.Option{arg.Usage("remaining paths")},
 			want: &argtest.Unmatched{
 				Name:  "rest",
-				Type:  "path",
 				Usage: "remaining paths",
 			},
 		},

@@ -84,13 +84,13 @@ default is not preferable, you can override it:
 
 ```go
 cl.Add(arg.Flag("visibility", &f.visibility,
-  arg.Type("visibility"),
+  arg.ValueLabel("visibility"),
   arg.Usage("visibility of the new repository (public,private,internal)"),
 ))
 ```
 
-`arg.Type` exists precisely so the type name is a property of the *flag*, not
-baked into the type. That is also what keeps the type testable: there is no
+`arg.ValueLabel` exists precisely so the value name is a property of the *flag*,
+not baked into the type. That is also what keeps the type testable: there is no
 `Type() string` method whose return value a test has to assert against.
 
 ## Part 2: The reusable component
@@ -135,13 +135,13 @@ type ClientFlags struct {
 func (f *ClientFlags) RegisterArgs(cl *arg.CommandLine) {
   token := arg.Flag("github-token", &f.token,
     arg.Shorthand("T"),
-    arg.Type("api-token"),
+    arg.ValueLabel("api-token"),
     arg.Usage("the GitHub API token to use for communication"),
     arg.DefaultFromEnv("GITHUB_TOKEN"),
     arg.DefaultFromEnv("GH_TOKEN"),
   )
   apiURL := arg.Flag("github-api-url", &f.baseURL,
-    arg.Type("url"),
+    arg.ValueLabel("url"),
     arg.Usage("the base URL for the GitHub API"),
     arg.DefaultFromEnv("GITHUB_API_URL"),
     arg.Hidden(),

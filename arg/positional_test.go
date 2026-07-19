@@ -161,15 +161,15 @@ func TestPositional_Metadata(t *testing.T) {
 	var name string
 	var count int
 	addPositional(cl, "name", 0, &name, arg.Usage("the name"))
-	addPositional(cl, "count", 1, &count, arg.Type("number"), arg.Usage("how many"))
+	addPositional(cl, "count", 1, &count, arg.Usage("how many"))
 
 	// Act
 	positionals := argtest.AllPositionals(cl)
 
 	// Assert
 	want := []*argtest.Positional{
-		{Index: 0, Name: "name", Type: "string", Usage: "the name"},
-		{Index: 1, Name: "count", Type: "number", Usage: "how many"},
+		{Index: 0, Name: "name", Usage: "the name"},
+		{Index: 1, Name: "count", Usage: "how many"},
 	}
 	if got, want := positionals, want; !cmp.Equal(got, want) {
 		t.Errorf("AllPositionals(...) = %+v, want %+v", got, want)

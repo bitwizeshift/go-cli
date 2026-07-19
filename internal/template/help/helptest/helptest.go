@@ -202,7 +202,7 @@ func registerArgs(cmd *cobra.Command) *arg.CommandLine {
 		),
 		arg.Flag("timeout", &timeout,
 			arg.Shorthand("t"),
-			arg.Type("duration"),
+			arg.ValueLabel("duration"),
 			arg.Usage("maximum time to wait for the sync to finish"),
 		),
 	)
