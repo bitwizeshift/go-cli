@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/bitwizeshift/go-cli/arg"
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/spf13/cobra"
 )
 
@@ -81,7 +81,7 @@ type Notice struct {
 // positional arguments.
 func NewView(cmd *cobra.Command, cl *arg.CommandLine) View {
 	if cl == nil {
-		cl = (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+		cl = (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 	}
 	return View{
 		Name:          cmd.CommandPath(),
@@ -172,7 +172,7 @@ func visibleCommand(c *cobra.Command) bool {
 // registration order.
 func positionalsOf(cl *arg.CommandLine) []PositionalInfo {
 	var positionals []PositionalInfo
-	for _, p := range argreg.Positionals((*argreg.CommandLine)(cl)) {
+	for _, p := range argdef.Positionals((*argdef.CommandLine)(cl)) {
 		positionals = append(positionals, PositionalInfo{
 			Name:  p.Name,
 			Type:  p.Type,

@@ -1,12 +1,13 @@
 package argtest
 
 import (
+	"context"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/bitwizeshift/go-cli/arg"
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 )
 
 // Parse parses args into cl, binding both the registered flags and the
@@ -15,10 +16,11 @@ import (
 func Parse(t testing.TB, cl *arg.CommandLine, args ...string) {
 	t.Helper()
 
+	ctx := context.Background()
 	if err := cl.FlagSet().Parse(args); err != nil {
 		t.Fatalf("Parse(...): unexpected error: %v", err)
 	}
-	if err := argreg.Bind((*argreg.CommandLine)(cl), cl.FlagSet().Args()); err != nil {
+	if err := argdef.Bind(ctx, (*argdef.CommandLine)(cl), cl.FlagSet().Args()); err != nil {
 		t.Fatalf("Parse(...): unexpected error: %v", err)
 	}
 }
@@ -39,7 +41,7 @@ type Flag struct {
 
 // NewCommandLine returns a new [arg.CommandLine] that can be used for testing.
 func NewCommandLine() *arg.CommandLine {
-	reg := argreg.New()
+	reg := argdef.New()
 	return (*arg.CommandLine)(reg)
 }
 
@@ -101,7 +103,7 @@ type Positional struct {
 // in cl, in registration order.
 func AllPositionals(cl *arg.CommandLine) []*Positional {
 	var result []*Positional
-	for _, p := range argreg.Positionals((*argreg.CommandLine)(cl)) {
+	for _, p := range argdef.Positionals((*argdef.CommandLine)(cl)) {
 		result = append(result, &Positional{
 			Index: p.Index,
 			Name:  p.Name,

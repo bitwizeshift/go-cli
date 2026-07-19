@@ -27,14 +27,25 @@ func typeToName(v any) string {
 	return strings.Join(parts, "-")
 }
 
-// Option configures an optional property of a flag constructed by [Flag].
+// Option configures an optional property of an [Arg].
 type Option interface {
 	apply(*config)
+	FlagOption
+}
+
+// FlagOption configures an optional property of a [FlagArg].
+type FlagOption interface {
+	applyFlag(*flagConfig)
 }
 
 type option func(*config)
 
-func (o option) apply(c *config) { o(c) }
+func (o option) apply(c *config)         { o(c) }
+func (o option) applyFlag(c *flagConfig) { o(&c.config) }
+
+type flagOption func(*flagConfig)
+
+func (o flagOption) applyFlag(c *flagConfig) { o(c) }
 
 // DefaultFunc is a function that can provide a flag default, only executed
 // if a flag was not set during the CLI invocation.
@@ -42,21 +53,12 @@ type DefaultFunc func(ctx context.Context) (string, error)
 
 // config holds the resolved options for a single flag registration.
 type config struct {
-	shorthand string
-	usage     string
-	hidden    bool
-	required  bool
-	typeName  func(any) string
-	set       func(any, []byte) error
+	usage    string
+	typeName func(any) string
+	set      func(any, []byte) error
 
 	// Callbacks invoked with the decoded value each time the flag is set.
 	callbacks []reflect.Value
-
-	// Occurrence limits.
-
-	maxSet   bool // an occurrence option was applied
-	maxCount int  // when maxSet: 0 means unlimited, n > 0 caps at n
-	capped   bool // RepeatableUpTo was used, selecting ErrTooManyOccurrences
 
 	// Fallbacks
 
@@ -65,6 +67,20 @@ type config struct {
 
 	// Shell completion.
 	completer completerFunc
+}
+
+type flagConfig struct {
+	config
+
+	shorthand string
+	hidden    bool
+	required  bool
+
+	// Occurrence limits.
+
+	maxSet   bool // an occurrence option was applied
+	maxCount int  // when maxSet: 0 means unlimited, n > 0 caps at n
+	capped   bool // RepeatableUpTo was used, selecting ErrTooManyOccurrences
 }
 
 // newConfig builds a config from options, defaulting the type name to
@@ -77,9 +93,19 @@ func newConfig(options ...Option) *config {
 	return cfg
 }
 
+func newFlagConfig(options ...FlagOption) *flagConfig {
+	cfg := &flagConfig{
+		config: config{typeName: typeToName, set: Unmarshal},
+	}
+	for _, opt := range options {
+		opt.applyFlag(cfg)
+	}
+	return cfg
+}
+
 // Shorthand sets the single-character shorthand alias for the flag.
-func Shorthand(short string) Option {
-	return option(func(c *config) { c.shorthand = short })
+func Shorthand(short string) FlagOption {
+	return flagOption(func(c *flagConfig) { c.shorthand = short })
 }
 
 // Usage sets the help string displayed for the flag.
@@ -89,14 +115,14 @@ func Usage(usage string) Option {
 
 // Hidden marks the flag as hidden, omitting it from generated help and usage
 // output while leaving it functional when specified.
-func Hidden() Option {
-	return option(func(c *config) { c.hidden = true })
+func Hidden() FlagOption {
+	return flagOption(func(c *flagConfig) { c.hidden = true })
 }
 
 // Required marks the flag as required, so parsing fails when it is omitted. It
 // is shorthand for [MarkRequired] on the registered flag.
-func Required() Option {
-	return option(func(c *config) { c.required = true })
+func Required() FlagOption {
+	return flagOption(func(c *flagConfig) { c.required = true })
 }
 
 // Type overrides the reported flag type name, bypassing the default kebab-case
@@ -146,8 +172,8 @@ func UnmarshalWith[T any](unmarshal func(data []byte) (T, error)) Option {
 // Repeatable allows the flag to be specified any number of times. A repeated
 // non-slice flag keeps the last value; a slice flag accumulates across
 // occurrences.
-func Repeatable() Option {
-	return option(func(c *config) {
+func Repeatable() FlagOption {
+	return flagOption(func(c *flagConfig) {
 		c.maxSet = true
 		c.maxCount = 0
 	})
@@ -156,11 +182,11 @@ func Repeatable() Option {
 // RepeatableUpTo allows the flag to be specified up to n times, reporting
 // [ErrTooManyOccurrences] on any further occurrence. It panics if n is less
 // than one.
-func RepeatableUpTo(n int) Option {
+func RepeatableUpTo(n int) FlagOption {
 	if n < 1 {
 		panic("flag: RepeatableUpTo requires a positive count")
 	}
-	return option(func(c *config) {
+	return flagOption(func(c *flagConfig) {
 		c.maxSet = true
 		c.maxCount = n
 		c.capped = true

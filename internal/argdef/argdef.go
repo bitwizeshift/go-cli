@@ -1,10 +1,33 @@
-package argreg
+package argdef
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
 	"unsafe"
 
+	"github.com/bitwizeshift/go-cli/internal/completion"
 	"github.com/spf13/pflag"
 )
+
+var (
+	// ErrSettingEnvFlag indicates that a value sourced from an environment
+	// fallback could not be assigned to its flag.
+	ErrSettingEnvFlag = errors.New("setting flag env default")
+
+	// ErrComputingFuncFlag indicates that a fallback function returned an error
+	// while computing a flag's default.
+	ErrComputingFuncFlag = errors.New("computing flag custom default")
+
+	// ErrSettingFuncFlag indicates that a value produced by a fallback function
+	// could not be assigned to its flag.
+	ErrSettingFuncFlag = errors.New("setting flag custom default")
+)
+
+// FallbackFunc computes a fallback default for an arg that was not set
+// during the CLI invocation, returning the value to assign or an error.
+type FallbackFunc = func(ctx context.Context) (string, error)
 
 // CommandLine is the opaque command-line destination threaded through
 // registration.
@@ -24,6 +47,13 @@ type Positional struct {
 	Type  string
 	Usage string
 	Set   func(value string) error
+
+	EnvFallbacks  []string
+	FuncFallbacks []FallbackFunc
+
+	// Complete offers shell-completion candidates for this argument, or is nil
+	// when the argument offers none.
+	Complete completion.Func
 }
 
 // Unmatched is a registered binding for every argument not claimed by a
@@ -69,6 +99,20 @@ func Positionals(reg *CommandLine) []*Positional {
 	return reg.positionals
 }
 
+// PositionalCompletions returns the completion function of every [Positional]
+// registered on reg that has one, keyed by the index it completes. A later
+// registration at an index already claimed replaces the earlier one.
+func PositionalCompletions(reg *CommandLine) map[int]completion.Func {
+	result := map[int]completion.Func{}
+	for _, p := range reg.positionals {
+		if p.Complete == nil {
+			continue
+		}
+		result[p.Index] = p.Complete
+	}
+	return result
+}
+
 // SetUnmatched records u as the unmatched-argument binding on reg, replacing any
 // previously registered binding.
 func SetUnmatched(reg *CommandLine, u *Unmatched) {
@@ -87,10 +131,13 @@ func GetUnmatched(reg *CommandLine) *Unmatched {
 // in command-line order, to an [Unmatched] binding.
 //
 // It returns the first error reported by a binding.
-func Bind(reg *CommandLine, args []string) error {
+func Bind(ctx context.Context, reg *CommandLine, args []string) error {
 	claimed := make(map[int]struct{})
 	for _, p := range reg.positionals {
 		if p.Index < 0 || p.Index >= len(args) {
+			if err := setFallback(ctx, p); err != nil {
+				return err
+			}
 			continue
 		}
 		claimed[p.Index] = struct{}{}
@@ -109,4 +156,46 @@ func Bind(reg *CommandLine, args []string) error {
 		rest = append(rest, arg)
 	}
 	return reg.unmatched.Set(rest)
+}
+
+func setFallback(ctx context.Context, p *Positional) error {
+	visited, err := envFallback(p)
+	if visited || err != nil {
+		return err
+	}
+	_, err = funcFallback(ctx, p)
+	return err
+}
+
+func envFallback(p *Positional) (visited bool, err error) {
+	for _, key := range p.EnvFallbacks {
+		if value, ok := os.LookupEnv(key); ok && value != "" {
+			err = p.Set(value)
+			visited = true
+			if err != nil {
+				err = fmt.Errorf("%w: $%v: %w", ErrSettingEnvFlag, key, err)
+			}
+			return
+		}
+	}
+	return false, nil
+}
+
+func funcFallback(ctx context.Context, p *Positional) (visited bool, err error) {
+	for _, fn := range p.FuncFallbacks {
+		value, ferr := fn(ctx)
+		if ferr != nil {
+			return true, fmt.Errorf("%w: %w", ErrComputingFuncFlag, ferr)
+		}
+		if value == "" {
+			continue
+		}
+		err = p.Set(value)
+		visited = true
+		if err != nil {
+			err = fmt.Errorf("%w: %w", ErrSettingFuncFlag, err)
+		}
+		return
+	}
+	return
 }

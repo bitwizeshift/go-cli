@@ -11,7 +11,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/storage"
 	"github.com/bitwizeshift/go-cli/internal/template"
@@ -107,7 +107,7 @@ func (i *CommandInfo) run(builder Builder, store *storage.AppStorage, cl *arg.Co
 		}
 
 		// Bind positional and unmatched arguments into the runner before it runs.
-		if e := argreg.Bind((*argreg.CommandLine)(cl), args); e != nil {
+		if e := argdef.Bind(ctx, (*argdef.CommandLine)(cl), args); e != nil {
 			return fmt.Errorf("%w: %w", ErrUsage, e)
 		}
 

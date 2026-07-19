@@ -98,7 +98,7 @@ func TestAdd_String(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []arg.Option
+		options []arg.FlagOption
 		sets    []string
 		want    string
 		wantErr error
@@ -116,20 +116,20 @@ func TestAdd_String(t *testing.T) {
 		},
 		{
 			name:    "UnmarshalWithOverridesDecoder",
-			options: []arg.Option{arg.UnmarshalWith(yell)},
+			options: []arg.FlagOption{arg.UnmarshalWith(yell)},
 			sets:    []string{"hi"},
 			want:    "HI",
 		},
 		{
 			name:    "UnmarshalWithPropagatesError",
-			options: []arg.Option{arg.UnmarshalWith(failString)},
+			options: []arg.FlagOption{arg.UnmarshalWith(failString)},
 			sets:    []string{"x"},
 			want:    "",
 			wantErr: errDecode,
 		},
 		{
 			name:    "UnmarshalWithTypeMismatch",
-			options: []arg.Option{arg.UnmarshalWith(parseHexInt)},
+			options: []arg.FlagOption{arg.UnmarshalWith(parseHexInt)},
 			sets:    []string{"ff"},
 			want:    "",
 			wantErr: cmpopts.AnyError,
@@ -164,7 +164,7 @@ func TestAdd_Int(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []arg.Option
+		options []arg.FlagOption
 		sets    []string
 		want    int
 		wantErr error
@@ -182,7 +182,7 @@ func TestAdd_Int(t *testing.T) {
 		},
 		{
 			name:    "HexViaUnmarshalWith",
-			options: []arg.Option{arg.UnmarshalWith(parseHexInt)},
+			options: []arg.FlagOption{arg.UnmarshalWith(parseHexInt)},
 			sets:    []string{"ff"},
 			want:    255,
 		},
@@ -359,7 +359,7 @@ func TestAdd_Options(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []arg.Option
+		options []arg.FlagOption
 		want    flagInfo
 	}{
 		{
@@ -368,17 +368,17 @@ func TestAdd_Options(t *testing.T) {
 		},
 		{
 			name:    "Shorthand",
-			options: []arg.Option{arg.Shorthand("v")},
+			options: []arg.FlagOption{arg.Shorthand("v")},
 			want:    flagInfo{Short: "v", Type: "string"},
 		},
 		{
 			name:    "TypeOverride",
-			options: []arg.Option{arg.Type("custom")},
+			options: []arg.FlagOption{arg.Type("custom")},
 			want:    flagInfo{Type: "custom"},
 		},
 		{
 			name:    "Usage",
-			options: []arg.Option{arg.Usage("the value")},
+			options: []arg.FlagOption{arg.Usage("the value")},
 			want:    flagInfo{Type: "string", Usage: "the value"},
 		},
 	}
@@ -451,7 +451,7 @@ func TestCallback(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		options   []arg.Option
+		options   []arg.FlagOption
 		sets      []string
 		want      []int
 		wantValue int
@@ -465,7 +465,7 @@ func TestCallback(t *testing.T) {
 		},
 		{
 			name:      "InvokedPerOccurrenceWhenRepeatable",
-			options:   []arg.Option{arg.Repeatable()},
+			options:   []arg.FlagOption{arg.Repeatable()},
 			sets:      []string{"1", "2"},
 			want:      []int{1, 2},
 			wantValue: 2,
@@ -504,7 +504,7 @@ func TestCallback(t *testing.T) {
 				seen = append(seen, v)
 				return nil
 			}
-			options := append([]arg.Option{arg.Callback(cb)}, tc.options...)
+			options := append([]arg.FlagOption{arg.Callback(cb)}, tc.options...)
 			f := addFlag(cl, "n", &dst, options...)
 
 			// Act
@@ -851,12 +851,12 @@ func TestHidden(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []arg.Option
+		options []arg.FlagOption
 		want    bool
 	}{
 		{
 			name:    "HiddenOptionMarksFlagHidden",
-			options: []arg.Option{arg.Hidden()},
+			options: []arg.FlagOption{arg.Hidden()},
 			want:    true,
 		},
 		{
@@ -891,12 +891,12 @@ func TestRequired(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		options []arg.Option
+		options []arg.FlagOption
 		want    bool
 	}{
 		{
 			name:    "RequiredOptionMarksFlagRequired",
-			options: []arg.Option{arg.Required()},
+			options: []arg.FlagOption{arg.Required()},
 			want:    true,
 		},
 		{

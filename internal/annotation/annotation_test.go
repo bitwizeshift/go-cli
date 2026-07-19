@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 )
 
 // newFlagSet returns a flag set with three boolean flags "a", "b", and "c".
@@ -509,7 +510,7 @@ func TestAddENVFallback(t *testing.T) {
 
 			// Act
 			for _, env := range tc.envs {
-				annotation.AddENVFallback(target, env)
+				annotation.AddEnvFallback(target, env)
 			}
 
 			// Assert
@@ -611,7 +612,7 @@ func TestSetFlagFallbacks(t *testing.T) {
 			name:      "FuncErrorWrapsComputeSentinel",
 			funcs:     []funcResult{{err: errCompute}},
 			wantValue: "",
-			wantErr:   annotation.ErrComputingFuncFlag,
+			wantErr:   argdef.ErrComputingFuncFlag,
 		},
 		{
 			name:      "NoFallbacksLeavesDefault",
@@ -626,7 +627,7 @@ func TestSetFlagFallbacks(t *testing.T) {
 			fs.String("flag", "", "")
 			target := fs.Lookup("flag")
 			for _, env := range tc.envs {
-				annotation.AddENVFallback(target, env)
+				annotation.AddEnvFallback(target, env)
 			}
 			for _, fn := range tc.funcs {
 				annotation.AddFuncFallback(target, func(context.Context) (string, error) {
@@ -664,12 +665,12 @@ func TestSetFlagFallbacks_SetError(t *testing.T) {
 			name:    "EnvValueRejectedWrapsEnvSentinel",
 			envs:    []string{"FLAG_ENV"},
 			setEnv:  map[string]string{"FLAG_ENV": "not-an-int"},
-			wantErr: annotation.ErrSettingEnvFlag,
+			wantErr: argdef.ErrSettingEnvFlag,
 		},
 		{
 			name:    "FuncValueRejectedWrapsFuncSentinel",
 			funcs:   []funcResult{{value: "not-an-int"}},
-			wantErr: annotation.ErrSettingFuncFlag,
+			wantErr: argdef.ErrSettingFuncFlag,
 		},
 	}
 
@@ -680,7 +681,7 @@ func TestSetFlagFallbacks_SetError(t *testing.T) {
 			fs.Int("flag", 0, "")
 			target := fs.Lookup("flag")
 			for _, env := range tc.envs {
-				annotation.AddENVFallback(target, env)
+				annotation.AddEnvFallback(target, env)
 			}
 			for _, fn := range tc.funcs {
 				annotation.AddFuncFallback(target, func(context.Context) (string, error) {
@@ -711,7 +712,7 @@ func TestSetFlagFallbacks_SkipsChangedFlag(t *testing.T) {
 	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	fs.String("flag", "", "")
 	target := fs.Lookup("flag")
-	annotation.AddENVFallback(target, "FLAG_ENV")
+	annotation.AddEnvFallback(target, "FLAG_ENV")
 	annotation.AddFuncFallback(target, func(context.Context) (string, error) { return "from-func", nil })
 	t.Setenv("FLAG_ENV", "from-env")
 	if err := fs.Set("flag", "from-user"); err != nil {
@@ -770,10 +771,10 @@ func TestSetFlagFallbacks_JoinsErrors(t *testing.T) {
 	err := annotation.SetFlagFallbacks(ctx, fs)
 
 	// Assert
-	if got, want := errors.Is(err, annotation.ErrComputingFuncFlag), true; got != want {
+	if got, want := errors.Is(err, argdef.ErrComputingFuncFlag), true; got != want {
 		t.Errorf("errors.Is(err, ErrComputingFuncFlag) = %t, want %t", got, want)
 	}
-	if got, want := errors.Is(err, annotation.ErrSettingFuncFlag), true; got != want {
+	if got, want := errors.Is(err, argdef.ErrSettingFuncFlag), true; got != want {
 		t.Errorf("errors.Is(err, ErrSettingFuncFlag) = %t, want %t", got, want)
 	}
 }
@@ -782,7 +783,7 @@ func TestSetFlagFallbacks_EnvErrorNamesKey(t *testing.T) {
 	// Arrange
 	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	fs.Int("flag", 0, "")
-	annotation.AddENVFallback(fs.Lookup("flag"), "FLAG_ENV")
+	annotation.AddEnvFallback(fs.Lookup("flag"), "FLAG_ENV")
 	t.Setenv("FLAG_ENV", "not-an-int")
 	ctx := context.Background()
 
@@ -790,7 +791,7 @@ func TestSetFlagFallbacks_EnvErrorNamesKey(t *testing.T) {
 	err := annotation.SetFlagFallbacks(ctx, fs)
 
 	// Assert
-	if got, want := err, annotation.ErrSettingEnvFlag; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+	if got, want := err, argdef.ErrSettingEnvFlag; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
 		t.Fatalf("SetFlagFallbacks(...) = %v, want %v", got, want)
 	}
 	if got, want := strings.Contains(err.Error(), "FLAG_ENV"), true; got != want {

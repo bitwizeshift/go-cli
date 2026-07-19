@@ -6,7 +6,8 @@ import (
 	"slices"
 
 	"github.com/bitwizeshift/go-cli/internal/annotation"
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
+	"github.com/bitwizeshift/go-cli/internal/completion"
 	"github.com/spf13/pflag"
 )
 
@@ -33,8 +34,8 @@ type FlagArg struct {
 // caps it, reporting [ErrTooManyOccurrences] beyond the cap; a repeated non-slice
 // flag keeps the last value. [Callback] options are invoked with the decoded
 // value on each occurrence.
-func Flag[T any](name string, v *T, options ...Option) *FlagArg {
-	cfg := newConfig(options...)
+func Flag[T any](name string, v *T, options ...FlagOption) *FlagArg {
+	cfg := newFlagConfig(options...)
 	slice := isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Slice
 	limit := 1
 	if slice {
@@ -77,7 +78,7 @@ func Flag[T any](name string, v *T, options ...Option) *FlagArg {
 
 // register adds the underlying flag to cl's flag set.
 func (f *FlagArg) register(cl *CommandLine) {
-	argreg.Flags((*argreg.CommandLine)(cl)).AddFlag(f.flag)
+	argdef.Flags((*argdef.CommandLine)(cl)).AddFlag(f.flag)
 }
 
 var _ Arg = (*FlagArg)(nil)
@@ -216,7 +217,7 @@ func flagsOf(fs *pflag.FlagSet) []*FlagArg {
 // configured annotation, without inserting it into any flag set. Insertion is
 // deferred to [FlagArg.register]. It applies the bool bare-flag default for an
 // unnamed bool T.
-func newFlagArg[T any](val *value, name string, cfg *config) *FlagArg {
+func newFlagArg[T any](val *value, name string, cfg *flagConfig) *FlagArg {
 	f := &pflag.Flag{
 		Name:      name,
 		Shorthand: cfg.shorthand,
@@ -232,13 +233,13 @@ func newFlagArg[T any](val *value, name string, cfg *config) *FlagArg {
 		f.NoOptDefVal = "true"
 	}
 	for _, env := range cfg.envs {
-		annotation.AddENVFallback(f, env)
+		annotation.AddEnvFallback(f, env)
 	}
 	for _, fn := range cfg.custom {
 		annotation.AddFuncFallback(f, fn)
 	}
 	if cfg.completer != nil {
-		annotation.AddCompletion(f, cfg.completer)
+		completion.AddFlag(f, cfg.completer)
 	}
 	return &FlagArg{flag: f}
 }

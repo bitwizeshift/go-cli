@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 )
 
 // Registrar abstracts objects that have flags that need to be registered to
@@ -59,7 +59,7 @@ func register(cl *CommandLine, rv reflect.Value, rt reflect.Type) {
 	if !rv.CanInterface() {
 		return
 	}
-	visited := argreg.Visited((*argreg.CommandLine)(cl))
+	visited := argdef.Visited((*argdef.CommandLine)(cl))
 	for {
 		if registrar, ok := rv.Interface().(Registrar); ok {
 			if id, ok := instanceID(rv); ok {

@@ -13,7 +13,7 @@ import (
 
 // addFlag constructs a flag named name bound to v and registers it on cl,
 // returning the constructed [arg.FlagArg].
-func addFlag[T any](cl *arg.CommandLine, name string, v *T, options ...arg.Option) *arg.FlagArg {
+func addFlag[T any](cl *arg.CommandLine, name string, v *T, options ...arg.FlagOption) *arg.FlagArg {
 	f := arg.Flag(name, v, options...)
 	cl.Add(f)
 	return f
@@ -32,7 +32,7 @@ func addUnmatched(cl *arg.CommandLine, out *[]string) {
 }
 
 // newFlag constructs a string flag named name.
-func newFlag(name string, options ...arg.Option) *arg.FlagArg {
+func newFlag(name string, options ...arg.FlagOption) *arg.FlagArg {
 	return arg.Flag(name, new(string), options...)
 }
 

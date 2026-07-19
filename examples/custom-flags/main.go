@@ -16,6 +16,7 @@ import (
 type GitHubFlags struct {
 	token string
 
+	heading         string
 	githubBaseURL   string
 	githubUploadURL string
 
@@ -79,8 +80,8 @@ func (f *GitHubFlags) RegisterArgs(cl *arg.CommandLine) {
 		arg.DefaultFromEnv("GITHUB_API_URL"),
 		arg.Hidden(),
 	)
-	foo := arg.Positional("foo", 0, &f.githubBaseURL,
-		arg.Usage("Mehhhh"),
+	foo := arg.Positional("heading", 0, &f.heading,
+		arg.Usage("An optional heading to print"),
 	)
 
 	cl.Add(token, pr, owner, repo, apiURL, uploadURL, foo)

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -230,10 +231,6 @@ func collectGroups(f *pflag.Flag, key string, groups map[string][]string) {
 	}
 }
 
-// FlagFallbackFunc computes a fallback default for a flag that was not set
-// during the CLI invocation, returning the value to assign or an error.
-type FlagFallbackFunc = func(ctx context.Context) (string, error)
-
 // mu guards flagFuncs and current. flagFuncs is the process-wide registry of
 // fallback functions, keyed by the identifier stored in a flag's
 // [AnnotationFuncFallback] annotation; current is the counter used to mint
@@ -241,12 +238,12 @@ type FlagFallbackFunc = func(ctx context.Context) (string, error)
 var (
 	mu        sync.RWMutex
 	current   int
-	flagFuncs = map[string]FlagFallbackFunc{}
+	flagFuncs = map[string]argdef.FallbackFunc{}
 )
 
-// AddENVFallback records env as an environment variable that may source a
+// AddEnvFallback records env as an environment variable that may source a
 // fallback default for f, as consumed by [SetFlagFallbacks].
-func AddENVFallback(f *pflag.Flag, env string) {
+func AddEnvFallback(f *pflag.Flag, env string) {
 	appendAnnotation(f, AnnotationENVFallback, env)
 }
 
@@ -254,7 +251,7 @@ func AddENVFallback(f *pflag.Flag, env string) {
 // as consumed by [SetFlagFallbacks]. The function is held in a process-wide
 // registry; a best-effort [runtime.AddCleanup] removes it if f is collected,
 // though this cleanup may never run.
-func AddFuncFallback(f *pflag.Flag, fallback FlagFallbackFunc) {
+func AddFuncFallback(f *pflag.Flag, fallback argdef.FallbackFunc) {
 	mu.Lock()
 	id := fmt.Sprintf("%d", current)
 	current++
@@ -295,22 +292,8 @@ func SetFlagFallbacks(ctx context.Context, fs *pflag.FlagSet) error {
 	return errors.Join(errs...)
 }
 
-var (
-	// ErrSettingEnvFlag indicates that a value sourced from an environment
-	// fallback could not be assigned to its flag.
-	ErrSettingEnvFlag = errors.New("setting flag env default")
-
-	// ErrComputingFuncFlag indicates that a fallback function returned an error
-	// while computing a flag's default.
-	ErrComputingFuncFlag = errors.New("computing flag custom default")
-
-	// ErrSettingFuncFlag indicates that a value produced by a fallback function
-	// could not be assigned to its flag.
-	ErrSettingFuncFlag = errors.New("setting flag custom default")
-)
-
 // runEnvFlagFallback assigns f the value of the first present environment
-// variable recorded on f via [AddENVFallback]. It reports whether a variable
+// variable recorded on f via [AddEnvFallback]. It reports whether a variable
 // was present, and wraps [ErrSettingEnvFlag] if assignment failed.
 func runEnvFlagFallback(f *pflag.Flag) (visited bool, err error) {
 	for _, key := range f.Annotations[AnnotationENVFallback] {
@@ -318,7 +301,7 @@ func runEnvFlagFallback(f *pflag.Flag) (visited bool, err error) {
 			err = f.Value.Set(value)
 			visited = true
 			if err != nil {
-				err = fmt.Errorf("%w: $%v: %w", ErrSettingEnvFlag, key, err)
+				err = fmt.Errorf("%w: $%v: %w", argdef.ErrSettingEnvFlag, key, err)
 			}
 			return
 		}
@@ -340,7 +323,7 @@ func runFuncFlagFallback(ctx context.Context, f *pflag.Flag) (visited bool, err 
 		}
 		value, ferr := fn(ctx)
 		if ferr != nil {
-			return true, fmt.Errorf("%w: %w", ErrComputingFuncFlag, ferr)
+			return true, fmt.Errorf("%w: %w", argdef.ErrComputingFuncFlag, ferr)
 		}
 		if value == "" {
 			continue
@@ -348,7 +331,7 @@ func runFuncFlagFallback(ctx context.Context, f *pflag.Flag) (visited bool, err 
 		err = f.Value.Set(value)
 		visited = true
 		if err != nil {
-			err = fmt.Errorf("%w: %w", ErrSettingFuncFlag, err)
+			err = fmt.Errorf("%w: %w", argdef.ErrSettingFuncFlag, err)
 		}
 		return
 	}

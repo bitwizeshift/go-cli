@@ -53,7 +53,7 @@ func (lf *LoggerFlag) RegisterArgs(cl *arg.CommandLine) {
 	if usage == "" {
 		usage = "The output format for diagnostics to be printed in"
 	}
-	opts := []arg.Option{
+	opts := []arg.FlagOption{
 		arg.Usage(usage),
 		arg.Type("format"),
 		arg.CompleteFrom(string(FormatText), string(FormatGitHub), string(FormatJSON)),

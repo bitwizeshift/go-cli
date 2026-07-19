@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bitwizeshift/go-cli/arg"
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/bitwizeshift/go-cli/internal/template/help"
 )
 
@@ -164,7 +164,7 @@ func commandWithGroups() *cobra.Command {
 
 func commandWithFlagGroups() *cobra.Command {
 	cmd := &cobra.Command{Use: "svc", Short: "svc", Run: noop}
-	cl := (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 	var force bool
 	var zulu, yankee, beta, gamma string
 	forceFlag := arg.Flag("force", &force, arg.Shorthand("f"), arg.Usage("force it"))
@@ -180,7 +180,7 @@ func commandWithFlagGroups() *cobra.Command {
 
 func commandWithPositionals() (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{Use: "cp <src> <dst>", Short: "cp", Run: noop}
-	cl := (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 	var src, dst string
 	cl.Add(
 		arg.Positional("src", 0, &src, arg.Usage("source path")),

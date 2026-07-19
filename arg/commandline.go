@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/spf13/pflag"
 )
 
@@ -12,13 +12,13 @@ import (
 // a [pflag.CommandLine] and records which [Registrar] instances have already been
 // registered so that a shared instance registers its flags only once.
 // [CommandLine.Add] is its only mutator.
-type CommandLine argreg.CommandLine
+type CommandLine argdef.CommandLine
 
 // FlagSet is an escape-hatch to allow direct access to the underlying
 // [flag.FlagSet]. In general, this should _only_ be used as a transitional
 // mechanism -- but should otherwise aim to avoid relying on this.
 func (r *CommandLine) FlagSet() *pflag.FlagSet {
-	return argreg.Flags((*argreg.CommandLine)(r))
+	return argdef.Flags((*argdef.CommandLine)(r))
 }
 
 // Flags returns every [FlagArg] registered in this registry, in lexical order.

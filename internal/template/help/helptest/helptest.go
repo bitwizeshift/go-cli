@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/bitwizeshift/go-cli/arg"
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/spf13/cobra"
 )
 
@@ -150,7 +150,7 @@ example-cli sync origin v1.2.0 --force --timeout 1m`,
 // the latter across two named groups. It returns the argument registry so the
 // positional arguments can be rendered in help.
 func registerArgs(cmd *cobra.Command) *arg.CommandLine {
-	cl := (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 	var (
 		remoteRef string
 		ref       string

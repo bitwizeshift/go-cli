@@ -27,7 +27,7 @@ func hiddenFlags(t testing.TB, hidden []bool) []*arg.FlagArg {
 	cl := argtest.NewCommandLine()
 	var flags []*arg.FlagArg
 	for i, h := range hidden {
-		var options []arg.Option
+		var options []arg.FlagOption
 		if h {
 			options = append(options, arg.Hidden())
 		}

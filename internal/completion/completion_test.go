@@ -1,4 +1,4 @@
-package annotation_test
+package completion_test
 
 import (
 	"testing"
@@ -6,51 +6,52 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
-	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/completion"
 )
 
-func TestAddCompletion(t *testing.T) {
+func TestAddFlag(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
 	target := newStringFlag("flag")
 
 	// Act
-	annotation.AddCompletion(target, func(string) ([]string, annotation.CompletionDirective) {
-		return nil, annotation.CompletionDefault
+	completion.AddFlag(target, func(string) ([]string, completion.Directive) {
+		return nil, completion.Default
 	})
-	ids := len(target.Annotations[annotation.AnnotationCompletion])
+	ids := len(target.Annotations[completion.Annotation])
 
 	// Assert
 	if got, want := ids, 1; !cmp.Equal(got, want) {
-		t.Errorf("AddCompletion(...) recorded %d ids, want %d", got, want)
+		t.Errorf("AddFlag(...) recorded %d ids, want %d", got, want)
 	}
 }
 
-func TestGetCompletionFunc_FlagWithCompletion_ReturnsCompletion(t *testing.T) {
+func TestFlagFunc_FlagWithCompletion_ReturnsCompletion(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
 	target := newStringFlag("flag")
-	annotation.AddCompletion(target, func(toComplete string) ([]string, annotation.CompletionDirective) {
-		return []string{toComplete + "-value"}, annotation.CompletionNoFileComp
+	completion.AddFlag(target, func(toComplete string) ([]string, completion.Directive) {
+		return []string{toComplete + "-value"}, completion.NoFileComp
 	})
 
 	// Act
-	sut := annotation.GetCompletionFunc(target)
+	sut := completion.FlagFunc(target)
 	values, directive := complete(t, sut, "flag")
 
 	// Assert
 	if got, want := values, []string{"flag-value"}; !cmp.Equal(got, want) {
-		t.Errorf("GetCompletionFunc(...)(...) values = %v, want %v\n%s", got, want, cmp.Diff(want, got))
+		t.Errorf("FlagFunc(...)(...) values = %v, want %v\n%s", got, want, cmp.Diff(want, got))
 	}
-	if got, want := directive, annotation.CompletionNoFileComp; !cmp.Equal(got, want) {
-		t.Errorf("GetCompletionFunc(...)(...) directive = %v, want %v", got, want)
+	if got, want := directive, completion.NoFileComp; !cmp.Equal(got, want) {
+		t.Errorf("FlagFunc(...)(...) directive = %v, want %v", got, want)
 	}
 }
 
-func TestGetCompletionFunc_FlagWithoutCompletion_ReturnsNil(t *testing.T) {
+func TestFlagFunc_FlagWithoutCompletion_ReturnsNil(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -63,7 +64,7 @@ func TestGetCompletionFunc_FlagWithoutCompletion_ReturnsNil(t *testing.T) {
 		},
 		{
 			name:        "UnknownCompletionID",
-			annotations: map[string][]string{annotation.AnnotationCompletion: {"not-a-registered-id"}},
+			annotations: map[string][]string{completion.Annotation: {"not-a-registered-id"}},
 		},
 	}
 
@@ -76,51 +77,51 @@ func TestGetCompletionFunc_FlagWithoutCompletion_ReturnsNil(t *testing.T) {
 			target.Annotations = tc.annotations
 
 			// Act
-			sut := annotation.GetCompletionFunc(target)
+			sut := completion.FlagFunc(target)
 
 			// Assert
 			if got, want := sut == nil, true; !cmp.Equal(got, want) {
-				t.Errorf("GetCompletionFunc(...) = nil %t, want %t", got, want)
+				t.Errorf("FlagFunc(...) = nil %t, want %t", got, want)
 			}
 		})
 	}
 }
 
-func TestRegisterFlagCompletions(t *testing.T) {
+func TestRegisterFlags(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name          string
 		values        []string
-		directive     annotation.CompletionDirective
+		directive     completion.Directive
 		want          []string
 		wantDirective cobra.ShellCompDirective
 	}{
 		{
 			name:          "DefaultDefersToShell",
 			values:        nil,
-			directive:     annotation.CompletionDefault,
+			directive:     completion.Default,
 			want:          nil,
 			wantDirective: cobra.ShellCompDirectiveDefault,
 		},
 		{
 			name:          "NoFileCompOffersCandidatesOnly",
 			values:        []string{"json", "yaml"},
-			directive:     annotation.CompletionNoFileComp,
+			directive:     completion.NoFileComp,
 			want:          []string{"json", "yaml"},
 			wantDirective: cobra.ShellCompDirectiveNoFileComp,
 		},
 		{
 			name:          "FilterFileExtCompletesExtensions",
 			values:        []string{"json"},
-			directive:     annotation.CompletionFilterFileExt,
+			directive:     completion.FilterFileExt,
 			want:          []string{"json"},
 			wantDirective: cobra.ShellCompDirectiveFilterFileExt,
 		},
 		{
 			name:          "FilterDirsCompletesDirectories",
 			values:        nil,
-			directive:     annotation.CompletionFilterDirs,
+			directive:     completion.FilterDirs,
 			want:          nil,
 			wantDirective: cobra.ShellCompDirectiveFilterDirs,
 		},
@@ -132,10 +133,10 @@ func TestRegisterFlagCompletions(t *testing.T) {
 
 			// Arrange
 			cmd := newStringFlagCommand("flag")
-			annotation.AddCompletion(cmd.Flags().Lookup("flag"), func(string) ([]string, annotation.CompletionDirective) {
+			completion.AddFlag(cmd.Flags().Lookup("flag"), func(string) ([]string, completion.Directive) {
 				return tc.values, tc.directive
 			})
-			annotation.RegisterFlagCompletions(cmd)
+			completion.RegisterFlags(cmd)
 
 			// Act
 			values, directive := invokeCompletion(t, cmd, "flag", "")
@@ -151,19 +152,27 @@ func TestRegisterFlagCompletions(t *testing.T) {
 	}
 }
 
-func TestRegisterFlagCompletions_Unannotated_RegistersNothing(t *testing.T) {
+func TestRegisterFlags_Unannotated_RegistersNothing(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
 	cmd := newStringFlagCommand("flag")
 
 	// Act
-	annotation.RegisterFlagCompletions(cmd)
+	completion.RegisterFlags(cmd)
 
 	// Assert
 	if _, got := cmd.GetFlagCompletionFunc("flag"); got != false {
 		t.Errorf("GetFlagCompletionFunc(...) registered = %t, want %t", got, false)
 	}
+}
+
+// newStringFlag registers a string flag named name on a fresh flag set and
+// returns it, for exercising helpers that operate on a single flag.
+func newStringFlag(name string) *pflag.Flag {
+	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	fs.String(name, "", "")
+	return fs.Lookup(name)
 }
 
 // newStringFlagCommand returns a command carrying a single string flag named
@@ -176,10 +185,10 @@ func newStringFlagCommand(name string) *cobra.Command {
 
 // complete invokes fn with toComplete, failing the test if no completion
 // function was found.
-func complete(t testing.TB, fn annotation.CompletionFunc, toComplete string) ([]string, annotation.CompletionDirective) {
+func complete(t testing.TB, fn completion.Func, toComplete string) ([]string, completion.Directive) {
 	t.Helper()
 	if fn == nil {
-		t.Fatalf("GetCompletionFunc(...) = nil, want a completion function")
+		t.Fatalf("FlagFunc(...) = nil, want a completion function")
 	}
 	return fn(toComplete)
 }

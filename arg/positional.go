@@ -3,13 +3,13 @@ package arg
 import (
 	"reflect"
 
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 )
 
 // PositionalArg is a positional-argument binding produced by [Positional]. It is
 // registered on a [CommandLine] with [CommandLine.Add].
 type PositionalArg struct {
-	positional *argreg.Positional
+	positional *argdef.Positional
 }
 
 // Positional constructs a positional argument at index bound to v, decoding it
@@ -22,15 +22,21 @@ type PositionalArg struct {
 // command's arity governs how many arguments are permitted.
 //
 // By default the value is decoded with [Unmarshal] and reports a kebab-case type
-// name derived from T; both may be adjusted with [Option] values. Options that
-// concern flags alone, such as [Shorthand] or [Repeatable], have no effect.
+// name derived from T; both may be adjusted with [Option] values.
 func Positional[T any](name string, index int, v *T, options ...Option) *PositionalArg {
 	cfg := newConfig(options...)
-	return &PositionalArg{positional: &argreg.Positional{
-		Index: index,
-		Name:  name,
-		Type:  cfg.typeName(v),
-		Usage: cfg.usage,
+	fallbackFuncs := make([]argdef.FallbackFunc, 0, len(cfg.custom))
+	for _, f := range cfg.custom {
+		fallbackFuncs = append(fallbackFuncs, f)
+	}
+	return &PositionalArg{positional: &argdef.Positional{
+		Index:         index,
+		Name:          name,
+		Type:          cfg.typeName(v),
+		Usage:         cfg.usage,
+		Complete:      cfg.completer,
+		EnvFallbacks:  cfg.envs,
+		FuncFallbacks: fallbackFuncs,
 		Set: func(s string) error {
 			var tmp T
 			if err := cfg.set(&tmp, []byte(s)); err != nil {
@@ -49,7 +55,7 @@ func Positional[T any](name string, index int, v *T, options ...Option) *Positio
 
 // register records the positional-argument binding on cl.
 func (p *PositionalArg) register(cl *CommandLine) {
-	argreg.AddPositional((*argreg.CommandLine)(cl), p.positional)
+	argdef.AddPositional((*argdef.CommandLine)(cl), p.positional)
 }
 
 var _ Arg = (*PositionalArg)(nil)

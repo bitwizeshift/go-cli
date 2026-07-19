@@ -10,7 +10,8 @@ import (
 
 	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
-	"github.com/bitwizeshift/go-cli/internal/argreg"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
+	"github.com/bitwizeshift/go-cli/internal/completion"
 	"github.com/bitwizeshift/go-cli/internal/storage"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/richtext"
@@ -159,10 +160,13 @@ func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage
 	var cl *arg.CommandLine
 	if builder := builders[i.ID]; builder != nil {
 		delete(builders, i.ID)
-		cl = (*arg.CommandLine)(argreg.FromFlagSet(cmd.Flags()))
+		cl = (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 		arg.Register(cl, builder)
 		annotation.ConfigureFlags(cmd)
-		annotation.RegisterFlagCompletions(cmd)
+		completion.RegisterFlags(cmd)
+		cmd.ValidArgsFunction = completion.ForPositionals(
+			argdef.PositionalCompletions((*argdef.CommandLine)(cl)),
+		)
 		cmd.RunE = i.run(builder, store, cl)
 	} else {
 		cmd.RunE = i.showHelp
