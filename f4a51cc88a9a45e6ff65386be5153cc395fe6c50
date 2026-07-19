@@ -1,0 +1,78 @@
+Create a plan
+
+**Background:** This project wraps pflag and cobra so that very little of these
+libraries are visible or usable on the seam.
+
+We currently have an `arg.Completion` option available for flag definitions,
+but we don't support this for positionals. Now we want to add support for
+positionals.
+
+## Goal
+
+Make the `arg.Completion` work with `arg.Positional` definitions.
+
+Cobra only supports completions at the command level for all unmatched args, so
+we need to be creative here. We will need to build a _single_ `cobra.CompletionFunc`
+that dynamically handles the positional arguments.
+
+As a high-level example (doesn't have to look like this) we need to build
+something like:
+
+```go
+func(_ *Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+  argIdx := len(args) + 1 // not 100% sure this is correct, might need to tweak
+
+  // assuming all positionals are in a map within the closure
+  positional, ok := positionals[argIdx]
+  if !ok {
+    return nil, cobra.DefaultShellCompDirective
+  }
+  completion := positional.Completion
+  // ... compute completion
+}
+```
+
+## Implementation
+
+The logic for reconcilliation should NOT be exposed on any exported type or
+package. It should live solely in `internal` logic, and be built into
+@internal/spec during construction.
+
+One possible candidate is under the @internal/argreg package.
+Other completions live in @internal/annotation package -- but this might not be
+correct based on the annotation package focusing on flags and not positionals.
+May be an argument for @internal/spec, or a new package that centralizes the
+content.
+
+Please suggest a location for this based on the information you get in the plan.
+
+## Requirements
+
+* Development MUST use Skill(go:general)
+* Testing MUST use Skill(go:table-testing), Skill(go:unit-testing), Skill(go:testing-errors)
+* Coverage MUST be evaluated using Skill(go:coverage)
+
+All of the rules defined in the skills above are binding and MUST be followed.
+It is ILLEGAL to deviate from any of the rules. You are not allowed to
+rationalize or ignore any rule listed above. Missing even one rule is considered
+failure of the project. It is CRITICAL that these rules are aligned.
+
+Any problems with the design, judgment calls, uncertainties, or ambiguities MUST
+be resolved by the user. You are NOT to resolve any of these yourself. Use the
+Tool(AskUserQuestion) to raise any such problems to the user and suggest paths
+forward. Mark one of the options as the recommended path to allow the user to
+know your leaning.
+
+DO NOT make a judgment call on your own.
+
+## Important
+
+DO NOT SUMMARIZE EVERY TYPE OR FUNCTION IN PACKAGE DOCS. You have a horrible
+habit of doing this and no human in existance writes code like this.
+DO NOT SUMMARIZE IMPLEMENTATIONS OF FUNCTIONS IN DOCUMENTS, OR IN TYPES. Give
+high-level descriptions of how things work, optionally with examples where
+reasonable. But do NOT summarize the actual implementaiton.
+
+Do not use the explore agent for this; inspect the files yourself for this plan.
+
+Include the contents from "# Requirements" and "# Important" verbatim in the plan.
