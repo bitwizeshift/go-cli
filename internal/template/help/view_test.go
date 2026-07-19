@@ -107,7 +107,7 @@ func TestNewView(t *testing.T) {
 				Description: "cp",
 				Usage:       "cp <src> <dst> [flags]",
 				Arguments: []help.ArgumentInfo{
-					{Name: "src", Type: "string", Usage: "source path"},
+					{Name: "src", Type: "string", Usage: "source path", Required: true},
 					{Name: "dst", Type: "string", Usage: "destination path"},
 				},
 			},
@@ -133,7 +133,7 @@ func TestNewView(t *testing.T) {
 				Description: "sum",
 				Usage:       "sum [flags]",
 				Arguments: []help.ArgumentInfo{
-					{Type: "int...", Usage: "values to sum"},
+					{Type: "int...", Usage: "values to sum", Required: true},
 				},
 			},
 		},
@@ -210,7 +210,7 @@ func commandWithPositionals() (*cobra.Command, *arg.CommandLine) {
 	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 	var src, dst string
 	cl.Add(
-		arg.Positional("src", 0, &src, arg.Usage("source path")),
+		arg.Positional("src", 0, &src, arg.Usage("source path"), arg.Required()),
 		arg.Positional("dst", 1, &dst, arg.Usage("destination path")),
 	)
 	return cmd, cl
@@ -232,7 +232,7 @@ func commandWithUnmatchedOnly() (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{Use: "sum", Short: "sum", Run: noop}
 	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 	var values []int
-	cl.Add(arg.Unmatched(&values, arg.Usage("values to sum")))
+	cl.Add(arg.Unmatched(&values, arg.Usage("values to sum"), arg.Required()))
 	return cmd, cl
 }
 

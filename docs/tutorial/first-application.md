@@ -24,9 +24,9 @@ import "github.com/bitwizeshift/go-cli"
 
 `go-cli` splits a command into two halves.
 
-The *specification* -- names, summaries, descriptions, aliases, argument counts,
-nesting -- lives in a YAML file that you embed into the binary. The *behavior*
-lives in Go. The two are joined by an `id`.
+The *specification* -- names, summaries, descriptions, aliases, nesting -- lives
+in a YAML file that you embed into the binary. The *behavior*, including the
+arguments a command takes, lives in Go. The two are joined by an `id`.
 
 This is the library's central opinion. It keeps long help text out of Go string
 literals, and it leaves your Go code holding only the parts worth testing.
@@ -52,7 +52,6 @@ commands:
     - id: greet
       use: greet <name>
       summary: Greets someone by name
-      arity: 1
 ```
 
 The first line points your editor at [`command.schema.json`][schema], which gets
@@ -63,20 +62,27 @@ Two fields are required on every node: `id` and `use`. `id` is the key you bind
 Go code to, and it never appears in the user interface. Everything else is
 optional. The full field list is in the [command schema reference][schema-ref].
 
-`arity: 1` declares that `greet` takes exactly one positional argument. The
-framework enforces this before your code runs, which matters in step 2.
-
 ## Step 2: Implement a runner
 
 A command's behavior is a `cli.Runner`:
 
 ```go
 type Runner interface {
-  Run(ctx context.Context, args ...string) error
+  Run(ctx context.Context) error
 }
 ```
 
-That is the whole interface. Create `main.go`:
+That is the whole interface -- it takes no arguments, because a command's
+arguments are bound to fields before it runs. A runner declares those bindings
+by also implementing `arg.Registrar`:
+
+```go
+type Registrar interface {
+  RegisterArgs(cl *arg.CommandLine)
+}
+```
+
+Create `main.go`:
 
 ```go
 package main
@@ -87,6 +93,7 @@ import (
   "fmt"
 
   "github.com/bitwizeshift/go-cli"
+  "github.com/bitwizeshift/go-cli/arg"
 )
 
 //go:embed app.yaml
@@ -99,21 +106,35 @@ func main() {
 }
 
 // GreetRunner backs "greet".
-type GreetRunner struct{}
+type GreetRunner struct {
+  name string
+}
 
-func (*GreetRunner) Run(ctx context.Context, args ...string) error {
-  fmt.Fprintf(cli.OutStream(ctx), "Hello, %s!\n", args[0])
+func (g *GreetRunner) RegisterArgs(cl *arg.CommandLine) {
+  cl.Add(arg.Positional("name", 0, &g.name,
+    arg.Usage("who to greet"),
+    arg.Required(),
+  ))
+}
+
+func (g *GreetRunner) Run(ctx context.Context) error {
+  fmt.Fprintf(cli.OutStream(ctx), "Hello, %s!\n", g.name)
   return nil
 }
 
-var _ cli.Runner = (*GreetRunner)(nil)
+var (
+  _ cli.Runner    = (*GreetRunner)(nil)
+  _ arg.Registrar = (*GreetRunner)(nil)
+)
 ```
 
 Four things are worth pulling out of that.
 
-**`args[0]` is not a bug.** `arity: 1` already rejected any other count, so by
-the time `Run` executes, `len(args)` is exactly 1. Declare the arity in YAML and
-you can index positionally without needing defensive checks.
+**`g.name` is never empty.** `arg.Required()` tells the framework that the
+command line must reach argument 0, so `greeter greet` with no argument is
+rejected before `Run` executes. Registering one positional also caps the command
+at one argument, so `greeter greet a b` is rejected too. No defensive checks
+needed.
 
 **`FromBytes` panics on a bad specification.** A malformed YAML document, or an
 `id` bound to no command, panics rather than returning an error. The
@@ -151,42 +172,41 @@ the destination is not a terminal.
 
 ## Step 4: Add a flag
 
-Flags are declared in Go, not in YAML. A runner opts into flags by also
-implementing `arg.Registrar`:
+Flags are declared in Go, not in YAML, and they go through the same
+`RegisterArgs` method the positional argument used. Give `GreetRunner` a
+`--loud` flag:
 
 ```go
-type Registrar interface {
-  RegisterArgs(fs *Registry)
-}
-```
-
-Give `GreetRunner` a `--loud` flag:
-
-```go
-import "github.com/bitwizeshift/go-cli/arg"
-
 type GreetRunner struct {
+  name string
   loud bool
 }
 
 func (g *GreetRunner) RegisterArgs(cl *arg.CommandLine) {
-  cl.Add(arg.Flag("loud", &g.loud,
-    arg.Shorthand("l"),
-    arg.Usage("shout the greeting"),
-  ))
+  cl.Add(
+    arg.Positional("name", 0, &g.name,
+      arg.Usage("who to greet"),
+      arg.Required(),
+    ),
+    arg.Flag("loud", &g.loud,
+      arg.Shorthand("l"),
+      arg.Usage("shout the greeting"),
+    ),
+  )
 }
 
-func (g *GreetRunner) Run(ctx context.Context, args ...string) error {
-  greeting := fmt.Sprintf("Hello, %s!", args[0])
+func (g *GreetRunner) Run(ctx context.Context) error {
+  greeting := fmt.Sprintf("Hello, %s!", g.name)
   if g.loud {
     greeting = strings.ToUpper(greeting)
   }
   fmt.Fprintln(cli.OutStream(ctx), greeting)
   return nil
 }
-
-var _ arg.Registrar = (*GreetRunner)(nil)
 ```
+
+`arg.Required()` reads the same on both: on a flag it demands `--loud` be
+given, on a positional it demands the argument be supplied.
 
 `arg.Flag` is generic over the destination pointer, so the type of `&g.loud`
 determines how the flag parses. Because `loud` is a `bool`, `--loud` works as a
@@ -195,7 +215,8 @@ it on the command line.
 
 Registration happens automatically: when the framework binds a runner, it checks
 whether that runner implements `Registrar` and calls `RegisterArgs` if so. You
-never touch a `pflag.FlagSet` directly.
+never touch a `pflag.FlagSet` directly, and you never declare argument counts by
+hand -- the registered arguments are what the framework validates against.
 
 Flags can be grouped in the help output with `arg.AddToGroup`, and constrained
 against each other with `arg.MarkRequired`, `arg.MarkMutuallyExclusive`,
@@ -254,10 +275,10 @@ func TestGreetRunner_Run(t *testing.T) {
 
       // Arrange
       ctx, output := clitest.WithCaptureWriters(context.Background())
-      sut := &GreetRunner{loud: tc.loud}
+      sut := &GreetRunner{name: "world", loud: tc.loud}
 
       // Act
-      err := sut.Run(ctx, "world")
+      err := sut.Run(ctx)
 
       // Assert
       if got, want := err, (error)(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -271,9 +292,10 @@ func TestGreetRunner_Run(t *testing.T) {
 }
 ```
 
-The flag is set by assigning the struct field. There is no parsing involved, and
-no dependency on the flag's name or shorthand. Testing what the command *does*
-is decoupled from how it is *spelled*.
+Both the flag and the positional argument are set by assigning struct fields.
+There is no parsing involved, and no dependency on the flag's name, its
+shorthand, or the argument's position. Testing what the command *does* is
+decoupled from how it is *spelled*.
 
 ## Where to go next
 
@@ -281,7 +303,8 @@ is decoupled from how it is *spelled*.
   same shape: grouped commands, nested subcommands, aliases, flag constraints,
   and a deliberate panic.
 * [Command Schema reference][schema-ref] documents every YAML field, including
-  the `arity` expression grammar and command grouping.
+  command grouping and how positional arguments determine the counts a command
+  accepts.
 * [Creating custom reusable flag types][custom-flags] builds flags that are
   themselves testable, injectable components.
 * [Formatted output with richtext][richtext] covers styling what you print.

@@ -21,4 +21,3 @@ commands:
       description: |
         Prints a friendly greeting. Its --help output deliberately omits the
         update advisory, which only appears on the root command.
-      arity: <=1

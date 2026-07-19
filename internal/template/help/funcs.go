@@ -28,6 +28,11 @@ func (s *span) add(text, role string) {
 	s.b.WriteString(tag.Themed(role, text))
 }
 
+// addPlain appends unstyled text to the marker.
+func (s *span) addPlain(text string) {
+	s.b.WriteString(text)
+}
+
 // row returns the accumulated marker as a [format.Row] with the given
 // description, sizing the marker column from its visible width.
 func (s *span) row(description string) format.Row {
@@ -80,14 +85,21 @@ func flagGrid(flags []FlagInfo, columns int) string {
 
 // argumentGrid renders arguments as an aligned grid, styling names and their
 // type arguments distinctly, matching the flag grid's layout. An unnamed
-// argument shows its type alone, occupying the column a name would.
+// argument shows its type alone, occupying the column a name would, and an
+// optional argument is bracketed.
 func argumentGrid(arguments []ArgumentInfo, columns int) string {
 	rows := make([]format.Row, 0, len(arguments))
 	for _, a := range arguments {
 		var s span
+		if !a.Required {
+			s.addPlain("[")
+		}
 		s.add(a.Name, "label")
 		if a.Type != "" {
 			s.add(typeSeparator(a)+a.Type, "value")
+		}
+		if !a.Required {
+			s.addPlain("]")
 		}
 		rows = append(rows, s.row(a.Usage))
 	}

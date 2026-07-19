@@ -60,6 +60,9 @@ type config struct {
 	// Callbacks invoked with the decoded value each time the flag is set.
 	callbacks []reflect.Value
 
+	// required marks the argument as one that must be supplied.
+	required bool
+
 	// Fallbacks
 
 	envs   []string
@@ -74,7 +77,6 @@ type flagConfig struct {
 
 	shorthand string
 	hidden    bool
-	required  bool
 
 	// Occurrence limits.
 
@@ -119,10 +121,9 @@ func Hidden() FlagOption {
 	return flagOption(func(c *flagConfig) { c.hidden = true })
 }
 
-// Required marks the flag as required, so parsing fails when it is omitted. It
-// is shorthand for [MarkRequired] on the registered flag.
-func Required() FlagOption {
-	return flagOption(func(c *flagConfig) { c.required = true })
+// Required marks the argument as required, so parsing fails when it is omitted.
+func Required() Option {
+	return option(func(c *config) { c.required = true })
 }
 
 // Type overrides the reported flag type name, bypassing the default kebab-case

@@ -18,7 +18,6 @@
     "version": true,
     "hidden": true,
     "deprecated": true,
-    "arity": true,
     "commands": true,
     "issue-url": {
       "type": "string",
@@ -81,19 +80,17 @@
           "type": "string",
           "description": "Deprecation message shown when the command is used. A non-empty value marks the command deprecated."
         },
-        "arity": {
-          "description": "Permitted positional-argument counts. A comma-separated list of terms, where each term is an exact count (\"3\"), a comparison (\">3\", \">=3\", \"<3\", \"<=3\"), or a range with an exclusive (\"1..3\") or inclusive (\"1..=3\") upper bound. Terms may touch but must not overlap.",
-          "type": [
-            "string",
-            "integer"
-          ],
-          "minimum": 0,
-          "pattern": "^\\s*([0-9]+(\\.\\.=?[0-9]+)?|[<>]=?[0-9]+)(\\s*,\\s*([0-9]+(\\.\\.=?[0-9]+)?|[<>]=?[0-9]+))*\\s*$"
-        },
         "commands": {
           "$ref": "#/$defs/groupCommands"
+        },
+        "issue-url": {
+          "description": "Only meaningful on the root command, which propagates it to the whole hierarchy. Ignored elsewhere."
+        },
+        "app-id": {
+          "description": "Only meaningful on the root command. Ignored elsewhere."
         }
-      }
+      },
+      "unevaluatedProperties": false
     },
     "groupCommands": {
       "type": "object",

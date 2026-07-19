@@ -11,6 +11,7 @@ import (
 	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/argdef"
+	"github.com/bitwizeshift/go-cli/internal/arity"
 	"github.com/bitwizeshift/go-cli/internal/completion"
 	"github.com/bitwizeshift/go-cli/internal/storage"
 	"github.com/bitwizeshift/go-cli/internal/template"
@@ -147,7 +148,6 @@ func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage
 		Aliases:       i.Aliases,
 		Hidden:        i.Hidden,
 		Deprecated:    i.Deprecated,
-		Args:          cobra.PositionalArgs(i.Arity),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 
@@ -162,6 +162,8 @@ func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage
 		delete(builders, i.ID)
 		cl = (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 		arg.Register(cl, builder)
+		argdef.VerifyPositionals((*argdef.CommandLine)(cl))
+		cmd.Args = positionalArgs(argdef.Arity((*argdef.CommandLine)(cl)))
 		annotation.ConfigureFlags(cmd)
 		completion.RegisterFlags(cmd)
 		cmd.ValidArgsFunction = completion.ForArgs(
@@ -170,6 +172,7 @@ func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage
 		)
 		cmd.RunE = i.run(builder, store, cl)
 	} else {
+		cmd.Args = positionalArgs(argdef.Arity(argdef.New()))
 		cmd.RunE = i.showHelp
 	}
 	cmd.SetHelpFunc(template.DefaultRenderEngine.HelpFunc(cl))
@@ -180,6 +183,14 @@ func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage
 		i.addGroup(cmd, group, builders, store)
 	}
 	return cmd, cl
+}
+
+// positionalArgs adapts a permitted argument count into cobra's
+// positional-argument validator.
+func positionalArgs(a arity.Arity) cobra.PositionalArgs {
+	return func(_ *cobra.Command, args []string) error {
+		return a.Validate(len(args))
+	}
 }
 
 // showHelp is the default action for a command with no bound runner. Printing

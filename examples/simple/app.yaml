@@ -9,8 +9,9 @@ description: |
   with.
 
   It is not a real tool; it exists to exercise the go-cli library end to end,
-  demonstrating grouped commands, nested subcommands, positional-argument arity,
-  flags with and without values, flag constraints, and crash handling.
+  demonstrating grouped commands, nested subcommands, required and optional
+  positional arguments, flags with and without values, flag constraints, and
+  crash handling.
 examples:
   - example-cli init --path ./vault
   - example-cli add "Buy milk" --priority 2 --tag chores --tag home
@@ -27,7 +28,6 @@ commands:
 
         An existing vault is left untouched unless --force is given, in which
         case it is recreated from scratch and its contents are discarded.
-      arity: 0
 
     - id: status
       use: status
@@ -35,7 +35,6 @@ commands:
       description: |
         Summarizes whether a vault is initialized, how many items it holds, and
         which remotes are configured.
-      arity: 0
 
     - id: panic
       use: panic
@@ -43,7 +42,6 @@ commands:
       description: |
         Triggers a runtime panic so you can see how the library renders a crash
         report, complete with a link for filing an issue.
-      arity: 0
       hidden: true
 
   Item Commands:
@@ -56,7 +54,6 @@ commands:
 
         Items may be tagged and prioritized. A pinned item is always listed
         first, so it cannot also carry a numeric priority.
-      arity: <=1
 
     - id: item-list
       use: list
@@ -67,7 +64,6 @@ commands:
 
         Only open items are shown by default. Use --all to include completed
         items, or --status to filter by a single status.
-      arity: 0
 
     - id: item-remove
       use: remove <name>...
@@ -76,7 +72,6 @@ commands:
       description: |
         Permanently removes the named items, or the items named by $SIMPLE_ITEMS
         when none are given. The confirmation prompt can be skipped with --yes.
-      arity: '>=0'
 
   Configuration Commands:
     - id: config
@@ -89,15 +84,12 @@ commands:
           - id: config-get
             use: get <key>
             summary: Prints a single configuration value
-            arity: 1
           - id: config-set
             use: set <key> <value>
             summary: Assigns a configuration value
-            arity: 2
           - id: config-list
             use: list
             summary: Prints every configuration value
-            arity: 0
 
     - id: remote
       use: remote <command>
@@ -110,12 +102,9 @@ commands:
           - id: remote-add
             use: add <name> <url>
             summary: Registers a new remote
-            arity: 2
           - id: remote-list
             use: list
             summary: Lists the configured remotes
-            arity: 0
           - id: remote-remove
             use: remove <name>
             summary: Removes a remote
-            arity: 1

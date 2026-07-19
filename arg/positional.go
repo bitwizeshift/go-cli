@@ -18,8 +18,9 @@ type PositionalArg struct {
 // [CommandLine.Add].
 //
 // Positional arguments are drawn from the command line after flags are parsed.
-// If no argument occupies index when the command runs, v is left unchanged; the
-// command's arity governs how many arguments are permitted.
+// If no argument occupies index when the command runs, v is left unchanged.
+// Marking the argument [Required] instead demands that the command line reach
+// index, so v is always assigned before the command runs.
 //
 // By default the value is decoded with [Unmarshal] and reports a kebab-case type
 // name derived from T; both may be adjusted with [Option] values.
@@ -34,6 +35,7 @@ func Positional[T any](name string, index int, v *T, options ...Option) *Positio
 		Name:          name,
 		Type:          cfg.typeName(v),
 		Usage:         cfg.usage,
+		Required:      cfg.required,
 		Complete:      cfg.completer,
 		EnvFallbacks:  cfg.envs,
 		FuncFallbacks: fallbackFuncs,

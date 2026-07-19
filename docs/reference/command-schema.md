@@ -87,31 +87,39 @@ The fields are:
   a message is indicated that the command is deprecated. Maps to the
   `cobra.Command.Deprecated` field.
 
-* `arity`: An optional field indicating the range of positional arguments that
-  can be provided to this command. See [Arity](#arity) for more details.
-  This configures the `cobra.Command.PositionalArgs` settings.
-
 * `commands`: This is where composition occurs. This field is a mapping of
   `<group-name>: [<commands>]`, where `<group-name>` is the title of a command
   group. Use `default` if no group is desired. Each command in the list of
   `<command>`s is a recursive member of this schema.
 
-#### Arity
+#### Positional arguments
 
-The `arity` field supports a custom DSL for indicating the range of arguments that are allowed.
-This is nothing too complex; the expression can be one of 3 primary things:
+The number of positional arguments a command accepts is not declared in the
+YAML. It follows from the arguments the command's builder registers, so the
+specification and the Go code can never disagree:
 
-* An exact value (e.g. `3`, `5`, etc)
-* An open/unbounded range using on of `>=`, `>`, `<`, or `<=` -- in the form of
-  `<op><number>` (e.g. `>=5` expects 5 or more positional arguments)
-* A range with an _exclusive_ upper bound using `<start>..<end>` syntax (e.g.
-  `3..5` expects 3 or 4 arguments)
-* A range with an _inclusive_ upper bound using `<start>..=<end>` syntax (e.g.
-  `3..=5` expects between 3 to 5 arguments)
+* Each `arg.Positional` claims one argument slot. A command accepts no more
+  arguments than it has slots, unless an `arg.Unmatched` binding claims the
+  remainder, in which case there is no upper bound.
+* Adding `arg.Required()` to a positional demands that the command line reach
+  that argument. Adding it to an `arg.Unmatched` binding demands at least one
+  argument beyond those the positionals claim.
+* A command that registers no positional arguments accepts none, as does a
+  command with no bound runner.
 
-In addition to the above, multiple clauses can be concatenated with `,` provided
-the ranges don't overlap. For example, `3,5,>=7` enables 3, 5, or greater than 7
-arguments.
+So a builder registering a required `key` and an optional `value` accepts one or
+two arguments, and rejects anything else before the runner executes:
+
+```go
+func (r *setRunner) RegisterArgs(cl *arg.CommandLine) {
+  cl.Add(
+    arg.Positional("key", 0, &r.key, arg.Required()),
+    arg.Positional("value", 1, &r.value),
+  )
+}
+```
+
+Optional arguments are shown bracketed in the command's help output.
 
 ### Example
 
@@ -127,8 +135,9 @@ description: |
   with.
 
   It is not a real tool; it exists to exercise the go-cli library end to end,
-  demonstrating grouped commands, nested subcommands, positional-argument arity,
-  flags with and without values, flag constraints, and crash handling.
+  demonstrating grouped commands, nested subcommands, required and optional
+  positional arguments, flags with and without values, flag constraints, and
+  crash handling.
 examples:
   - example-cli init --path ./vault
   - example-cli add "Buy milk" --priority 2 --tag chores --tag home
@@ -145,7 +154,6 @@ commands:
 
         An existing vault is left untouched unless --force is given, in which
         case it is recreated from scratch and its contents are discarded.
-      arity: 0
 ```
 
 ### Runner IDs

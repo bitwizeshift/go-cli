@@ -23,14 +23,12 @@ commands:
       summary: Reads a plain line of input
       description: |
         Prompts for your name and echoes it back.
-      arity: 0
 
     - id: confirm
       use: confirm
       summary: Reads a yes/no answer
       description: |
         Prompts for confirmation and prints the parsed boolean.
-      arity: 0
 
     - id: secret
       use: secret
@@ -38,7 +36,6 @@ commands:
       description: |
         Prompts for a password, echoing '*' per character. Requires an
         interactive terminal and errors otherwise.
-      arity: 0
 
     - id: value
       use: value <type>
@@ -51,20 +48,15 @@ commands:
           - id: value-string
             use: string
             summary: Reads a string
-            arity: 0
           - id: value-int
             use: int
             summary: Reads an integer
-            arity: 0
           - id: value-float
             use: float
             summary: Reads a floating-point number
-            arity: 0
           - id: value-bool
             use: bool
             summary: Reads a boolean
-            arity: 0
           - id: value-duration
             use: duration
             summary: Reads a duration
-            arity: 0

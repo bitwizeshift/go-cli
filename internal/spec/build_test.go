@@ -9,6 +9,7 @@ import (
 	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/arg/argtest"
 	"github.com/bitwizeshift/go-cli/internal/argdef"
+	"github.com/bitwizeshift/go-cli/internal/arity"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/spec/spectest"
 	"github.com/google/go-cmp/cmp"
@@ -60,6 +61,72 @@ func (pr *positionalRunner) Run(context.Context) error {
 var (
 	_ spec.Runner   = (*positionalRunner)(nil)
 	_ arg.Registrar = (*positionalRunner)(nil)
+)
+
+// requiredPositionalRunner is a [spec.Runner] registering a required positional
+// argument ahead of an optional one, used to verify the argument counts
+// [spec.Build] derives from a command's arguments.
+type requiredPositionalRunner struct {
+	src string
+	dst string
+}
+
+func (rpr *requiredPositionalRunner) RegisterArgs(cl *arg.CommandLine) {
+	cl.Add(
+		arg.Positional("src", 0, &rpr.src, arg.Required()),
+		arg.Positional("dst", 1, &rpr.dst),
+	)
+}
+
+func (rpr *requiredPositionalRunner) Run(context.Context) error {
+	return nil
+}
+
+var (
+	_ spec.Runner   = (*requiredPositionalRunner)(nil)
+	_ arg.Registrar = (*requiredPositionalRunner)(nil)
+)
+
+// unmatchedRunner is a [spec.Runner] registering a required unmatched binding,
+// which claims every argument beyond the positionals.
+type unmatchedRunner struct {
+	items []string
+}
+
+func (ur *unmatchedRunner) RegisterArgs(cl *arg.CommandLine) {
+	cl.Add(arg.Unmatched(&ur.items, arg.Required()))
+}
+
+func (ur *unmatchedRunner) Run(context.Context) error {
+	return nil
+}
+
+var (
+	_ spec.Runner   = (*unmatchedRunner)(nil)
+	_ arg.Registrar = (*unmatchedRunner)(nil)
+)
+
+// gappedRunner is a [spec.Runner] registering positional arguments that skip an
+// index, leaving an argument slot nothing can ever fill.
+type gappedRunner struct {
+	first string
+	third string
+}
+
+func (gr *gappedRunner) RegisterArgs(cl *arg.CommandLine) {
+	cl.Add(
+		arg.Positional("first", 0, &gr.first),
+		arg.Positional("third", 2, &gr.third),
+	)
+}
+
+func (gr *gappedRunner) Run(context.Context) error {
+	return nil
+}
+
+var (
+	_ spec.Runner   = (*gappedRunner)(nil)
+	_ arg.Registrar = (*gappedRunner)(nil)
 )
 
 // offered is what a command offers for a word being completed: the candidates it
@@ -391,6 +458,139 @@ func TestBuild_UnboundCommand_RegistersNoArgsFunction(t *testing.T) {
 	if got, want := sut.ValidArgsFunction == nil, true; !cmp.Equal(got, want) {
 		t.Errorf("ValidArgsFunction = nil %t, want %t", got, want)
 	}
+}
+
+func TestBuild_Args(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		runner  spec.Runner
+		args    []string
+		wantErr error
+	}{
+		{
+			name:    "NoPositionalsAcceptsNone",
+			runner:  &flaggedRunner{},
+			args:    nil,
+			wantErr: nil,
+		}, {
+			name:    "NoPositionalsRejectsArgument",
+			runner:  &flaggedRunner{},
+			args:    []string{"extra"},
+			wantErr: arity.ErrBadArity,
+		}, {
+			name:    "OptionalPositionalsAcceptNone",
+			runner:  &positionalRunner{},
+			args:    nil,
+			wantErr: nil,
+		}, {
+			name:    "OptionalPositionalsAcceptAll",
+			runner:  &positionalRunner{},
+			args:    []string{"in", "json"},
+			wantErr: nil,
+		}, {
+			name:    "OptionalPositionalsRejectExcess",
+			runner:  &positionalRunner{},
+			args:    []string{"in", "json", "extra"},
+			wantErr: arity.ErrBadArity,
+		}, {
+			name:    "RequiredPositionalDemandsArgument",
+			runner:  &requiredPositionalRunner{},
+			args:    nil,
+			wantErr: arity.ErrBadArity,
+		}, {
+			name:    "RequiredPositionalSatisfied",
+			runner:  &requiredPositionalRunner{},
+			args:    []string{"src"},
+			wantErr: nil,
+		}, {
+			name:    "OptionalPositionalAccepted",
+			runner:  &requiredPositionalRunner{},
+			args:    []string{"src", "dst"},
+			wantErr: nil,
+		}, {
+			name:    "ExcessArgumentRejected",
+			runner:  &requiredPositionalRunner{},
+			args:    []string{"src", "dst", "extra"},
+			wantErr: arity.ErrBadArity,
+		}, {
+			name:    "RequiredUnmatchedDemandsArgument",
+			runner:  &unmatchedRunner{},
+			args:    nil,
+			wantErr: arity.ErrBadArity,
+		}, {
+			name:    "UnmatchedAcceptsAnyCount",
+			runner:  &unmatchedRunner{},
+			args:    []string{"a", "b", "c"},
+			wantErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			sut := buildRoot(t, tc.runner)
+
+			// Act
+			err := sut.Args(sut, tc.args)
+
+			// Assert
+			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+				t.Fatalf("sut.Args(...) = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestBuild_UnboundCommand_RejectsArguments(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	reader := strings.NewReader(rootWithChild)
+	root, err := spec.Build(reader, spec.Options{
+		Builders: toBuilders(map[string]spec.Runner{"root": spectest.NoOpRunner()}),
+	})
+	if err != nil {
+		t.Fatalf("spec.Build(...) = %v, want %v", err, error(nil))
+	}
+	sut := root.Commands()[0]
+
+	// Act
+	err = sut.Args(sut, []string{"extra"})
+
+	// Assert
+	if got, want := err, arity.ErrBadArity; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
+		t.Fatalf("sut.Args(...) = %v, want %v", got, want)
+	}
+}
+
+func TestBuild_GappedPositionals_Panics(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	reader := strings.NewReader("id: root\nuse: root\n")
+	opts := spec.Options{
+		Builders: toBuilders(map[string]spec.Runner{"root": &gappedRunner{}}),
+	}
+	build := func() { _, _ = spec.Build(reader, opts) }
+
+	// Act
+	panicked := recovered(build)
+
+	// Assert
+	if got, want := panicked, true; !cmp.Equal(got, want) {
+		t.Errorf("spec.Build(...) panicked = %t, want %t", got, want)
+	}
+}
+
+// recovered reports whether fn panicked.
+func recovered(fn func()) (panicked bool) {
+	defer func() { panicked = recover() != nil }()
+	fn()
+	return
 }
 
 // buildRoot builds a single-command tree binding runner to its root, failing the

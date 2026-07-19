@@ -657,3 +657,184 @@ func TestPositionalCompletions(t *testing.T) {
 		})
 	}
 }
+
+func TestArity(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		positionals []*argdef.Positional
+		unmatched   *argdef.Unmatched
+		want        string
+	}{
+		{
+			name:        "NoArgumentsAcceptsNone",
+			positionals: nil,
+			unmatched:   nil,
+			want:        "no arguments",
+		}, {
+			name: "OptionalPositionalIsNotDemanded",
+			positionals: []*argdef.Positional{
+				{Index: 0},
+			},
+			unmatched: nil,
+			want:      "at most 1 argument",
+		}, {
+			name: "RequiredPositionalIsDemanded",
+			positionals: []*argdef.Positional{
+				{Index: 0, Required: true},
+			},
+			unmatched: nil,
+			want:      "exactly 1 argument",
+		}, {
+			name: "AllRequiredPositionalsAreDemanded",
+			positionals: []*argdef.Positional{
+				{Index: 0, Required: true},
+				{Index: 1, Required: true},
+			},
+			unmatched: nil,
+			want:      "exactly 2 arguments",
+		}, {
+			name: "TrailingOptionalPositionalWidensRange",
+			positionals: []*argdef.Positional{
+				{Index: 0, Required: true},
+				{Index: 1},
+			},
+			unmatched: nil,
+			want:      "between 1 and 2 arguments",
+		}, {
+			name: "HighestRequiredIndexSetsFloor",
+			positionals: []*argdef.Positional{
+				{Index: 0},
+				{Index: 1, Required: true},
+				{Index: 2},
+			},
+			unmatched: nil,
+			want:      "between 2 and 3 arguments",
+		}, {
+			name: "DuplicateIndexCountsOnce",
+			positionals: []*argdef.Positional{
+				{Index: 0, Required: true},
+				{Index: 0},
+			},
+			unmatched: nil,
+			want:      "exactly 1 argument",
+		}, {
+			name:        "OptionalUnmatchedRemovesUpperBound",
+			positionals: nil,
+			unmatched:   &argdef.Unmatched{},
+			want:        "any number of arguments",
+		}, {
+			name:        "RequiredUnmatchedDemandsOne",
+			positionals: nil,
+			unmatched:   &argdef.Unmatched{Required: true},
+			want:        "at least 1 argument",
+		}, {
+			name: "UnmatchedFollowsRequiredPositional",
+			positionals: []*argdef.Positional{
+				{Index: 0, Required: true},
+			},
+			unmatched: &argdef.Unmatched{},
+			want:      "at least 1 argument",
+		}, {
+			name: "RequiredUnmatchedDemandsOneBeyondPositionals",
+			positionals: []*argdef.Positional{
+				{Index: 0, Required: true},
+			},
+			unmatched: &argdef.Unmatched{Required: true},
+			want:      "at least 2 arguments",
+		}, {
+			name: "RequiredUnmatchedCountsOptionalPositionals",
+			positionals: []*argdef.Positional{
+				{Index: 0},
+				{Index: 1},
+			},
+			unmatched: &argdef.Unmatched{Required: true},
+			want:      "at least 3 arguments",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			cl := argdef.New()
+			for _, p := range tc.positionals {
+				argdef.AddPositional(cl, p)
+			}
+			if tc.unmatched != nil {
+				argdef.SetUnmatched(cl, tc.unmatched)
+			}
+
+			// Act
+			permitted := argdef.Arity(cl)
+
+			// Assert
+			if got, want := permitted.String(), tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Arity(...) = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestVerifyPositionals(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		indices []int
+		want    bool
+	}{
+		{
+			name:    "NoPositionals",
+			indices: nil,
+			want:    false,
+		}, {
+			name:    "ContiguousFromZero",
+			indices: []int{0, 1, 2},
+			want:    false,
+		}, {
+			name:    "RegisteredOutOfOrder",
+			indices: []int{2, 0, 1},
+			want:    false,
+		}, {
+			name:    "DuplicateIndex",
+			indices: []int{0, 0, 1},
+			want:    false,
+		}, {
+			name:    "VacantMiddleIndex",
+			indices: []int{0, 2},
+			want:    true,
+		}, {
+			name:    "VacantFirstIndex",
+			indices: []int{1},
+			want:    true,
+		}, {
+			name:    "NegativeIndex",
+			indices: []int{-1},
+			want:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			cl := argdef.New()
+			for _, index := range tc.indices {
+				argdef.AddPositional(cl, &argdef.Positional{Index: index})
+			}
+			call := func() { argdef.VerifyPositionals(cl) }
+
+			// Act
+			panicked := recovered(call)
+
+			// Assert
+			if got, want := panicked, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("VerifyPositionals(...) panicked = %t, want %t", got, want)
+			}
+		})
+	}
+}

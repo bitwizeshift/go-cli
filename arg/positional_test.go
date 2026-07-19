@@ -429,3 +429,42 @@ func TestPositional_NoCompletionOption_RegistersNone(t *testing.T) {
 		t.Errorf("PositionalCompletions(...) = %d completions, want %d", got, want)
 	}
 }
+
+func TestPositional_Required(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []arg.Option
+		want    bool
+	}{
+		{
+			name:    "OptionalByDefault",
+			options: nil,
+			want:    false,
+		}, {
+			name:    "MarkedRequired",
+			options: []arg.Option{arg.Required()},
+			want:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			cl := argtest.NewCommandLine()
+			var dst string
+			cl.Add(arg.Positional("value", 0, &dst, tc.options...))
+
+			// Act
+			positional := firstPositional(cl)
+
+			// Assert
+			if got, want := positional.Required, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Positional(...) required = %t, want %t", got, want)
+			}
+		})
+	}
+}

@@ -159,9 +159,11 @@ func registerArgs(cmd *cobra.Command) *arg.CommandLine {
 	cl.Add(
 		arg.Positional("remote", 0, &remoteRef,
 			arg.Usage("name of the remote to synchronize with"),
+			arg.Required(),
 		),
 		arg.Positional("ref", 1, &ref,
 			arg.Usage("reference within the remote to synchronize"),
+			arg.Required(),
 		),
 		arg.Unmatched(&items,
 			arg.Usage("items to synchronize, or all items when none are given"),

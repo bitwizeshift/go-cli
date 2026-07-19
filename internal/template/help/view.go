@@ -30,9 +30,10 @@ type View struct {
 // ArgumentInfo is a single argument entry in a help listing. Name is empty for
 // an unmatched-argument binding, which is identified by its type alone.
 type ArgumentInfo struct {
-	Name  string
-	Type  string
-	Usage string
+	Name     string
+	Type     string
+	Usage    string
+	Required bool
 }
 
 // CommandGroup is a titled list of subcommands.
@@ -177,15 +178,17 @@ func argumentsOf(cl *arg.CommandLine) []ArgumentInfo {
 	var arguments []ArgumentInfo
 	for _, p := range argdef.Positionals((*argdef.CommandLine)(cl)) {
 		arguments = append(arguments, ArgumentInfo{
-			Name:  p.Name,
-			Type:  p.Type,
-			Usage: p.Usage,
+			Name:     p.Name,
+			Type:     p.Type,
+			Usage:    p.Usage,
+			Required: p.Required,
 		})
 	}
 	if u := argdef.GetUnmatched((*argdef.CommandLine)(cl)); u != nil {
 		arguments = append(arguments, ArgumentInfo{
-			Type:  u.Type + "...",
-			Usage: u.Usage,
+			Type:     u.Type + "...",
+			Usage:    u.Usage,
+			Required: u.Required,
 		})
 	}
 	return arguments

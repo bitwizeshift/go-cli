@@ -13,7 +13,7 @@ EXAMPLES
 ARGUMENTS
   remote string   name of the remote to synchronize with
   ref string      reference within the remote to synchronize
-  string...       items to synchronize, or all items when none are given
+  [string...]     items to synchronize, or all items when none are given
 
 CONNECTION FLAGS
   -T, --auth-token string   auth token used to authenticate with the remote

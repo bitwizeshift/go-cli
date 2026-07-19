@@ -553,3 +553,42 @@ func TestUnmatched_ClaimsOnlyArgsPositionalsLeave(t *testing.T) {
 		t.Errorf("Bind(...) values = %v, want %v", got, want)
 	}
 }
+
+func TestUnmatched_Required(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []arg.Option
+		want    bool
+	}{
+		{
+			name:    "OptionalByDefault",
+			options: nil,
+			want:    false,
+		}, {
+			name:    "MarkedRequired",
+			options: []arg.Option{arg.Required()},
+			want:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			cl := argtest.NewCommandLine()
+			var rest []string
+			cl.Add(arg.Unmatched(&rest, tc.options...))
+
+			// Act
+			unmatched := unmatchedOf(cl)
+
+			// Assert
+			if got, want := unmatched.Required, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("Unmatched(...) required = %t, want %t", got, want)
+			}
+		})
+	}
+}

@@ -31,6 +31,7 @@ func Unmatched[T any](out *[]T, options ...Option) *UnmatchedArg {
 	return &UnmatchedArg{unmatched: &argdef.Unmatched{
 		Type:          cfg.typeName(new(T)),
 		Usage:         cfg.usage,
+		Required:      cfg.required,
 		Complete:      cfg.completer,
 		EnvFallbacks:  cfg.envs,
 		FuncFallbacks: fallbackFuncs,

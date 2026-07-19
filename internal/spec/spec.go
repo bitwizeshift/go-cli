@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bitwizeshift/go-cli/internal/arity"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -57,8 +56,6 @@ type CommandInfo struct {
 	Version     string   `yaml:"version,omitempty"`
 	Hidden      bool     `yaml:"hidden,omitempty"`
 	Deprecated  string   `yaml:"deprecated,omitempty"`
-
-	Arity arity.ArityFunc `yaml:"arity"`
 
 	Commands GroupCommands `yaml:"commands"`
 }

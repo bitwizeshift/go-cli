@@ -7,6 +7,7 @@ import (
 	"os"
 	"unsafe"
 
+	"github.com/bitwizeshift/go-cli/internal/arity"
 	"github.com/bitwizeshift/go-cli/internal/completion"
 	"github.com/bitwizeshift/go-cli/internal/format/csvfield"
 	"github.com/spf13/pflag"
@@ -49,6 +50,9 @@ type Positional struct {
 	Usage string
 	Set   func(value string) error
 
+	// Required marks the argument as one the command cannot run without.
+	Required bool
+
 	EnvFallbacks  []string
 	FuncFallbacks []FallbackFunc
 
@@ -63,6 +67,9 @@ type Unmatched struct {
 	Type  string
 	Usage string
 	Set   func(values []string) error
+
+	// Required marks the binding as one that must claim at least one argument.
+	Required bool
 
 	EnvFallbacks  []string
 	FuncFallbacks []FallbackFunc
@@ -138,6 +145,67 @@ func SetUnmatched(reg *CommandLine, u *Unmatched) {
 // if none was registered.
 func GetUnmatched(reg *CommandLine) *Unmatched {
 	return reg.unmatched
+}
+
+// VerifyPositionals checks that the positional arguments registered on reg
+// claim a contiguous run of indices starting at zero. Two bindings may share an
+// index, but an index no binding claims leaves an argument slot that can never
+// be filled.
+//
+// It panics when an index is negative, or when an index below the highest
+// registered one is vacant. Both are mistakes in the command's registration
+// rather than in the command line, so they surface before any input is parsed.
+func VerifyPositionals(reg *CommandLine) {
+	claimed := make(map[int]struct{}, len(reg.positionals))
+	for _, p := range reg.positionals {
+		if p.Index < 0 {
+			panic(fmt.Sprintf("arg: positional %q registered at negative index %d", p.Name, p.Index))
+		}
+		claimed[p.Index] = struct{}{}
+	}
+	var vacant []int
+	for i := range positionalWidth(reg) {
+		if _, ok := claimed[i]; !ok {
+			vacant = append(vacant, i)
+		}
+	}
+	if len(vacant) > 0 {
+		panic(fmt.Sprintf("arg: no positional registered at index %v", vacant))
+	}
+}
+
+// Arity returns the positional-argument counts reg permits, derived from the
+// arguments registered on it.
+//
+// Every required positional demands that the command line reach its index, and
+// a required [Unmatched] binding demands one argument beyond those the
+// positionals claim. The count is capped at the positionals registered, unless
+// an [Unmatched] binding claims the remaining arguments.
+func Arity(reg *CommandLine) arity.Arity {
+	width := positionalWidth(reg)
+	low := 0
+	for _, p := range reg.positionals {
+		if p.Required {
+			low = max(low, p.Index+1)
+		}
+	}
+	if reg.unmatched == nil {
+		return arity.Between(low, width)
+	}
+	if reg.unmatched.Required {
+		low = max(low, width+1)
+	}
+	return arity.AtLeast(low)
+}
+
+// positionalWidth returns the number of argument slots the positionals
+// registered on reg claim, which is one past the highest index bound.
+func positionalWidth(reg *CommandLine) int {
+	width := 0
+	for _, p := range reg.positionals {
+		width = max(width, p.Index+1)
+	}
+	return width
 }
 
 // UnmatchedCompletion returns the completion function of the [Unmatched]

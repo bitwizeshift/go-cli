@@ -1,9 +1,9 @@
 // Command example-cli is a self-contained showcase of the go-cli library.
 //
 // It models a fictional workspace manager, binding runners to an embedded YAML
-// specification to demonstrate grouped commands, nested subcommands, positional
-// arity, flags with and without values, named flag groups, flag constraints,
-// and panic handling.
+// specification to demonstrate grouped commands, nested subcommands, required
+// and optional positional arguments, flags with and without values, named flag
+// groups, flag constraints, and panic handling.
 package main
 
 import (
@@ -204,6 +204,7 @@ type configGetRunner struct {
 func (cgr *configGetRunner) RegisterArgs(cl *arg.CommandLine) {
 	cl.Add(arg.Positional("key", 0, &cgr.key,
 		arg.Usage("configuration key to read"),
+		arg.Required(),
 	))
 }
 
@@ -223,9 +224,11 @@ func (csr *configSetRunner) RegisterArgs(cl *arg.CommandLine) {
 	cl.Add(
 		arg.Positional("key", 0, &csr.key,
 			arg.Usage("configuration key to set"),
+			arg.Required(),
 		),
 		arg.Positional("value", 1, &csr.value,
 			arg.Usage("value to assign to the key"),
+			arg.Required(),
 		),
 	)
 }
@@ -264,9 +267,11 @@ type remoteAddRunner struct {
 func (rar *remoteAddRunner) RegisterArgs(cl *arg.CommandLine) {
 	name := arg.Positional("name", 0, &rar.name,
 		arg.Usage("name for the remote"),
+		arg.Required(),
 	)
 	url := arg.Positional("url", 1, &rar.url,
 		arg.Usage("URL of the remote"),
+		arg.Required(),
 	)
 	token := arg.Flag("token", &rar.token,
 		arg.Shorthand("k"),
@@ -302,6 +307,7 @@ type remoteRemoveRunner struct {
 func (rrr *remoteRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
 	name := arg.Positional("name", 0, &rrr.name,
 		arg.Usage("name of the remote to remove"),
+		arg.Required(),
 	)
 	yes := arg.Flag("yes", &rrr.yes,
 		arg.Shorthand("y"),
