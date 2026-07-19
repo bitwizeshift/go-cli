@@ -26,17 +26,6 @@ type Field struct {
 	Value string
 }
 
-// Version returns the module version of the running binary, or "snapshot" when
-// it was not built with an embedded version.
-func (b *Build) Version() string {
-	if info, ok := b.ReadBuildInfo(); ok {
-		if v := info.Main.Version; v != "" && v != "(devel)" {
-			return v
-		}
-	}
-	return "snapshot"
-}
-
 // Target returns the compilation target as "GOOS/GOARCH", using the build
 // settings when present and falling back to the running binary's values.
 func (b *Build) Target() string {

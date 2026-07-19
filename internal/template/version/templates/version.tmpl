@@ -1,5 +1,5 @@
 {{- $width := text.MaxWidth build.FieldNames -}}
-[theme:title]{{ .Name }}[/theme] (version {{ build.Version }})
+[theme:title]{{ .Name }}[/theme] (version {{ .Version }})
 
 [theme:heading]BUILD DETAILS[/theme]
 {{- range build.Fields }}

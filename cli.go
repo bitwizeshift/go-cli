@@ -73,6 +73,7 @@ func FromReader(r io.Reader, options ...Option) *CLI {
 		Builders: cfg.builders,
 		Theme:    cfg.theme,
 		Colour:   cfg.colour,
+		Version:  cfg.buildVersion,
 		Update: spec.UpdateOptions{
 			Version:   cfg.buildVersion,
 			Source:    cfg.buildSource,

@@ -1,6 +1,5 @@
 # yaml-language-server: $schema=../../command.schema.json
 name: update-demo
-version: 1.0.0
 app-id: com.rodusek.update-demo
 summary: Demonstrates go-cli's update-availability advisory
 description: |

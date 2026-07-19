@@ -1,7 +1,6 @@
 # yaml-language-server: $schema=../../command.schema.json
 name: diagnostics
 app-id: com.rodusek.diagnostics
-version: 1.0.0
 summary: A small example CLI showcasing the diagnostic logger
 description: |
   diagnostics acts as an example for the diagnostic logger in the go-cli

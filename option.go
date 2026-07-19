@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bitwizeshift/go-cli/exit"
+	"github.com/bitwizeshift/go-cli/internal/buildinfo"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/term"
 	"github.com/bitwizeshift/go-cli/richtext"
@@ -38,6 +39,7 @@ func newConfig(options ...Option) *config {
 		builders:        map[string]spec.Builder{},
 		classifier:      exit.POSIXClassifier,
 		updateProviders: map[string]update.Provider{},
+		buildVersion:    buildinfo.DefaultVersionReader.Version(),
 	}
 	for _, opt := range options {
 		opt.apply(cfg)
@@ -144,10 +146,13 @@ func ExitClassifier(classifier exit.Classifier) Option {
 }
 
 // CurrentVersion sets the running build's version, typically injected at build
-// time with -ldflags. It enables update checking together with [BuildSource] and
-// at least one [UpdateProvider]; without all three, no update check is performed.
+// time with -ldflags. A build that sets none reports the module version the Go
+// toolchain embedded in it, or "snapshot" when it carries none.
 func CurrentVersion(version string) Option {
 	return option(func(c *config) {
+		if version == "" {
+			return
+		}
 		c.buildVersion = version
 	})
 }

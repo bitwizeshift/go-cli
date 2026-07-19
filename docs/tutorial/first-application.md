@@ -39,7 +39,6 @@ Create `app.yaml`:
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bitwizeshift/go-cli/refs/heads/master/command.schema.json
 name: greeter
-version: 0.1.0
 summary: Greets people
 description: |
   greeter is a small demonstration application.

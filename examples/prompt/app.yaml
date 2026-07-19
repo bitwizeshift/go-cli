@@ -1,7 +1,6 @@
 # yaml-language-server: $schema=../../command.schema.json
 name: prompt-demo
 app-id: com.rodusek.prompt-demo
-version: 1.0.0
 summary: Showcases the go-cli prompt package
 description: |
   prompt-demo reads interactive input using the go-cli prompt package.

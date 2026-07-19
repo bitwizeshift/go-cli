@@ -58,6 +58,9 @@ type Options struct {
 	// Colour selects the colour policy applied to the wrapped output streams.
 	Colour ColourMode
 
+	// Version is the running build's version, reported by the root command.
+	Version string
+
 	// Stdout and Stderr are the base streams wrapped for styled output. A nil
 	// value uses [os.Stdout] or [os.Stderr] respectively.
 	Stdout io.Writer
@@ -86,6 +89,7 @@ func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 	maps.Copy(unbound, opts.Builders)
 	store := storage.NewAppStorage(app.resolveAppID())
 	cmd, cl := app.toCobraCommand(app.Name, unbound, store)
+	cmd.Version = opts.Version
 	if len(unbound) > 0 {
 		return nil, fmt.Errorf("%w: %s", ErrUnboundRunner, strings.Join(sortedKeys(unbound), ", "))
 	}
@@ -154,7 +158,6 @@ func (i *CommandInfo) toCobraCommand(path string, builders map[string]Builder, s
 		Short:         i.Summary,
 		Long:          i.Description,
 		Example:       strings.Join(i.Examples, "\n"),
-		Version:       i.Version,
 		Aliases:       i.Aliases,
 		Hidden:        i.Hidden,
 		Deprecated:    i.Deprecated,

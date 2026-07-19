@@ -15,56 +15,6 @@ func readerOf(info *debug.BuildInfo, ok bool) func() (*debug.BuildInfo, bool) {
 	return func() (*debug.BuildInfo, bool) { return info, ok }
 }
 
-func TestBuild_Version(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name string
-		info *debug.BuildInfo
-		ok   bool
-		want string
-	}{
-		{
-			name: "released version",
-			info: &debug.BuildInfo{Main: debug.Module{Version: "v1.2.3"}},
-			ok:   true,
-			want: "v1.2.3",
-		}, {
-			name: "devel version",
-			info: &debug.BuildInfo{Main: debug.Module{Version: "(devel)"}},
-			ok:   true,
-			want: "snapshot",
-		}, {
-			name: "empty version",
-			info: &debug.BuildInfo{Main: debug.Module{Version: ""}},
-			ok:   true,
-			want: "snapshot",
-		}, {
-			name: "build info unavailable",
-			info: nil,
-			ok:   false,
-			want: "snapshot",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Arrange
-			sut := &tmplfuncs.Build{ReadBuildInfo: readerOf(tc.info, tc.ok)}
-
-			// Act
-			version := sut.Version()
-
-			// Assert
-			if got, want := version, tc.want; !cmp.Equal(got, want) {
-				t.Errorf("Build.Version() = %q, want %q", got, want)
-			}
-		})
-	}
-}
-
 func TestBuild_GoVersion(t *testing.T) {
 	t.Parallel()
 

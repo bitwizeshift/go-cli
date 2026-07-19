@@ -73,10 +73,6 @@ The fields are:
   `--help` is provided to that command. Optional, but recommended. This maps to
   the `cobra.Command.Long` field.
 
-* `version`: The version of this command. Ideally this should only be specified
-  on the root, but is available on any command. Enables the `--version` flag.
-  This maps to the `cobra.Command.Version` field.
-
 * `hidden`: A boolean to indicate that the command is hidden, and won't appear
   in `--help` menus. Maps to the `cobra.Command.Hidden` field.
 
@@ -95,7 +91,6 @@ Excerpt from [this example](../../examples/simple/app.yaml):
 
 ```yaml
 name: example-cli
-version: 1.4.0
 summary: A fictional workspace manager that showcases the go-cli library
 description: |
   example-cli manages a local "vault" of items and the remotes they synchronize

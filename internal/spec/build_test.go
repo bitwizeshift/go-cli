@@ -316,6 +316,69 @@ func TestBuild_Colour(t *testing.T) {
 	}
 }
 
+func TestBuild_Version(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		version string
+		want    string
+	}{
+		{
+			name:    "ReportsConfiguredVersion",
+			version: "v1.2.3",
+			want:    "v1.2.3",
+		},
+		{
+			name:    "UnsetVersionReportsNone",
+			version: "",
+			want:    "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			opts := spec.Options{
+				Builders: toBuilders(map[string]spec.Runner{
+					"root": spectest.NoOpRunner(),
+				}),
+				Version: tc.version,
+			}
+
+			// Act
+			sut := build(t, rootWithChild, opts)
+
+			// Assert
+			if got, want := sut.Version, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("spec.Build(...).Version = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestBuild_VersionedRoot_LeavesSubcommandUnversioned(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	root := build(t, rootWithChild, spec.Options{
+		Builders: toBuilders(map[string]spec.Runner{
+			"root": spectest.NoOpRunner(),
+		}),
+		Version: "v1.2.3",
+	})
+
+	// Act
+	sut := subcommand(t, root, "child")
+
+	// Assert
+	if got, want := sut.Version, ""; !cmp.Equal(got, want) {
+		t.Errorf("child.Version = %q, want %q", got, want)
+	}
+}
+
 func TestBuild_DefaultGroup_LeavesChildUngrouped(t *testing.T) {
 	t.Parallel()
 

@@ -27,9 +27,10 @@ func BuildInfo() *debug.BuildInfo {
 	}
 }
 
-// Command returns the fixture command whose name appears in the version output.
+// Command returns the fixture command whose name and version appear in the
+// version output.
 func Command() *cobra.Command {
-	return &cobra.Command{Use: "widget"}
+	return &cobra.Command{Use: "widget", Version: "v1.2.3"}
 }
 
 // Render renders the version template for cmd, producing richtext styling tags.

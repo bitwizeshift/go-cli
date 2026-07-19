@@ -14,7 +14,6 @@
     "examples": true,
     "summary": true,
     "description": true,
-    "version": true,
     "hidden": true,
     "deprecated": true,
     "commands": true,
@@ -61,10 +60,6 @@
         "description": {
           "type": "string",
           "description": "Long-form description of the command."
-        },
-        "version": {
-          "type": "string",
-          "description": "Version reported for this command."
         },
         "hidden": {
           "type": "boolean",

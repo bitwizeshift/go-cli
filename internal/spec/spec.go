@@ -51,7 +51,6 @@ type CommandInfo struct {
 	Examples    []string `yaml:"examples,omitempty"`
 	Summary     string   `yaml:"summary,omitempty"`
 	Description string   `yaml:"description,omitempty"`
-	Version     string   `yaml:"version,omitempty"`
 	Hidden      bool     `yaml:"hidden,omitempty"`
 	Deprecated  string   `yaml:"deprecated,omitempty"`
 

@@ -58,6 +58,51 @@ func TestFromBytes_BuildsCommandTree(t *testing.T) {
 	}
 }
 
+func TestFromReader_Version(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []cli.Option
+		want    string
+	}{
+		{
+			name:    "DefaultsToSnapshot",
+			options: nil,
+			want:    "snapshot",
+		},
+		{
+			name:    "ReportsConfiguredVersion",
+			options: []cli.Option{cli.CurrentVersion("v1.2.3")},
+			want:    "v1.2.3",
+		},
+		{
+			name:    "EmptyVersionKeepsDefault",
+			options: []cli.Option{cli.CurrentVersion("")},
+			want:    "snapshot",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			reader := strings.NewReader(rootWithChild)
+			options := append(tc.options, cli.BindRunner("root", spectest.NoOpRunner()))
+
+			// Act
+			sut := cli.FromReader(reader, options...)
+
+			// Assert
+			version := sut.CobraCommand().Version
+			if got, want := version, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("cli.FromReader(...).CobraCommand().Version = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestFromBytes_InvalidSpecification_Panics(t *testing.T) {
 	t.Parallel()
 
