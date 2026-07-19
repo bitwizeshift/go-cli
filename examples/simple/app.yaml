@@ -74,9 +74,9 @@ commands:
       aliases: [rm]
       summary: Removes one or more items from the vault
       description: |
-        Permanently removes the named items. The confirmation prompt can be
-        skipped with --yes.
-      arity: '>=1'
+        Permanently removes the named items, or the items named by $SIMPLE_ITEMS
+        when none are given. The confirmation prompt can be skipped with --yes.
+      arity: '>=0'
 
   Configuration Commands:
     - id: config

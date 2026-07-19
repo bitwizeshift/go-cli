@@ -8,6 +8,7 @@ import (
 	"unsafe"
 
 	"github.com/bitwizeshift/go-cli/internal/completion"
+	"github.com/bitwizeshift/go-cli/internal/format/csvfield"
 	"github.com/spf13/pflag"
 )
 
@@ -59,7 +60,16 @@ type Positional struct {
 // Unmatched is a registered binding for every argument not claimed by a
 // [Positional].
 type Unmatched struct {
-	Set func(values []string) error
+	Type  string
+	Usage string
+	Set   func(values []string) error
+
+	EnvFallbacks  []string
+	FuncFallbacks []FallbackFunc
+
+	// Complete offers shell-completion candidates for every argument index no
+	// [Positional] claims, or is nil when the binding offers none.
+	Complete completion.Func
 }
 
 // New returns a newly constructed [CommandLine]. This is to enable creating
@@ -113,9 +123,14 @@ func PositionalCompletions(reg *CommandLine) map[int]completion.Func {
 	return result
 }
 
-// SetUnmatched records u as the unmatched-argument binding on reg, replacing any
-// previously registered binding.
+// SetUnmatched records u as the unmatched-argument binding on reg.
+//
+// It panics if reg already carries an unmatched-argument binding, since the
+// arguments a second binding would claim are already spoken for.
 func SetUnmatched(reg *CommandLine, u *Unmatched) {
+	if reg.unmatched != nil {
+		panic("arg: unmatched argument bound more than once")
+	}
 	reg.unmatched = u
 }
 
@@ -125,17 +140,33 @@ func GetUnmatched(reg *CommandLine) *Unmatched {
 	return reg.unmatched
 }
 
+// UnmatchedCompletion returns the completion function of the [Unmatched]
+// binding registered on reg, or nil if no binding was registered or it offers
+// no completion.
+func UnmatchedCompletion(reg *CommandLine) completion.Func {
+	if reg.unmatched == nil {
+		return nil
+	}
+	return reg.unmatched.Complete
+}
+
 // Bind assigns args to the positional and unmatched bindings registered on reg.
 // A [Positional] whose index falls outside args is skipped, leaving its
 // destination unchanged. Every argument not claimed by a [Positional] is passed,
 // in command-line order, to an [Unmatched] binding.
+//
+// A binding left without a value falls back to the first of its environment
+// variables that is set, then to the first of its fallback functions that
+// yields a value. An [Unmatched] binding's fallback value carries the whole set
+// as comma-separated fields, so it applies only when no argument went
+// unclaimed.
 //
 // It returns the first error reported by a binding.
 func Bind(ctx context.Context, reg *CommandLine, args []string) error {
 	claimed := make(map[int]struct{})
 	for _, p := range reg.positionals {
 		if p.Index < 0 || p.Index >= len(args) {
-			if err := setFallback(ctx, p); err != nil {
+			if _, err := setFallback(ctx, p.EnvFallbacks, p.FuncFallbacks, p.Set); err != nil {
 				return err
 			}
 			continue
@@ -148,6 +179,12 @@ func Bind(ctx context.Context, reg *CommandLine, args []string) error {
 	if reg.unmatched == nil {
 		return nil
 	}
+	return bindUnmatched(ctx, reg.unmatched, unclaimed(args, claimed))
+}
+
+// unclaimed returns the arguments whose index is absent from claimed, in
+// command-line order.
+func unclaimed(args []string, claimed map[int]struct{}) []string {
 	rest := make([]string, 0, len(args))
 	for i, arg := range args {
 		if _, ok := claimed[i]; ok {
@@ -155,22 +192,45 @@ func Bind(ctx context.Context, reg *CommandLine, args []string) error {
 		}
 		rest = append(rest, arg)
 	}
-	return reg.unmatched.Set(rest)
+	return rest
 }
 
-func setFallback(ctx context.Context, p *Positional) error {
-	visited, err := envFallback(p)
-	if visited || err != nil {
+// bindUnmatched assigns rest to u, sourcing a fallback set instead when no
+// argument went unclaimed.
+func bindUnmatched(ctx context.Context, u *Unmatched, rest []string) error {
+	if len(rest) == 0 {
+		visited, err := setFallback(ctx, u.EnvFallbacks, u.FuncFallbacks, u.setFields)
+		if visited || err != nil {
+			return err
+		}
+	}
+	return u.Set(rest)
+}
+
+// setFields assigns value to u as the comma-separated fields it holds.
+func (u *Unmatched) setFields(value string) error {
+	fields, err := csvfield.Split(value)
+	if err != nil {
 		return err
 	}
-	_, err = funcFallback(ctx, p)
-	return err
+	return u.Set(fields)
 }
 
-func envFallback(p *Positional) (visited bool, err error) {
-	for _, key := range p.EnvFallbacks {
+// setFallback assigns the first available fallback value to set, preferring an
+// environment variable over a fallback function. It reports whether a fallback
+// supplied a value.
+func setFallback(ctx context.Context, envs []string, funcs []FallbackFunc, set func(string) error) (visited bool, err error) {
+	visited, err = envFallback(envs, set)
+	if visited || err != nil {
+		return visited, err
+	}
+	return funcFallback(ctx, funcs, set)
+}
+
+func envFallback(envs []string, set func(string) error) (visited bool, err error) {
+	for _, key := range envs {
 		if value, ok := os.LookupEnv(key); ok && value != "" {
-			err = p.Set(value)
+			err = set(value)
 			visited = true
 			if err != nil {
 				err = fmt.Errorf("%w: $%v: %w", ErrSettingEnvFlag, key, err)
@@ -181,8 +241,8 @@ func envFallback(p *Positional) (visited bool, err error) {
 	return false, nil
 }
 
-func funcFallback(ctx context.Context, p *Positional) (visited bool, err error) {
-	for _, fn := range p.FuncFallbacks {
+func funcFallback(ctx context.Context, funcs []FallbackFunc, set func(string) error) (visited bool, err error) {
+	for _, fn := range funcs {
 		value, ferr := fn(ctx)
 		if ferr != nil {
 			return true, fmt.Errorf("%w: %w", ErrComputingFuncFlag, ferr)
@@ -190,7 +250,7 @@ func funcFallback(ctx context.Context, p *Positional) (visited bool, err error) 
 		if value == "" {
 			continue
 		}
-		err = p.Set(value)
+		err = set(value)
 		visited = true
 		if err != nil {
 			err = fmt.Errorf("%w: %w", ErrSettingFuncFlag, err)

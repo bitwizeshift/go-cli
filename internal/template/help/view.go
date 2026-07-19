@@ -22,13 +22,14 @@ type View struct {
 	Usage         string
 	Examples      []string
 	CommandGroups []CommandGroup
-	Positionals   []PositionalInfo
+	Arguments     []ArgumentInfo
 	FlagGroups    []FlagGroup
 	Hint          Hint
 }
 
-// PositionalInfo is a single positional-argument entry in a help listing.
-type PositionalInfo struct {
+// ArgumentInfo is a single argument entry in a help listing. Name is empty for
+// an unmatched-argument binding, which is identified by its type alone.
+type ArgumentInfo struct {
 	Name  string
 	Type  string
 	Usage string
@@ -89,7 +90,7 @@ func NewView(cmd *cobra.Command, cl *arg.CommandLine) View {
 		Usage:         usageLineOf(cmd),
 		Examples:      examplesOf(cmd),
 		CommandGroups: commandGroupsOf(cmd),
-		Positionals:   positionalsOf(cl),
+		Arguments:     argumentsOf(cl),
 		FlagGroups:    flagGroupsOf(cl),
 		Hint:          hintOf(cmd),
 	}
@@ -168,18 +169,26 @@ func visibleCommand(c *cobra.Command) bool {
 	return c.IsAvailableCommand() && !c.IsAdditionalHelpTopicCommand()
 }
 
-// positionalsOf returns the positional arguments registered on cl, in
-// registration order.
-func positionalsOf(cl *arg.CommandLine) []PositionalInfo {
-	var positionals []PositionalInfo
+// argumentsOf returns the arguments registered on cl: the positionals in
+// registration order, followed by the unmatched-argument binding when one is
+// registered. The unmatched entry is unnamed, reporting its element type
+// suffixed with "..." to mark that it claims every remaining argument.
+func argumentsOf(cl *arg.CommandLine) []ArgumentInfo {
+	var arguments []ArgumentInfo
 	for _, p := range argdef.Positionals((*argdef.CommandLine)(cl)) {
-		positionals = append(positionals, PositionalInfo{
+		arguments = append(arguments, ArgumentInfo{
 			Name:  p.Name,
 			Type:  p.Type,
 			Usage: p.Usage,
 		})
 	}
-	return positionals
+	if u := argdef.GetUnmatched((*argdef.CommandLine)(cl)); u != nil {
+		arguments = append(arguments, ArgumentInfo{
+			Type:  u.Type + "...",
+			Usage: u.Usage,
+		})
+	}
+	return arguments
 }
 
 // flagGroupsOf returns the visible flag groups of cl. Fully hidden groups

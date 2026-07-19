@@ -113,3 +113,23 @@ func AllPositionals(cl *arg.CommandLine) []*Positional {
 	}
 	return result
 }
+
+// Unmatched is a small wrapper around a registered unmatched-argument binding,
+// for property-testing purposes.
+type Unmatched struct {
+	Type  string
+	Usage string
+}
+
+// GetUnmatched returns the [Unmatched] binding registered in cl, or nil if cl
+// has none.
+func GetUnmatched(cl *arg.CommandLine) *Unmatched {
+	u := argdef.GetUnmatched((*argdef.CommandLine)(cl))
+	if u == nil {
+		return nil
+	}
+	return &Unmatched{
+		Type:  u.Type,
+		Usage: u.Usage,
+	}
+}

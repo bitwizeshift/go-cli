@@ -164,8 +164,9 @@ func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage
 		arg.Register(cl, builder)
 		annotation.ConfigureFlags(cmd)
 		completion.RegisterFlags(cmd)
-		cmd.ValidArgsFunction = completion.ForPositionals(
+		cmd.ValidArgsFunction = completion.ForArgs(
 			argdef.PositionalCompletions((*argdef.CommandLine)(cl)),
+			argdef.UnmatchedCompletion((*argdef.CommandLine)(cl)),
 		)
 		cmd.RunE = i.run(builder, store, cl)
 	} else {

@@ -78,19 +78,29 @@ func flagGrid(flags []FlagInfo, columns int) string {
 	return format.Grid(rows, columns, sectionIndent, gridGap, 0)
 }
 
-// positionalGrid renders positional arguments as an aligned grid, styling names
-// and their type arguments distinctly, matching the flag grid's layout.
-func positionalGrid(positionals []PositionalInfo, columns int) string {
-	rows := make([]format.Row, 0, len(positionals))
-	for _, p := range positionals {
+// argumentGrid renders arguments as an aligned grid, styling names and their
+// type arguments distinctly, matching the flag grid's layout. An unnamed
+// argument shows its type alone, occupying the column a name would.
+func argumentGrid(arguments []ArgumentInfo, columns int) string {
+	rows := make([]format.Row, 0, len(arguments))
+	for _, a := range arguments {
 		var s span
-		s.add(p.Name, "label")
-		if p.Type != "" {
-			s.add(" "+p.Type, "value")
+		s.add(a.Name, "label")
+		if a.Type != "" {
+			s.add(typeSeparator(a)+a.Type, "value")
 		}
-		rows = append(rows, s.row(p.Usage))
+		rows = append(rows, s.row(a.Usage))
 	}
 	return format.Grid(rows, columns, sectionIndent, gridGap, 0)
+}
+
+// typeSeparator returns the spacing between an argument's name and its type,
+// which an unnamed argument omits so its type starts the column.
+func typeSeparator(a ArgumentInfo) string {
+	if a.Name == "" {
+		return ""
+	}
+	return " "
 }
 
 // flagMarker renders the name column of a flag, aligning long-only flags beneath
@@ -125,8 +135,8 @@ func funcs(columns int, view View) template.FuncMap {
 		return commandGrid(commands, columns, commandWidth)
 	}
 	f["flagGrid"] = func(flags []FlagInfo) string { return flagGrid(flags, columns) }
-	f["positionalGrid"] = func(positionals []PositionalInfo) string {
-		return positionalGrid(positionals, columns)
+	f["argumentGrid"] = func(arguments []ArgumentInfo) string {
+		return argumentGrid(arguments, columns)
 	}
 	f["hint"] = func(path string) string { return hintLine(path, columns) }
 	return f

@@ -2,13 +2,13 @@ package arg
 
 import (
 	"encoding"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/bitwizeshift/go-cli/internal/format/csvfield"
 )
 
 // Unmarshaler is implemented by types that decode themselves from the raw bytes
@@ -166,7 +166,7 @@ func unmarshalInto(v reflect.Value, s string) error {
 		}
 		v.SetFloat(f)
 	case reflect.Slice:
-		parts, err := readAsCSV(s)
+		parts, err := csvfield.Split(s)
 		if err != nil {
 			return fmt.Errorf("unmarshal: %w", err)
 		}
@@ -183,13 +183,4 @@ func unmarshalInto(v reflect.Value, s string) error {
 		return fmt.Errorf("unmarshal: %w: %s", ErrUnsupportedType, v.Type())
 	}
 	return nil
-}
-
-func readAsCSV(val string) ([]string, error) {
-	if val == "" {
-		return []string{}, nil
-	}
-	stringReader := strings.NewReader(val)
-	csvReader := csv.NewReader(stringReader)
-	return csvReader.Read()
 }

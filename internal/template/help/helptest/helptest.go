@@ -146,14 +146,15 @@ example-cli sync origin v1.2.0 --force --timeout 1m`,
 	return cmd, registerArgs(cmd)
 }
 
-// registerArgs registers the sync command's positional arguments and its flags,
-// the latter across two named groups. It returns the argument registry so the
-// positional arguments can be rendered in help.
+// registerArgs registers the sync command's positional and unmatched arguments
+// and its flags, the latter across two named groups. It returns the argument
+// registry so the arguments can be rendered in help.
 func registerArgs(cmd *cobra.Command) *arg.CommandLine {
 	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 	var (
 		remoteRef string
 		ref       string
+		items     []string
 	)
 	cl.Add(
 		arg.Positional("remote", 0, &remoteRef,
@@ -161,6 +162,9 @@ func registerArgs(cmd *cobra.Command) *arg.CommandLine {
 		),
 		arg.Positional("ref", 1, &ref,
 			arg.Usage("reference within the remote to synchronize"),
+		),
+		arg.Unmatched(&items,
+			arg.Usage("items to synchronize, or all items when none are given"),
 		),
 	)
 	var (

@@ -31,12 +31,13 @@ func echoCompleter(toComplete string) ([]string, completion.Directive) {
 	return []string{toComplete + "-done"}, completion.NoFileComp
 }
 
-func TestForPositionals(t *testing.T) {
+func TestForArgs(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name       string
 		fns        map[int]completion.Func
+		unmatched  completion.Func
 		args       []string
 		toComplete string
 		want       offered
@@ -46,6 +47,7 @@ func TestForPositionals(t *testing.T) {
 			fns: map[int]completion.Func{
 				0: completerOf([]string{"alpha", "beta"}, completion.NoFileComp),
 			},
+			unmatched:  nil,
 			args:       nil,
 			toComplete: "",
 			want: offered{
@@ -59,6 +61,7 @@ func TestForPositionals(t *testing.T) {
 				0: completerOf([]string{"first"}, completion.NoFileComp),
 				1: completerOf([]string{"second"}, completion.NoFileComp),
 			},
+			unmatched:  nil,
 			args:       []string{"alpha"},
 			toComplete: "",
 			want: offered{
@@ -71,6 +74,7 @@ func TestForPositionals(t *testing.T) {
 			fns: map[int]completion.Func{
 				0: completerOf([]string{"first"}, completion.NoFileComp),
 			},
+			unmatched:  nil,
 			args:       []string{"alpha"},
 			toComplete: "",
 			want: offered{
@@ -83,6 +87,7 @@ func TestForPositionals(t *testing.T) {
 			fns: map[int]completion.Func{
 				2: completerOf([]string{"third"}, completion.NoFileComp),
 			},
+			unmatched:  nil,
 			args:       []string{"alpha", "beta"},
 			toComplete: "",
 			want: offered{
@@ -95,6 +100,7 @@ func TestForPositionals(t *testing.T) {
 			fns: map[int]completion.Func{
 				0: echoCompleter,
 			},
+			unmatched:  nil,
 			args:       nil,
 			toComplete: "pre",
 			want: offered{
@@ -107,6 +113,7 @@ func TestForPositionals(t *testing.T) {
 			fns: map[int]completion.Func{
 				0: completerOf(nil, completion.Default),
 			},
+			unmatched:  nil,
 			args:       nil,
 			toComplete: "",
 			want: offered{
@@ -119,6 +126,7 @@ func TestForPositionals(t *testing.T) {
 			fns: map[int]completion.Func{
 				0: completerOf([]string{"json"}, completion.FilterFileExt),
 			},
+			unmatched:  nil,
 			args:       nil,
 			toComplete: "",
 			want: offered{
@@ -131,11 +139,60 @@ func TestForPositionals(t *testing.T) {
 			fns: map[int]completion.Func{
 				0: completerOf(nil, completion.FilterDirs),
 			},
+			unmatched:  nil,
 			args:       nil,
 			toComplete: "",
 			want: offered{
 				Candidates: nil,
 				Directive:  cobra.ShellCompDirectiveFilterDirs,
+			},
+		},
+		{
+			name:       "UnregisteredIndexDefersToUnmatched",
+			fns:        map[int]completion.Func{},
+			unmatched:  completerOf([]string{"rest"}, completion.NoFileComp),
+			args:       []string{"alpha"},
+			toComplete: "",
+			want: offered{
+				Candidates: []string{"rest"},
+				Directive:  cobra.ShellCompDirectiveNoFileComp,
+			},
+		},
+		{
+			name: "PositionalWinsOverUnmatchedAtItsIndex",
+			fns: map[int]completion.Func{
+				0: completerOf([]string{"first"}, completion.NoFileComp),
+			},
+			unmatched:  completerOf([]string{"rest"}, completion.NoFileComp),
+			args:       nil,
+			toComplete: "",
+			want: offered{
+				Candidates: []string{"first"},
+				Directive:  cobra.ShellCompDirectiveNoFileComp,
+			},
+		},
+		{
+			name: "UnmatchedClaimsIndexBeyondPositionals",
+			fns: map[int]completion.Func{
+				0: completerOf([]string{"first"}, completion.NoFileComp),
+			},
+			unmatched:  completerOf([]string{"rest"}, completion.NoFileComp),
+			args:       []string{"alpha", "beta"},
+			toComplete: "",
+			want: offered{
+				Candidates: []string{"rest"},
+				Directive:  cobra.ShellCompDirectiveNoFileComp,
+			},
+		},
+		{
+			name:       "PassesToCompleteThroughToUnmatched",
+			fns:        nil,
+			unmatched:  echoCompleter,
+			args:       nil,
+			toComplete: "pre",
+			want: offered{
+				Candidates: []string{"pre-done"},
+				Directive:  cobra.ShellCompDirectiveNoFileComp,
 			},
 		},
 	}
@@ -145,7 +202,7 @@ func TestForPositionals(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := completion.ForPositionals(tc.fns)
+			sut := completion.ForArgs(tc.fns, tc.unmatched)
 
 			// Act
 			candidates, directive := sut(nil, tc.args, tc.toComplete)
@@ -156,35 +213,60 @@ func TestForPositionals(t *testing.T) {
 				Directive:  directive,
 			}
 			if got, want := offer, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-				t.Errorf("ForPositionals(...)(...) = %+v, want %+v\n%s", got, want, cmp.Diff(want, got, cmpopts.EquateEmpty()))
+				t.Errorf("ForArgs(...)(...) = %+v, want %+v\n%s", got, want, cmp.Diff(want, got, cmpopts.EquateEmpty()))
 			}
 		})
 	}
 }
 
-func TestForPositionals_NoCompleters_ReturnsNil(t *testing.T) {
+func TestForArgs_Nil(t *testing.T) {
 	t.Parallel()
 
-	// Arrange
-	fns := map[int]completion.Func{}
-
-	// Act
-	sut := completion.ForPositionals(fns)
-
-	// Assert
-	if got, want := sut == nil, true; !cmp.Equal(got, want) {
-		t.Errorf("ForPositionals(...) = nil %t, want %t", got, want)
+	testCases := []struct {
+		name      string
+		fns       map[int]completion.Func
+		unmatched completion.Func
+		want      bool
+	}{
+		{
+			name:      "NoCompleters",
+			fns:       map[int]completion.Func{},
+			unmatched: nil,
+			want:      true,
+		},
+		{
+			name:      "NilMap",
+			fns:       nil,
+			unmatched: nil,
+			want:      true,
+		},
+		{
+			name:      "UnmatchedOnly",
+			fns:       nil,
+			unmatched: completerOf([]string{"rest"}, completion.NoFileComp),
+			want:      false,
+		},
+		{
+			name: "PositionalsOnly",
+			fns: map[int]completion.Func{
+				0: completerOf([]string{"first"}, completion.NoFileComp),
+			},
+			unmatched: nil,
+			want:      false,
+		},
 	}
-}
 
-func TestForPositionals_NilMap_ReturnsNil(t *testing.T) {
-	t.Parallel()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	// Act
-	sut := completion.ForPositionals(nil)
+			// Act
+			sut := completion.ForArgs(tc.fns, tc.unmatched)
 
-	// Assert
-	if got, want := sut == nil, true; !cmp.Equal(got, want) {
-		t.Errorf("ForPositionals(...) = nil %t, want %t", got, want)
+			// Assert
+			if got, want := sut == nil, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("ForArgs(...) = nil %t, want %t", got, want)
+			}
+		})
 	}
 }

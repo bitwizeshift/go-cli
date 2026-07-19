@@ -176,27 +176,6 @@ func TestPositional_Metadata(t *testing.T) {
 	}
 }
 
-func TestUnmatched_AssignsValues(t *testing.T) {
-	t.Parallel()
-
-	// Arrange
-	cl := argtest.NewCommandLine()
-	var rest []string
-	addUnmatched(cl, &rest)
-	unmatched := argdef.GetUnmatched((*argdef.CommandLine)(cl))
-
-	// Act
-	err := unmatched.Set([]string{"a", "b"})
-
-	// Assert
-	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
-		t.Fatalf("Unmatched.Set(...) = %v, want %v", got, want)
-	}
-	if got, want := rest, []string{"a", "b"}; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
-		t.Errorf("Unmatched.Set(...) values = %v, want %v", got, want)
-	}
-}
-
 func TestPositional_CompletionOptions(t *testing.T) {
 	t.Parallel()
 

@@ -16,6 +16,8 @@ func TestNewView(t *testing.T) {
 	t.Parallel()
 
 	positionalCmd, positionalCL := commandWithPositionals()
+	unmatchedCmd, unmatchedCL := commandWithUnmatched()
+	unmatchedOnlyCmd, unmatchedOnlyCL := commandWithUnmatchedOnly()
 
 	testCases := []struct {
 		name    string
@@ -104,9 +106,34 @@ func TestNewView(t *testing.T) {
 				Name:        "cp",
 				Description: "cp",
 				Usage:       "cp <src> <dst> [flags]",
-				Positionals: []help.PositionalInfo{
+				Arguments: []help.ArgumentInfo{
 					{Name: "src", Type: "string", Usage: "source path"},
 					{Name: "dst", Type: "string", Usage: "destination path"},
+				},
+			},
+		}, {
+			name:    "UnmatchedListedAfterPositionals",
+			command: unmatchedCmd,
+			cl:      unmatchedCL,
+			want: help.View{
+				Name:        "rm",
+				Description: "rm",
+				Usage:       "rm <src> [flags]",
+				Arguments: []help.ArgumentInfo{
+					{Name: "src", Type: "string", Usage: "source path"},
+					{Type: "string...", Usage: "additional paths"},
+				},
+			},
+		}, {
+			name:    "UnmatchedAloneReportsElementType",
+			command: unmatchedOnlyCmd,
+			cl:      unmatchedOnlyCL,
+			want: help.View{
+				Name:        "sum",
+				Description: "sum",
+				Usage:       "sum [flags]",
+				Arguments: []help.ArgumentInfo{
+					{Type: "int...", Usage: "values to sum"},
 				},
 			},
 		},
@@ -186,6 +213,26 @@ func commandWithPositionals() (*cobra.Command, *arg.CommandLine) {
 		arg.Positional("src", 0, &src, arg.Usage("source path")),
 		arg.Positional("dst", 1, &dst, arg.Usage("destination path")),
 	)
+	return cmd, cl
+}
+
+func commandWithUnmatched() (*cobra.Command, *arg.CommandLine) {
+	cmd := &cobra.Command{Use: "rm <src>", Short: "rm", Run: noop}
+	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
+	var src string
+	var rest []string
+	cl.Add(
+		arg.Positional("src", 0, &src, arg.Usage("source path")),
+		arg.Unmatched(&rest, arg.Usage("additional paths")),
+	)
+	return cmd, cl
+}
+
+func commandWithUnmatchedOnly() (*cobra.Command, *arg.CommandLine) {
+	cmd := &cobra.Command{Use: "sum", Short: "sum", Run: noop}
+	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
+	var values []int
+	cl.Add(arg.Unmatched(&values, arg.Usage("values to sum")))
 	return cmd, cl
 }
 

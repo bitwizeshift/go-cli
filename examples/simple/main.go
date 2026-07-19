@@ -166,7 +166,10 @@ func (ilr *itemListRunner) Run(context.Context) error {
 
 // itemRemoveRunner backs "item remove" and demonstrates a single ungrouped
 // confirmation flag alongside [arg.Unmatched], which collects every remaining
-// argument so the command can remove several items at once.
+// argument so the command can remove several items at once. The unmatched
+// binding carries the same options a flag or positional does, so it documents
+// itself in help, offers completion, and falls back to $SIMPLE_ITEMS when no
+// item is named.
 type itemRemoveRunner struct {
 	names []string
 	yes   bool
@@ -174,7 +177,12 @@ type itemRemoveRunner struct {
 
 func (irr *itemRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
 	cl.Add(
-		arg.Unmatched(&irr.names),
+		arg.Unmatched(&irr.names,
+			arg.Usage("names of the items to remove"),
+			arg.Type("name"),
+			arg.CompleteFrom("alpha", "beta", "gamma"),
+			arg.DefaultFromEnv("SIMPLE_ITEMS"),
+		),
 		arg.Flag("yes", &irr.yes,
 			arg.Shorthand("y"),
 			arg.Usage("skip the confirmation prompt"),

@@ -158,6 +158,66 @@ func TestAllPositionals(t *testing.T) {
 	}
 }
 
+func TestGetUnmatched(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		options []arg.Option
+		want    *argtest.Unmatched
+	}{
+		{
+			name:    "ReportsElementTypeAndUsage",
+			options: []arg.Option{arg.Usage("remaining paths")},
+			want: &argtest.Unmatched{
+				Type:  "string",
+				Usage: "remaining paths",
+			},
+		}, {
+			name:    "ReportsOverriddenType",
+			options: []arg.Option{arg.Type("path"), arg.Usage("remaining paths")},
+			want: &argtest.Unmatched{
+				Type:  "path",
+				Usage: "remaining paths",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			cl := argtest.NewCommandLine()
+			var rest []string
+			cl.Add(arg.Unmatched(&rest, tc.options...))
+
+			// Act
+			unmatched := argtest.GetUnmatched(cl)
+
+			// Assert
+			if got, want := unmatched, tc.want; !cmp.Equal(got, want) {
+				t.Errorf("GetUnmatched(...) = %v, want %v\n%s", got, want, cmp.Diff(want, got))
+			}
+		})
+	}
+}
+
+func TestGetUnmatched_Unbound_ReportsNone(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	cl := argtest.NewCommandLine()
+
+	// Act
+	unmatched := argtest.GetUnmatched(cl)
+
+	// Assert
+	if got, want := unmatched, (*argtest.Unmatched)(nil); !cmp.Equal(got, want) {
+		t.Errorf("GetUnmatched(...) = %v, want %v", got, want)
+	}
+}
+
 func TestParse_BindsPositionals(t *testing.T) {
 	t.Parallel()
 
