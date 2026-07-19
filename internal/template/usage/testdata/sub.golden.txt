@@ -1,6 +1,6 @@
 sub
 
 USAGE
-  app sub [flags]
+  app sub
 
 Run app sub --help for more details.

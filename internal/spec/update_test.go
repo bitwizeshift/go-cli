@@ -24,8 +24,7 @@ func TestBuild_UpdateSourceConfig_ConfiguresProvider(t *testing.T) {
 	// Arrange
 	provider := &update.GitHubProvider{}
 	input := strings.NewReader(yamlDoc(
-		"id: root",
-		"use: root",
+		"name: root",
 		"update-sources:",
 		"  github:",
 		"    owner: bitwizeshift",
@@ -57,8 +56,7 @@ func TestBuild_UndecodableUpdateSource_ReturnsError(t *testing.T) {
 
 	// Arrange
 	input := strings.NewReader(yamlDoc(
-		"id: root",
-		"use: root",
+		"name: root",
 		"update-sources:",
 		"  github: not-a-mapping",
 	))
@@ -105,8 +103,7 @@ func TestBuild_UpdateAdvisory(t *testing.T) {
 		{
 			name: "Available",
 			lines: []string{
-				"id: root",
-				"use: root",
+				"name: root",
 			},
 			update: spec.UpdateOptions{
 				Version:   currentVersion,
@@ -118,8 +115,7 @@ func TestBuild_UpdateAdvisory(t *testing.T) {
 		}, {
 			name: "ExplicitAppID",
 			lines: []string{
-				"id: root",
-				"use: root",
+				"name: root",
 				"app-id: myapp",
 			},
 			update: spec.UpdateOptions{
@@ -131,7 +127,7 @@ func TestBuild_UpdateAdvisory(t *testing.T) {
 		}, {
 			name: "DerivedAppID",
 			lines: []string{
-				"id: root",
+				"name: root",
 			},
 			update: spec.UpdateOptions{
 				Version:   currentVersion,
@@ -142,8 +138,7 @@ func TestBuild_UpdateAdvisory(t *testing.T) {
 		}, {
 			name: "UpToDate",
 			lines: []string{
-				"id: root",
-				"use: root",
+				"name: root",
 			},
 			update: spec.UpdateOptions{
 				Version:   latestVersion,
@@ -154,8 +149,7 @@ func TestBuild_UpdateAdvisory(t *testing.T) {
 		}, {
 			name: "ProviderError",
 			lines: []string{
-				"id: root",
-				"use: root",
+				"name: root",
 			},
 			update: spec.UpdateOptions{
 				Version:   currentVersion,
@@ -166,8 +160,7 @@ func TestBuild_UpdateAdvisory(t *testing.T) {
 		}, {
 			name: "Disabled",
 			lines: []string{
-				"id: root",
-				"use: root",
+				"name: root",
 			},
 			update:       spec.UpdateOptions{},
 			wantAdvisory: false,

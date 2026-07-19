@@ -4,16 +4,16 @@ Synchronize the vault with a remote registry, resolving and caching each
 referenced item and, unless told otherwise, its transitive dependencies.
 
 USAGE
-  example-cli sync <remote> <ref> [flags]
+  example-cli sync <remote> <ref> [items...] [flags]
 
 EXAMPLES
   example-cli sync origin main
   example-cli sync origin v1.2.0 --force --timeout 1m
 
 ARGUMENTS
-  remote string   name of the remote to synchronize with
-  ref string      reference within the remote to synchronize
-  [string...]     items to synchronize, or all items when none are given
+  remote       name of the remote to synchronize with
+  ref          reference within the remote to synchronize
+  [items...]   items to synchronize, or all items when none are given
 
 CONNECTION FLAGS
   -T, --auth-token string   auth token used to authenticate with the remote

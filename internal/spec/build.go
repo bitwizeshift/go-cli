@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/bitwizeshift/go-cli/arg"
-	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/bitwizeshift/go-cli/internal/arity"
 	"github.com/bitwizeshift/go-cli/internal/completion"
@@ -23,6 +22,15 @@ import (
 func init() {
 	cobra.AddTemplateFuncs(template.DefaultRenderEngine.VersionFuncs())
 }
+
+const (
+	// idSeparator delimits the names composing a command's id path.
+	idSeparator = "."
+
+	// commandOperand names the subcommand that must be chosen to reach a runner,
+	// as shown in the usage of a command that has subcommands.
+	commandOperand = "<command>"
+)
 
 // ColourMode selects how colour is decided for a command tree's output streams.
 type ColourMode int
@@ -38,7 +46,9 @@ const (
 
 // Options configures how a command tree is built and how its output is styled.
 type Options struct {
-	// Builders binds each command id to the runner that executes it.
+	// Builders binds each command id path to the runner that executes it. An id
+	// path is the dot-delimited names of a command and its ancestors, so the
+	// command invoked as "app remote add" is bound as "app.remote.add".
 	Builders map[string]Builder
 
 	// Theme resolves the styling tags emitted by the output templates. A nil
@@ -60,7 +70,7 @@ type Options struct {
 
 // Build decodes an [Application] specification from r and constructs the
 // corresponding [github.com/spf13/cobra.Command] tree, binding each runner to
-// the command whose id matches its key. Every command writes styled output
+// the command whose id path matches its key. Every command writes styled output
 // through a [richtext.Writer] wrapping the configured streams; the writers must
 // be flushed by [Execute] once the tree has run.
 //
@@ -75,11 +85,11 @@ func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 	unbound := make(map[string]Builder, len(opts.Builders))
 	maps.Copy(unbound, opts.Builders)
 	store := storage.NewAppStorage(app.resolveAppID())
-	cmd, cl := app.toCobraCommand(unbound, store)
+	cmd, cl := app.toCobraCommand(app.Name, unbound, store)
 	if len(unbound) > 0 {
 		return nil, fmt.Errorf("%w: %s", ErrUnboundRunner, strings.Join(sortedKeys(unbound), ", "))
 	}
-	annotation.AddIssueURL(cmd, app.IssueURL)
+	argdef.AddIssueURL(cmd, app.IssueURL)
 	checker, err := opts.Update.checker(&app, store.Cache)
 	if err != nil {
 		return nil, err
@@ -134,13 +144,13 @@ func sortedKeys(builders map[string]Builder) []string {
 }
 
 // toCobraCommand converts the command info into a [github.com/spf13/cobra.Command],
-// removing each bound runner from runners as it is consumed. store is shared by
-// every command so a bound runner can reach the application's storage roots. It
-// returns the command alongside its argument cl, which is nil when no
-// runner is bound.
-func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage.AppStorage) (*cobra.Command, *arg.CommandLine) {
+// removing each bound runner from runners as it is consumed. path is the
+// dot-delimited id path identifying this command, and is the key a runner is
+// bound under. store is shared by every command so a bound runner can reach the
+// application's storage roots. It returns the command alongside its argument cl,
+// which is nil when no runner is bound.
+func (i *CommandInfo) toCobraCommand(path string, builders map[string]Builder, store *storage.AppStorage) (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{
-		Use:           i.Use,
 		Short:         i.Summary,
 		Long:          i.Description,
 		Example:       strings.Join(i.Examples, "\n"),
@@ -158,13 +168,13 @@ func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage
 		SuggestionsMinimumDistance: 1,
 	}
 	var cl *arg.CommandLine
-	if builder := builders[i.ID]; builder != nil {
-		delete(builders, i.ID)
+	if builder := builders[path]; builder != nil {
+		delete(builders, path)
 		cl = (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 		arg.Register(cl, builder)
 		argdef.VerifyPositionals((*argdef.CommandLine)(cl))
 		cmd.Args = positionalArgs(argdef.Arity((*argdef.CommandLine)(cl)))
-		annotation.ConfigureFlags(cmd)
+		argdef.ConfigureFlags(cmd)
 		completion.RegisterFlags(cmd)
 		cmd.ValidArgsFunction = completion.ForArgs(
 			argdef.PositionalCompletions((*argdef.CommandLine)(cl)),
@@ -180,9 +190,28 @@ func (i *CommandInfo) toCobraCommand(builders map[string]Builder, store *storage
 	cmd.SetVersionTemplate(template.DefaultRenderEngine.VersionTemplate())
 
 	for _, group := range i.Commands {
-		i.addGroup(cmd, group, builders, store)
+		i.addGroup(cmd, path, group, builders, store)
 	}
+	cmd.Use = i.usage(cmd, cl)
 	return cmd, cl
+}
+
+// usage returns the synopsis cobra displays for cmd: the command's name
+// followed by the arguments registered on cl. A command with subcommands names
+// one as an operand, since a subcommand must be chosen to reach a runner.
+func (i *CommandInfo) usage(cmd *cobra.Command, cl *arg.CommandLine) string {
+	if cl == nil {
+		cl = (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
+	}
+	var operands []string
+	if cmd.HasAvailableSubCommands() {
+		operands = append(operands, commandOperand)
+	}
+	usage := argdef.Usage((*argdef.CommandLine)(cl), operands...)
+	if usage == "" {
+		return i.Name
+	}
+	return i.Name + " " + usage
 }
 
 // positionalArgs adapts a permitted argument count into cobra's
@@ -200,9 +229,10 @@ func (*CommandInfo) showHelp(cmd *cobra.Command, _ []string) error {
 	return cmd.Help()
 }
 
-// addGroup adds the commands of group to cmd. A group named [DefaultGroup] is
-// left ungrouped; any other group is registered as a titled cobra group.
-func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, builders map[string]Builder, store *storage.AppStorage) {
+// addGroup adds the commands of group to cmd, each identified by its name
+// appended to path. A group named [DefaultGroup] is left ungrouped; any other
+// group is registered as a titled cobra group.
+func (i *CommandInfo) addGroup(cmd *cobra.Command, path string, group GroupCommandInfo, builders map[string]Builder, store *storage.AppStorage) {
 	groupID := ""
 	if group.Name != DefaultGroup {
 		groupID = strings.ReplaceAll(group.Name, " ", "-")
@@ -212,7 +242,7 @@ func (i *CommandInfo) addGroup(cmd *cobra.Command, group GroupCommandInfo, build
 		})
 	}
 	for _, c := range group.Commands {
-		command, _ := c.toCobraCommand(builders, store)
+		command, _ := c.toCobraCommand(path+idSeparator+c.Name, builders, store)
 		command.GroupID = groupID
 		cmd.AddCommand(command)
 	}

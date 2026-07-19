@@ -16,12 +16,10 @@ import (
 )
 
 const rootWithChild = `
-id: root
-use: root
+name: root
 commands:
   default:
-    - id: child
-      use: child
+    - name: child
 `
 
 func TestFromReader_BuildsCommandTree(t *testing.T) {
@@ -34,7 +32,7 @@ func TestFromReader_BuildsCommandTree(t *testing.T) {
 	sut := cli.FromReader(reader, cli.BindRunner("root", spectest.NoOpRunner()))
 
 	// Assert
-	if got, want := sut.CobraCommand().Use, "root"; got != want {
+	if got, want := sut.CobraCommand().Use, "root <command>"; got != want {
 		t.Errorf("cli.FromReader(...).CobraCommand().Use = %q, want %q", got, want)
 	}
 	if got, want := childNames(sut), []string{"child"}; !cmp.Equal(got, want) {
@@ -52,7 +50,7 @@ func TestFromBytes_BuildsCommandTree(t *testing.T) {
 	sut := cli.FromBytes(data, cli.BindRunner("root", spectest.NoOpRunner()))
 
 	// Assert
-	if got, want := sut.CobraCommand().Use, "root"; got != want {
+	if got, want := sut.CobraCommand().Use, "root <command>"; got != want {
 		t.Errorf("cli.FromBytes(...).CobraCommand().Use = %q, want %q", got, want)
 	}
 	if got, want := childNames(sut), []string{"child"}; !cmp.Equal(got, want) {
@@ -71,18 +69,18 @@ func TestFromBytes_InvalidSpecification_Panics(t *testing.T) {
 	}{
 		{
 			name:         "invalid yaml",
-			input:        "use: root\ncommands: [unclosed",
+			input:        "name: root\ncommands: [unclosed",
 			wantContains: "cli:",
 		},
 		{
 			name:         "unbound runner",
-			input:        "id: root\nuse: root\n",
+			input:        "name: root\n",
 			options:      []cli.Option{cli.BindRunner("ghost", spectest.NoOpRunner())},
 			wantContains: "no command",
 		},
 		{
 			name:         "duplicate binding",
-			input:        "id: root\nuse: root\n",
+			input:        "name: root\n",
 			options:      []cli.Option{cli.BindRunner("root", spectest.NoOpRunner()), cli.BindRunner("root", spectest.NoOpRunner())},
 			wantContains: "duplicate",
 		},
@@ -138,7 +136,7 @@ func TestFromReader_StyleOptions_Build(t *testing.T) {
 			options := append(tc.options, cli.BindRunner("root", spectest.NoOpRunner()))
 
 			// Act
-			sut := cli.FromBytes([]byte("id: root\nuse: root\n"), options...)
+			sut := cli.FromBytes([]byte("name: root\n"), options...)
 
 			// Assert
 			if got, want := sut.CobraCommand().Use, "root"; !cmp.Equal(got, want) {
@@ -175,7 +173,7 @@ func TestFromReader_ConflictingColourOptions_Panics(t *testing.T) {
 
 			// Act
 			recovered := recoverPanic(func() {
-				cli.FromBytes([]byte("id: root\nuse: root\n"), tc.options...)
+				cli.FromBytes([]byte("name: root\n"), tc.options...)
 			})
 
 			// Assert
@@ -211,7 +209,7 @@ func TestFromReader_InvalidSizeOptions_Panics(t *testing.T) {
 
 			// Act
 			recovered := recoverPanic(func() {
-				cli.FromBytes([]byte("id: root\nuse: root\n"), tc.options...)
+				cli.FromBytes([]byte("name: root\n"), tc.options...)
 			})
 
 			// Assert
@@ -255,7 +253,7 @@ func TestCLI_Run(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := cli.FromBytes([]byte("id: root\nuse: root\n"), cli.BindRunner("root", tc.runner))
+			sut := cli.FromBytes([]byte("name: root\n"), cli.BindRunner("root", tc.runner))
 			var stderr strings.Builder
 			sut.CobraCommand().SetOut(&stderr)
 			sut.CobraCommand().SetErr(&stderr)
@@ -329,7 +327,7 @@ func TestExitClassifier(t *testing.T) {
 
 			// Arrange
 			options := append(tc.options, cli.BindRunner("root", spectest.Err(tc.err)))
-			sut := cli.FromBytes([]byte("id: root\nuse: root\n"), options...)
+			sut := cli.FromBytes([]byte("name: root\n"), options...)
 			var stderr strings.Builder
 			sut.CobraCommand().SetOut(&stderr)
 			sut.CobraCommand().SetErr(&stderr)
@@ -351,7 +349,7 @@ func TestExitClassifier_NilClassifier_Panics(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	data := []byte("id: root\nuse: root\n")
+	data := []byte("name: root\n")
 
 	// Act
 	recovered := recoverPanic(func() {

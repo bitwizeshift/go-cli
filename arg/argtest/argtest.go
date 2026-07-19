@@ -117,6 +117,7 @@ func AllPositionals(cl *arg.CommandLine) []*Positional {
 // Unmatched is a small wrapper around a registered unmatched-argument binding,
 // for property-testing purposes.
 type Unmatched struct {
+	Name  string
 	Type  string
 	Usage string
 }
@@ -129,6 +130,7 @@ func GetUnmatched(cl *arg.CommandLine) *Unmatched {
 		return nil
 	}
 	return &Unmatched{
+		Name:  u.Name,
 		Type:  u.Type,
 		Usage: u.Usage,
 	}

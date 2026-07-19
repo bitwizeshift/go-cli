@@ -81,7 +81,7 @@ func TestUnmatched_Set(t *testing.T) {
 			// Arrange
 			cl := argtest.NewCommandLine()
 			var dst []string
-			addUnmatched(cl, &dst, tc.options...)
+			addUnmatched(cl, "rest", &dst, tc.options...)
 			unmatched := unmatchedOf(cl)
 
 			// Act
@@ -104,7 +104,7 @@ func TestUnmatched_SetDecodesTypedValues(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst []int
-	addUnmatched(cl, &dst)
+	addUnmatched(cl, "rest", &dst)
 	unmatched := unmatchedOf(cl)
 
 	// Act
@@ -125,7 +125,7 @@ func TestUnmatched_SetLeavesDestinationOnDecodeError(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	dst := []int{7}
-	addUnmatched(cl, &dst)
+	addUnmatched(cl, "rest", &dst)
 	unmatched := unmatchedOf(cl)
 
 	// Act
@@ -146,7 +146,7 @@ func TestUnmatched_SetInvokesCallbackPerValue(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst, seen []string
-	addUnmatched(cl, &dst, arg.Callback(func(s string) { seen = append(seen, s) }))
+	addUnmatched(cl, "rest", &dst, arg.Callback(func(s string) { seen = append(seen, s) }))
 	unmatched := unmatchedOf(cl)
 
 	// Act
@@ -167,7 +167,7 @@ func TestUnmatched_SetCallbackError(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst []string
-	addUnmatched(cl, &dst, arg.Callback(func(string) error { return errDecode }))
+	addUnmatched(cl, "rest", &dst, arg.Callback(func(string) error { return errDecode }))
 	unmatched := unmatchedOf(cl)
 
 	// Act
@@ -191,6 +191,7 @@ func TestUnmatched_Metadata(t *testing.T) {
 			name:    "ReportsElementTypeAndUsage",
 			options: []arg.Option{arg.Usage("the rest")},
 			want: &argtest.Unmatched{
+				Name:  "rest",
 				Type:  "string",
 				Usage: "the rest",
 			},
@@ -198,6 +199,7 @@ func TestUnmatched_Metadata(t *testing.T) {
 			name:    "TypeOverridesReportedName",
 			options: []arg.Option{arg.Type("path"), arg.Usage("paths to read")},
 			want: &argtest.Unmatched{
+				Name:  "rest",
 				Type:  "path",
 				Usage: "paths to read",
 			},
@@ -205,6 +207,7 @@ func TestUnmatched_Metadata(t *testing.T) {
 			name:    "NoOptionsReportsBareType",
 			options: nil,
 			want: &argtest.Unmatched{
+				Name:  "rest",
 				Type:  "string",
 				Usage: "",
 			},
@@ -218,7 +221,7 @@ func TestUnmatched_Metadata(t *testing.T) {
 			// Arrange
 			cl := argtest.NewCommandLine()
 			var dst []string
-			addUnmatched(cl, &dst, tc.options...)
+			addUnmatched(cl, "rest", &dst, tc.options...)
 
 			// Act
 			unmatched := argtest.GetUnmatched(cl)
@@ -237,13 +240,13 @@ func TestUnmatched_MetadataReportsTypedElement(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst []int
-	addUnmatched(cl, &dst)
+	addUnmatched(cl, "rest", &dst)
 
 	// Act
 	unmatched := argtest.GetUnmatched(cl)
 
 	// Assert
-	want := &argtest.Unmatched{Type: "int", Usage: ""}
+	want := &argtest.Unmatched{Name: "rest", Type: "int", Usage: ""}
 	if got, want := unmatched, want; !cmp.Equal(got, want) {
 		t.Errorf("GetUnmatched(...) = %+v, want %+v", got, want)
 	}
@@ -270,10 +273,10 @@ func TestUnmatched_BoundTwice_Panics(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var first, second []string
-	cl.Add(arg.Unmatched(&first))
+	cl.Add(arg.Unmatched("rest", &first))
 
 	// Act & Assert
-	requirePanic(t, func() { cl.Add(arg.Unmatched(&second)) })
+	requirePanic(t, func() { cl.Add(arg.Unmatched("rest", &second)) })
 }
 
 func TestUnmatched_CompletionOptions(t *testing.T) {
@@ -327,7 +330,7 @@ func TestUnmatched_CompletionOptions(t *testing.T) {
 			// Arrange
 			cl := argtest.NewCommandLine()
 			var dst []string
-			addUnmatched(cl, &dst, tc.option)
+			addUnmatched(cl, "rest", &dst, tc.option)
 
 			// Act
 			offer := unmatchedCompletionOf(t, cl, tc.toComplete)
@@ -346,7 +349,7 @@ func TestUnmatched_NoCompletionOption_RegistersNone(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst []string
-	addUnmatched(cl, &dst)
+	addUnmatched(cl, "rest", &dst)
 
 	// Act
 	fn := argdef.UnmatchedCompletion((*argdef.CommandLine)(cl))
@@ -441,7 +444,7 @@ func TestUnmatched_Fallbacks(t *testing.T) {
 			}
 			cl := argtest.NewCommandLine()
 			var dst []string
-			cl.Add(arg.Unmatched(&dst, tc.options...))
+			cl.Add(arg.Unmatched("rest", &dst, tc.options...))
 			ctx := context.Background()
 
 			// Act
@@ -464,7 +467,7 @@ func TestUnmatched_FallbackDecodesTypedValues(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst []int
-	cl.Add(arg.Unmatched(&dst, arg.DefaultFromFunc(constantDefault("1,2,3"))))
+	cl.Add(arg.Unmatched("rest", &dst, arg.DefaultFromFunc(constantDefault("1,2,3"))))
 	ctx := context.Background()
 
 	// Act
@@ -485,7 +488,7 @@ func TestUnmatched_FallbackDecodeErrorIsWrapped(t *testing.T) {
 	// Arrange
 	cl := argtest.NewCommandLine()
 	var dst []string
-	cl.Add(arg.Unmatched(&dst,
+	cl.Add(arg.Unmatched("rest", &dst,
 		arg.UnmarshalWith(failString),
 		arg.DefaultFromFunc(constantDefault("x")),
 	))
@@ -508,7 +511,7 @@ func TestUnmatched_FallbackEnvDecodeErrorIsWrapped(t *testing.T) {
 	t.Setenv("UNMATCHED_BAD", "x")
 	cl := argtest.NewCommandLine()
 	var dst []string
-	cl.Add(arg.Unmatched(&dst,
+	cl.Add(arg.Unmatched("rest", &dst,
 		arg.UnmarshalWith(failString),
 		arg.DefaultFromEnv("UNMATCHED_BAD"),
 	))
@@ -535,7 +538,7 @@ func TestUnmatched_ClaimsOnlyArgsPositionalsLeave(t *testing.T) {
 	var rest []string
 	cl.Add(
 		arg.Positional("first", 0, &first),
-		arg.Unmatched(&rest),
+		arg.Unmatched("rest", &rest),
 	)
 	ctx := context.Background()
 
@@ -580,7 +583,7 @@ func TestUnmatched_Required(t *testing.T) {
 			// Arrange
 			cl := argtest.NewCommandLine()
 			var rest []string
-			cl.Add(arg.Unmatched(&rest, tc.options...))
+			cl.Add(arg.Unmatched("rest", &rest, tc.options...))
 
 			// Act
 			unmatched := unmatchedOf(cl)

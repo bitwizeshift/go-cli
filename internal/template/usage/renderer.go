@@ -29,17 +29,13 @@ func newView(cmd *cobra.Command) view {
 	}
 }
 
-// usageLineOf returns the usage line for cmd, always terminated with a "[flags]"
-// placeholder.
+// usageLineOf returns the usage line for cmd, qualified by the path of the
+// command it is reached through.
 func usageLineOf(cmd *cobra.Command) string {
-	use := cmd.Use
 	if cmd.HasParent() {
-		use = cmd.Parent().CommandPath() + " " + cmd.Use
+		return cmd.Parent().CommandPath() + " " + cmd.Use
 	}
-	if !strings.Contains(use, "[flags]") {
-		use += " [flags]"
-	}
-	return use
+	return cmd.Use
 }
 
 // Renderer writes the short usage advisory for a [cobra.Command]. The output

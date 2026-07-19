@@ -1,6 +1,5 @@
 # yaml-language-server: $schema=../../command.schema.json
-id: root
-use: example-cli <command>
+name: example-cli
 app-id: com.rodusek.example-cli
 version: 1.4.0
 summary: A fictional workspace manager that showcases the go-cli library
@@ -20,8 +19,7 @@ issue-url: https://github.com/bitwizeshift/go-cli/issues
 
 commands:
   default:
-    - id: init
-      use: init [--path <dir>] [--force]
+    - name: init
       summary: Initializes a new vault
       description: |
         Creates a new, empty vault in the target directory.
@@ -29,15 +27,13 @@ commands:
         An existing vault is left untouched unless --force is given, in which
         case it is recreated from scratch and its contents are discarded.
 
-    - id: status
-      use: status
+    - name: status
       summary: Reports the state of the current vault
       description: |
         Summarizes whether a vault is initialized, how many items it holds, and
         which remotes are configured.
 
-    - id: panic
-      use: panic
+    - name: panic
       summary: Deliberately crashes to demonstrate panic handling
       description: |
         Triggers a runtime panic so you can see how the library renders a crash
@@ -45,8 +41,7 @@ commands:
       hidden: true
 
   Item Commands:
-    - id: item-add
-      use: add <name>
+    - name: add
       aliases: [new]
       summary: Adds an item to the vault
       description: |
@@ -55,8 +50,7 @@ commands:
         Items may be tagged and prioritized. A pinned item is always listed
         first, so it cannot also carry a numeric priority.
 
-    - id: item-list
-      use: list
+    - name: list
       aliases: [ls]
       summary: Lists the items in the vault
       description: |
@@ -65,8 +59,7 @@ commands:
         Only open items are shown by default. Use --all to include completed
         items, or --status to filter by a single status.
 
-    - id: item-remove
-      use: remove <name>...
+    - name: remove
       aliases: [rm]
       summary: Removes one or more items from the vault
       description: |
@@ -74,37 +67,29 @@ commands:
         when none are given. The confirmation prompt can be skipped with --yes.
 
   Configuration Commands:
-    - id: config
-      use: config <command>
+    - name: config
       summary: Reads and writes vault configuration
       description: |
         Inspects and modifies the key/value settings stored alongside the vault.
       commands:
         default:
-          - id: config-get
-            use: get <key>
+          - name: get
             summary: Prints a single configuration value
-          - id: config-set
-            use: set <key> <value>
+          - name: set
             summary: Assigns a configuration value
-          - id: config-list
-            use: list
+          - name: list
             summary: Prints every configuration value
 
-    - id: remote
-      use: remote <command>
+    - name: remote
       summary: Manages the remotes a vault synchronizes with
       description: |
         Registers, lists, and removes the named remotes that a vault can push to
         and pull from.
       commands:
         default:
-          - id: remote-add
-            use: add <name> <url>
+          - name: add
             summary: Registers a new remote
-          - id: remote-list
-            use: list
+          - name: list
             summary: Lists the configured remotes
-          - id: remote-remove
-            use: remove <name>
+          - name: remove
             summary: Removes a remote

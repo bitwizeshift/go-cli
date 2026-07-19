@@ -31,7 +31,7 @@ func TestNewView(t *testing.T) {
 			want: help.View{
 				Name:        "tiny",
 				Description: "a tiny command",
-				Usage:       "tiny [flags]",
+				Usage:       "tiny",
 			},
 		}, {
 			name:    "LongPreferredOverShort",
@@ -39,7 +39,7 @@ func TestNewView(t *testing.T) {
 			want: help.View{
 				Name:        "tiny",
 				Description: "the long description",
-				Usage:       "tiny [flags]",
+				Usage:       "tiny",
 			},
 		}, {
 			name:    "SubcommandUsagePrefixedWithParentPath",
@@ -47,7 +47,7 @@ func TestNewView(t *testing.T) {
 			want: help.View{
 				Name:        "app sub",
 				Description: "the sub",
-				Usage:       "app sub <arg> [flags]",
+				Usage:       "app sub <arg>",
 			},
 		}, {
 			name:    "ExamplesSplitAndBlankLinesDropped",
@@ -55,7 +55,7 @@ func TestNewView(t *testing.T) {
 			want: help.View{
 				Name:        "note",
 				Description: "note",
-				Usage:       "note [flags]",
+				Usage:       "note",
 				Examples:    []string{"note first", "note second"},
 			},
 		}, {
@@ -64,7 +64,7 @@ func TestNewView(t *testing.T) {
 			want: help.View{
 				Name:        "app",
 				Description: "app",
-				Usage:       "app <command> [flags]",
+				Usage:       "app <command>",
 				CommandGroups: []help.CommandGroup{
 					{
 						Title:    "Tools",
@@ -82,7 +82,7 @@ func TestNewView(t *testing.T) {
 			want: help.View{
 				Name:        "svc",
 				Description: "svc",
-				Usage:       "svc [flags]",
+				Usage:       "svc",
 				FlagGroups: []help.FlagGroup{
 					{
 						Title: "Zeta Flags",
@@ -105,7 +105,7 @@ func TestNewView(t *testing.T) {
 			want: help.View{
 				Name:        "cp",
 				Description: "cp",
-				Usage:       "cp <src> <dst> [flags]",
+				Usage:       "cp <src> <dst>",
 				Arguments: []help.ArgumentInfo{
 					{Name: "src", Type: "string", Usage: "source path", Required: true},
 					{Name: "dst", Type: "string", Usage: "destination path"},
@@ -118,22 +118,22 @@ func TestNewView(t *testing.T) {
 			want: help.View{
 				Name:        "rm",
 				Description: "rm",
-				Usage:       "rm <src> [flags]",
+				Usage:       "rm <src>",
 				Arguments: []help.ArgumentInfo{
 					{Name: "src", Type: "string", Usage: "source path"},
-					{Type: "string...", Usage: "additional paths"},
+					{Name: "rest", Type: "string", Usage: "additional paths", Variadic: true},
 				},
 			},
 		}, {
-			name:    "UnmatchedAloneReportsElementType",
+			name:    "UnmatchedAloneReportedAsVariadic",
 			command: unmatchedOnlyCmd,
 			cl:      unmatchedOnlyCL,
 			want: help.View{
 				Name:        "sum",
 				Description: "sum",
-				Usage:       "sum [flags]",
+				Usage:       "sum",
 				Arguments: []help.ArgumentInfo{
-					{Type: "int...", Usage: "values to sum", Required: true},
+					{Name: "values", Type: "int", Usage: "values to sum", Required: true, Variadic: true},
 				},
 			},
 		},
@@ -223,7 +223,7 @@ func commandWithUnmatched() (*cobra.Command, *arg.CommandLine) {
 	var rest []string
 	cl.Add(
 		arg.Positional("src", 0, &src, arg.Usage("source path")),
-		arg.Unmatched(&rest, arg.Usage("additional paths")),
+		arg.Unmatched("rest", &rest, arg.Usage("additional paths")),
 	)
 	return cmd, cl
 }
@@ -232,7 +232,7 @@ func commandWithUnmatchedOnly() (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{Use: "sum", Short: "sum", Run: noop}
 	cl := (*arg.CommandLine)(argdef.FromFlagSet(cmd.Flags()))
 	var values []int
-	cl.Add(arg.Unmatched(&values, arg.Usage("values to sum"), arg.Required()))
+	cl.Add(arg.Unmatched("values", &values, arg.Usage("values to sum"), arg.Required()))
 	return cmd, cl
 }
 

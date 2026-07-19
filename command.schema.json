@@ -9,8 +9,7 @@
     }
   ],
   "properties": {
-    "id": true,
-    "use": true,
+    "name": true,
     "aliases": true,
     "examples": true,
     "summary": true,
@@ -26,7 +25,7 @@
     },
     "app-id": {
       "type": "string",
-      "description": "Identifier used to scope the application's on-disk storage (config, cache, data, runtime). When omitted, it is derived from the first token of `use`, then the running binary's name."
+      "description": "Identifier used to scope the application's on-disk storage (config, cache, data, runtime). When omitted, it is derived from the root command's `name`, then the running binary's name."
     }
   },
   "unevaluatedProperties": false,
@@ -34,17 +33,12 @@
     "command": {
       "type": "object",
       "required": [
-        "id",
-        "use"
+        "name"
       ],
       "properties": {
-        "id": {
+        "name": {
           "type": "string",
-          "description": "Unique identifier used to bind a runner to this command."
-        },
-        "use": {
-          "type": "string",
-          "description": "Usage string, e.g. \"add <name>\" or \"config <command>\"."
+          "description": "Name the command is invoked by. A runner is bound to it by its id path: the dot-delimited names of the command and its ancestors, e.g. \"app.remote.add\". The usage synopsis is generated from the arguments the bound runner registers."
         },
         "aliases": {
           "type": "array",

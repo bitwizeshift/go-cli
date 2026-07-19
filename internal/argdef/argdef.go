@@ -64,6 +64,7 @@ type Positional struct {
 // Unmatched is a registered binding for every argument not claimed by a
 // [Positional].
 type Unmatched struct {
+	Name  string
 	Type  string
 	Usage string
 	Set   func(values []string) error

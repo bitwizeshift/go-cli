@@ -133,7 +133,7 @@ func completionCommand() *cobra.Command {
 
 func syncCommand() (*cobra.Command, *arg.CommandLine) {
 	cmd := &cobra.Command{
-		Use:     subcommandName + " <remote> <ref>",
+		Use:     subcommandName + " <remote> <ref> [items...] [flags]",
 		GroupID: remoteGroup,
 		Short:   "Synchronize the vault with a remote",
 		Long: "Synchronize the vault with a remote registry, resolving and " +
@@ -165,7 +165,7 @@ func registerArgs(cmd *cobra.Command) *arg.CommandLine {
 			arg.Usage("reference within the remote to synchronize"),
 			arg.Required(),
 		),
-		arg.Unmatched(&items,
+		arg.Unmatched("items", &items,
 			arg.Usage("items to synchronize, or all items when none are given"),
 		),
 	)

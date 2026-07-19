@@ -21,7 +21,7 @@ var configYAML []byte
 
 func main() {
 	cli.FromBytes(configYAML,
-		cli.BindRunner("greet", &greetRunner{}),
+		cli.BindRunner("update-demo.greet", &greetRunner{}),
 		cli.CurrentVersion("v1.0.0"),
 		cli.BuildSource("demo"),
 		cli.UpdateProvider("demo", &fixedProvider{version: "v2.5.0"}),

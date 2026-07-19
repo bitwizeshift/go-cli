@@ -94,7 +94,7 @@ type unmatchedRunner struct {
 }
 
 func (ur *unmatchedRunner) RegisterArgs(cl *arg.CommandLine) {
-	cl.Add(arg.Unmatched(&ur.items, arg.Required()))
+	cl.Add(arg.Unmatched("items", &ur.items, arg.Required()))
 }
 
 func (ur *unmatchedRunner) Run(context.Context) error {
@@ -137,12 +137,26 @@ type offered struct {
 }
 
 const rootWithChild = `
-id: root
-use: root
+name: root
 commands:
   default:
-    - id: child
-      use: child
+    - name: child
+`
+
+// nestedCommands is a specification carrying an "add" command beneath two
+// different parents, which only an id path can tell apart.
+const nestedCommands = `
+name: root
+commands:
+  default:
+    - name: remote
+      commands:
+        default:
+          - name: add
+    - name: config
+      commands:
+        default:
+          - name: add
 `
 
 func toBuilders(runners map[string]spec.Runner) map[string]spec.Builder {
@@ -164,22 +178,64 @@ func TestBuild(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "builds command tree",
-			input:   "id: root\nuse: root <command>\n",
+			name:    "BuildsCommandTree",
+			input:   "name: root\n",
 			runners: map[string]spec.Runner{"root": spectest.NoOpRunner()},
-			want:    "root <command>",
+			want:    "root",
 		},
 		{
-			name:    "reports unbound runner",
-			input:   "id: root\nuse: root\n",
+			name:    "ReportsUnboundRunner",
+			input:   "name: root\n",
 			runners: map[string]spec.Runner{"ghost": spectest.NoOpRunner()},
 			wantErr: spec.ErrUnboundRunner,
 		},
 		{
-			name:    "reports malformed specification",
-			input:   "id: root\ncommands: not-a-mapping\n",
+			name:    "ReportsMalformedSpecification",
+			input:   "name: root\ncommands: not-a-mapping\n",
 			runners: map[string]spec.Runner{},
 			wantErr: cmpopts.AnyError,
+		},
+		{
+			name:    "NamesSubcommandOperand",
+			input:   rootWithChild,
+			runners: map[string]spec.Runner{"root": spectest.NoOpRunner()},
+			want:    "root <command>",
+		},
+		{
+			name:    "OmitsOperandForHiddenSubcommand",
+			input:   "name: root\ncommands:\n  default:\n    - name: child\n      hidden: true\n",
+			runners: map[string]spec.Runner{"root": spectest.NoOpRunner()},
+			want:    "root",
+		},
+		{
+			name:    "SpellsOutRegisteredArguments",
+			input:   "name: root\n",
+			runners: map[string]spec.Runner{"root": &requiredPositionalRunner{}},
+			want:    "root <src> [dst]",
+		},
+		{
+			name:    "ReportsOptionalFlagsAsPlaceholder",
+			input:   "name: root\n",
+			runners: map[string]spec.Runner{"root": &flaggedRunner{}},
+			want:    "root [flags]",
+		},
+		{
+			name:    "BindsRunnerByIDPath",
+			input:   nestedCommands,
+			runners: map[string]spec.Runner{"root.remote.add": &requiredPositionalRunner{}},
+			want:    "root <command>",
+		},
+		{
+			name:    "DistinguishesSameNameUnderDifferentParents",
+			input:   nestedCommands,
+			runners: map[string]spec.Runner{"root.config.add": spectest.NoOpRunner()},
+			want:    "root <command>",
+		},
+		{
+			name:    "ReportsUnboundIDPath",
+			input:   nestedCommands,
+			runners: map[string]spec.Runner{"root.remote.ghost": spectest.NoOpRunner()},
+			wantErr: spec.ErrUnboundRunner,
 		},
 	}
 
@@ -237,7 +293,7 @@ func TestBuild_Colour(t *testing.T) {
 
 			// Arrange
 			var out bytes.Buffer
-			sut := build(t, "id: root\nuse: root\n", spec.Options{
+			sut := build(t, "name: root\n", spec.Options{
 				Builders: toBuilders(map[string]spec.Runner{
 					"root": spectest.NoOpRunner(),
 				}),
@@ -288,12 +344,10 @@ func TestBuild_NamedGroup_AssignsGroupID(t *testing.T) {
 
 	// Arrange
 	const input = `
-id: root
-use: root
+name: root
 commands:
   Named Commands:
-    - id: child
-      use: child
+    - name: child
 `
 	reader := strings.NewReader(input)
 
@@ -321,7 +375,7 @@ func TestBuild_BoundRunner_RegistersFlags(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	reader := strings.NewReader("id: root\nuse: root\n")
+	reader := strings.NewReader("name: root\n")
 
 	// Act
 	sut, err := spec.Build(reader, spec.Options{
@@ -345,7 +399,7 @@ func TestBuild_BoundRunner_RegistersCompletions(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	reader := strings.NewReader("id: root\nuse: root\n")
+	reader := strings.NewReader("name: root\n")
 
 	// Act
 	sut, err := spec.Build(reader, spec.Options{
@@ -571,7 +625,7 @@ func TestBuild_GappedPositionals_Panics(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	reader := strings.NewReader("id: root\nuse: root\n")
+	reader := strings.NewReader("name: root\n")
 	opts := spec.Options{
 		Builders: toBuilders(map[string]spec.Runner{"root": &gappedRunner{}}),
 	}
@@ -598,7 +652,7 @@ func recovered(fn func()) (panicked bool) {
 func buildRoot(t testing.TB, runner spec.Runner) *cobra.Command {
 	t.Helper()
 
-	reader := strings.NewReader("id: root\nuse: root\n")
+	reader := strings.NewReader("name: root\n")
 	cmd, err := spec.Build(reader, spec.Options{
 		Builders: toBuilders(map[string]spec.Runner{"root": runner}),
 	})
@@ -613,12 +667,10 @@ func TestBuild_UnboundCommand_RunsHelp(t *testing.T) {
 
 	// Arrange
 	const input = `
-id: root
-use: root
+name: root
 commands:
   default:
-    - id: child
-      use: child
+    - name: child
       summary: a child command
 `
 	var out bytes.Buffer

@@ -24,9 +24,10 @@ import "github.com/bitwizeshift/go-cli"
 
 `go-cli` splits a command into two halves.
 
-The *specification* -- names, summaries, descriptions, aliases, nesting -- lives
-in a YAML file that you embed into the binary. The *behavior*, including the
-arguments a command takes, lives in Go. The two are joined by an `id`.
+The *specification* of commands -- names, summaries, descriptions, aliases,
+nesting -- lives in a YAML file that you embed into the binary. The *behavior*,
+such as the arguments used, execution logic, etc, lives in Go. The two parts
+are bound by an ID.
 
 This is the library's central opinion. It keeps long help text out of Go string
 literals, and it leaves your Go code holding only the parts worth testing.
@@ -37,8 +38,7 @@ Create `app.yaml`:
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bitwizeshift/go-cli/refs/heads/master/command.schema.json
-id: root
-use: greeter <command>
+name: greeter
 version: 0.1.0
 summary: Greets people
 description: |
@@ -49,8 +49,7 @@ issue-url: https://github.com/you/greeter/issues
 
 commands:
   default:
-    - id: greet
-      use: greet <name>
+    - name: greet
       summary: Greets someone by name
 ```
 
@@ -58,9 +57,9 @@ The first line points your editor at [`command.schema.json`][schema], which gets
 you completion and validation while you write. A relative path works too, if you
 vendor the schema alongside your source.
 
-Two fields are required on every node: `id` and `use`. `id` is the key you bind
-Go code to, and it never appears in the user interface. Everything else is
-optional. The full field list is in the [command schema reference][schema-ref].
+One field is required on every node: `name`, the name the command is invoked by.
+Everything else is optional. The full field list is in the
+[command schema reference][schema-ref].
 
 ## Step 2: Implement a runner
 
@@ -101,7 +100,7 @@ var configYAML []byte
 
 func main() {
   cli.FromBytes(configYAML,
-    cli.BindRunner("greet", &GreetRunner{}),
+    cli.BindRunner("greeter.greet", &GreetRunner{}),
   ).Execute()
 }
 
@@ -137,7 +136,7 @@ at one argument, so `greeter greet a b` is rejected too. No defensive checks
 needed.
 
 **`FromBytes` panics on a bad specification.** A malformed YAML document, or an
-`id` bound to no command, panics rather than returning an error. The
+id path bound to no command, panics rather than returning an error. The
 specification is embedded at build time, so a failure here is a programming
 error, not a runtime condition. You will see it the first time you run the
 binary.

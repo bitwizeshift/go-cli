@@ -20,15 +20,15 @@ var configYAML []byte
 
 func main() {
 	cli.FromBytes(configYAML,
-		cli.BindRunner("root", &rootRunner{}),
-		cli.BindRunner("line", &lineRunner{}),
-		cli.BindRunner("confirm", &confirmRunner{}),
-		cli.BindRunner("secret", &secretRunner{}),
-		cli.BindRunner("value-string", &valueRunner[string]{label: "Enter a string: "}),
-		cli.BindRunner("value-int", &valueRunner[int]{label: "Enter an integer: "}),
-		cli.BindRunner("value-float", &valueRunner[float64]{label: "Enter a float: "}),
-		cli.BindRunner("value-bool", &valueRunner[bool]{label: "Enter a bool (true/false): "}),
-		cli.BindRunner("value-duration", &valueRunner[time.Duration]{label: "Enter a duration (e.g. 1m30s): "}),
+		cli.BindRunner("prompt-demo", &rootRunner{}),
+		cli.BindRunner("prompt-demo.line", &lineRunner{}),
+		cli.BindRunner("prompt-demo.confirm", &confirmRunner{}),
+		cli.BindRunner("prompt-demo.secret", &secretRunner{}),
+		cli.BindRunner("prompt-demo.value.string", &valueRunner[string]{label: "Enter a string: "}),
+		cli.BindRunner("prompt-demo.value.int", &valueRunner[int]{label: "Enter an integer: "}),
+		cli.BindRunner("prompt-demo.value.float", &valueRunner[float64]{label: "Enter a float: "}),
+		cli.BindRunner("prompt-demo.value.bool", &valueRunner[bool]{label: "Enter a bool (true/false): "}),
+		cli.BindRunner("prompt-demo.value.duration", &valueRunner[time.Duration]{label: "Enter a duration (e.g. 1m30s): "}),
 	).Execute()
 }
 

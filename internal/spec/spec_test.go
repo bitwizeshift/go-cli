@@ -19,42 +19,38 @@ func TestGroupCommandsUnmarshalYAML(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "preserves document order",
+			name: "PreservesDocumentOrder",
 			input: `
 Zebra Commands:
-  - id: z
-    use: z
+  - name: z
 Apple Commands:
-  - id: a
-    use: a
+  - name: a
 `,
 			want: spec.GroupCommands{
-				{Name: "Zebra Commands", Commands: []spec.CommandInfo{{ID: "z", Use: "z"}}},
-				{Name: "Apple Commands", Commands: []spec.CommandInfo{{ID: "a", Use: "a"}}},
+				{Name: "Zebra Commands", Commands: []spec.CommandInfo{{Name: "z"}}},
+				{Name: "Apple Commands", Commands: []spec.CommandInfo{{Name: "a"}}},
 			},
 		},
 		{
-			name: "retains default group",
+			name: "RetainsDefaultGroup",
 			input: `
 default:
-  - id: d
-    use: d
+  - name: d
 Named Commands:
-  - id: n
-    use: n
+  - name: n
 `,
 			want: spec.GroupCommands{
-				{Name: "default", Commands: []spec.CommandInfo{{ID: "d", Use: "d"}}},
-				{Name: "Named Commands", Commands: []spec.CommandInfo{{ID: "n", Use: "n"}}},
+				{Name: "default", Commands: []spec.CommandInfo{{Name: "d"}}},
+				{Name: "Named Commands", Commands: []spec.CommandInfo{{Name: "n"}}},
 			},
 		},
 		{
-			name:    "rejects non-mapping node",
-			input:   "- id: x\n",
+			name:    "RejectsNonMappingNode",
+			input:   "- name: x\n",
 			wantErr: spec.ErrNotMapping,
 		},
 		{
-			name:    "rejects non-list group value",
+			name:    "RejectsNonListGroupValue",
 			input:   "Named:\n  scalar\n",
 			wantErr: cmpopts.AnyError,
 		},

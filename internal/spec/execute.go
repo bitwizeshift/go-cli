@@ -10,7 +10,6 @@ import (
 	"runtime/debug"
 
 	"github.com/bitwizeshift/go-cli/arg"
-	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/storage"
@@ -94,7 +93,7 @@ func (i *CommandInfo) run(builder Builder, store *storage.AppStorage, cl *arg.Co
 				pctx := panichandler.PanicContext{
 					Err:      e,
 					Stack:    stack,
-					IssueURL: annotation.IssueURL(cmd),
+					IssueURL: argdef.IssueURL(cmd),
 				}
 				_ = template.DefaultRenderEngine.PanicRenderer().Render(stderr, pctx)
 			}
@@ -102,7 +101,7 @@ func (i *CommandInfo) run(builder Builder, store *storage.AppStorage, cl *arg.Co
 
 		// Compute fallback defaults for flags that aren't set, and assign the
 		// values.
-		if e := annotation.SetFlagFallbacks(ctx, cmd.Flags()); e != nil {
+		if e := argdef.SetFlagFallbacks(ctx, cmd.Flags()); e != nil {
 			return fmt.Errorf("%w: %w", ErrUsage, e)
 		}
 

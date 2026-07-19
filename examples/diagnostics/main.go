@@ -65,7 +65,7 @@ var configYAML []byte
 
 func main() {
 	cli.FromBytes(configYAML,
-		cli.BindRunner("root", &rootRunner{
+		cli.BindRunner("diagnostics", &rootRunner{
 			LoggerProvider: &diagnostic.LoggerFlag{},
 		}),
 	).Execute()

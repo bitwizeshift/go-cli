@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"go.yaml.in/yaml/v4"
 )
@@ -22,7 +21,7 @@ type Application struct {
 	IssueURL string `yaml:"issue-url"`
 
 	// AppID scopes the application's on-disk storage. When empty, it is derived
-	// from the first token of Use, and failing that the running binary's name.
+	// from the command's Name, and failing that the running binary's name.
 	AppID string `yaml:"app-id,omitempty"`
 
 	// UpdateSources holds per-source configuration for update checking, keyed by
@@ -32,14 +31,14 @@ type Application struct {
 }
 
 // resolveAppID returns the effective application id used to scope storage: the
-// configured [Application.AppID], else the first token of Use, else the base
-// name of the running binary.
+// configured [Application.AppID], else the command's Name, else the base name of
+// the running binary.
 func (a *Application) resolveAppID() string {
 	if a.AppID != "" {
 		return a.AppID
 	}
-	if fields := strings.Fields(a.Use); len(fields) > 0 {
-		return fields[0]
+	if a.Name != "" {
+		return a.Name
 	}
 	return filepath.Base(os.Args[0])
 }
@@ -47,8 +46,7 @@ func (a *Application) resolveAppID() string {
 // CommandInfo describes a single command in a plain-text, easily edited YAML
 // form that mirrors the fields of a [github.com/spf13/cobra.Command].
 type CommandInfo struct {
-	ID          string   `yaml:"id"`
-	Use         string   `yaml:"use"`
+	Name        string   `yaml:"name"`
 	Aliases     []string `yaml:"aliases,omitempty"`
 	Examples    []string `yaml:"examples,omitempty"`
 	Summary     string   `yaml:"summary,omitempty"`

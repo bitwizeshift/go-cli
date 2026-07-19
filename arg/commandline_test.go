@@ -47,7 +47,7 @@ func TestCommandLine_Add(t *testing.T) {
 	cl.Add(
 		arg.Flag("verbose", &verbose, arg.Shorthand("v")),
 		arg.Positional("name", 0, &name),
-		arg.Unmatched(&rest),
+		arg.Unmatched("rest", &rest),
 	)
 
 	// Act

@@ -1,6 +1,5 @@
 # yaml-language-server: $schema=../../command.schema.json
-id: root
-use: prompt-demo <command>
+name: prompt-demo
 app-id: com.rodusek.prompt-demo
 version: 1.0.0
 summary: Showcases the go-cli prompt package
@@ -18,45 +17,36 @@ issue-url: https://github.com/bitwizeshift/go-cli/issues
 
 commands:
   default:
-    - id: line
-      use: line
+    - name: line
       summary: Reads a plain line of input
       description: |
         Prompts for your name and echoes it back.
 
-    - id: confirm
-      use: confirm
+    - name: confirm
       summary: Reads a yes/no answer
       description: |
         Prompts for confirmation and prints the parsed boolean.
 
-    - id: secret
-      use: secret
+    - name: secret
       summary: Reads a masked secret
       description: |
         Prompts for a password, echoing '*' per character. Requires an
         interactive terminal and errors otherwise.
 
-    - id: value
-      use: value <type>
+    - name: value
       summary: Reads a typed value
       description: |
         Prompts for a value and unmarshals the entered line into the chosen type,
         reporting a parse error for malformed input.
       commands:
         default:
-          - id: value-string
-            use: string
+          - name: string
             summary: Reads a string
-          - id: value-int
-            use: int
+          - name: int
             summary: Reads an integer
-          - id: value-float
-            use: float
+          - name: float
             summary: Reads a floating-point number
-          - id: value-bool
-            use: bool
+          - name: bool
             summary: Reads a boolean
-          - id: value-duration
-            use: duration
+          - name: duration
             summary: Reads a duration

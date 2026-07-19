@@ -43,7 +43,7 @@ field of [Command nodes](#command), as well as some additional settings.
 
 * `app-id`: The identifier used to scope the application's on-disk storage — the
   `config`, `cache`, `data`, and `runtime` roots reachable from a runner's
-  context. When omitted, it is derived from the first token of `use`, and
+  context. When omitted, it is derived from the root command's `name`, and
   failing that from the running binary's name.
 
 For the rest of the fields, read below.
@@ -55,12 +55,9 @@ Most of the configuration consists of "Command" node objects, most of which map
 
 The fields are:
 
-* `id` (required): an identifier that can be used to uniquely identify this
-  command object. This identifier is what is used to bind runners to the command
-  later.
-
-* `use` (required): maps to the `cobra.Command.Use` field. This is necessary for
-  knowing how to execute the program.
+* `name` (required): the name the command is invoked by, e.g. `add` in
+  `example-cli remote add`. Runners are bound to it by its
+  [id path](#runner-id-paths).
 
 * `aliases`: A list of optional aliases that can be used instead of the command
   that will invoke the same command. Maps to `cobra.Command.Aliases`.
@@ -92,42 +89,12 @@ The fields are:
   group. Use `default` if no group is desired. Each command in the list of
   `<command>`s is a recursive member of this schema.
 
-#### Positional arguments
-
-The number of positional arguments a command accepts is not declared in the
-YAML. It follows from the arguments the command's builder registers, so the
-specification and the Go code can never disagree:
-
-* Each `arg.Positional` claims one argument slot. A command accepts no more
-  arguments than it has slots, unless an `arg.Unmatched` binding claims the
-  remainder, in which case there is no upper bound.
-* Adding `arg.Required()` to a positional demands that the command line reach
-  that argument. Adding it to an `arg.Unmatched` binding demands at least one
-  argument beyond those the positionals claim.
-* A command that registers no positional arguments accepts none, as does a
-  command with no bound runner.
-
-So a builder registering a required `key` and an optional `value` accepts one or
-two arguments, and rejects anything else before the runner executes:
-
-```go
-func (r *setRunner) RegisterArgs(cl *arg.CommandLine) {
-  cl.Add(
-    arg.Positional("key", 0, &r.key, arg.Required()),
-    arg.Positional("value", 1, &r.value),
-  )
-}
-```
-
-Optional arguments are shown bracketed in the command's help output.
-
 ### Example
 
 Excerpt from [this example](../../examples/simple/app.yaml):
 
 ```yaml
-id: root
-use: example-cli <command>
+name: example-cli
 version: 1.4.0
 summary: A fictional workspace manager that showcases the go-cli library
 description: |
@@ -146,8 +113,7 @@ issue-url: https://github.com/bitwizeshift/go-cli/issues
 
 commands:
   default:
-    - id: init
-      use: init [--path <dir>] [--force]
+    - name: init
       summary: Initializes a new vault
       description: |
         Creates a new, empty vault in the target directory.
@@ -156,17 +122,19 @@ commands:
         case it is recreated from scratch and its contents are discarded.
 ```
 
-### Runner IDs
+### Runner ID paths
 
-The `id` field of the command nodes corresponds to the ID used for runners when
-constructing a CLI application.
+Runners and Builders are bound by _id path_: the `name` of the command joined to
+the names of its ancestors with `.`. A name only has to be unique among its
+siblings, so the path is what identifies a command across the whole file —
+`remote add` and `config add` are `example-cli.remote.add` and
+`example-cli.config.add`.
 
-In the above [example](#example), the id `init` can be bound to real behavior
-by using:
+In the above [example](#example), `init` is bound by:
 
 ```go
 var app = cli.FromReader(embeddedYAML,
-  cli.BindRunner("init", ...), // bind 'init' ID to a 'Runner'
+  cli.BindRunner("example-cli.init", ...), // bind the 'init' command to a 'Runner'
   ...
 )
 ```

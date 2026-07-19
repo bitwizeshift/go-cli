@@ -25,10 +25,10 @@ func addPositional[T any](cl *arg.CommandLine, name string, index int, v *T, opt
 	cl.Add(arg.Positional(name, index, v, options...))
 }
 
-// addUnmatched constructs an unmatched-argument binding to out and registers it
-// on cl.
-func addUnmatched[T any](cl *arg.CommandLine, out *[]T, options ...arg.Option) {
-	cl.Add(arg.Unmatched(out, options...))
+// addUnmatched constructs an unmatched-argument binding named name to out and
+// registers it on cl.
+func addUnmatched[T any](cl *arg.CommandLine, name string, out *[]T, options ...arg.Option) {
+	cl.Add(arg.Unmatched(name, out, options...))
 }
 
 // newFlag constructs a string flag named name.

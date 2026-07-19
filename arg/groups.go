@@ -1,7 +1,7 @@
 package arg
 
 import (
-	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 )
 
 // FlagGroup represents a grouping of flags denoted by the name of a given group
@@ -27,5 +27,5 @@ func (g *FlagGroup) Hidden() bool {
 // rendered under that heading in help output. A flag that is not added to any
 // group is reported under the default "General Flags" heading.
 func Group(name string, flags ...*FlagArg) {
-	annotation.AddToGroup(name, pflags(flags)...)
+	argdef.AddToGroup(name, pflags(flags)...)
 }

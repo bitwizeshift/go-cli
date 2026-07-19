@@ -170,6 +170,7 @@ func TestGetUnmatched(t *testing.T) {
 			name:    "ReportsElementTypeAndUsage",
 			options: []arg.Option{arg.Usage("remaining paths")},
 			want: &argtest.Unmatched{
+				Name:  "rest",
 				Type:  "string",
 				Usage: "remaining paths",
 			},
@@ -177,6 +178,7 @@ func TestGetUnmatched(t *testing.T) {
 			name:    "ReportsOverriddenType",
 			options: []arg.Option{arg.Type("path"), arg.Usage("remaining paths")},
 			want: &argtest.Unmatched{
+				Name:  "rest",
 				Type:  "path",
 				Usage: "remaining paths",
 			},
@@ -190,7 +192,7 @@ func TestGetUnmatched(t *testing.T) {
 			// Arrange
 			cl := argtest.NewCommandLine()
 			var rest []string
-			cl.Add(arg.Unmatched(&rest, tc.options...))
+			cl.Add(arg.Unmatched("rest", &rest, tc.options...))
 
 			// Act
 			unmatched := argtest.GetUnmatched(cl)
@@ -227,7 +229,7 @@ func TestParse_BindsPositionals(t *testing.T) {
 	var rest []string
 	cl.Add(
 		arg.Positional("name", 0, &name),
-		arg.Unmatched(&rest),
+		arg.Unmatched("rest", &rest),
 	)
 	ft := &FakeT{}
 

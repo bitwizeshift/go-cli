@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/bitwizeshift/go-cli/internal/completion"
 	"github.com/spf13/pflag"
@@ -143,7 +142,7 @@ func (f *FlagArg) Required() bool {
 	if f.Flag() == nil {
 		return false
 	}
-	return annotation.IsRequired(f.flag)
+	return argdef.IsRequired(f.flag)
 }
 
 // Group returns the name of the display group the flag was added to by
@@ -152,7 +151,7 @@ func (f *FlagArg) Group() string {
 	if f.Flag() == nil {
 		return ""
 	}
-	return annotation.Group(f.flag)
+	return argdef.Group(f.flag)
 }
 
 // MutuallyExclusiveWith returns the sorted names of the flags that may not be
@@ -162,7 +161,7 @@ func (f *FlagArg) MutuallyExclusiveWith() []string {
 	if f.Flag() == nil {
 		return nil
 	}
-	return annotation.MutuallyExclusive(f.flag)
+	return argdef.MutuallyExclusive(f.flag)
 }
 
 // RequiredWith returns the sorted names of the flags that must be specified
@@ -172,7 +171,7 @@ func (f *FlagArg) RequiredWith() []string {
 	if f.Flag() == nil {
 		return nil
 	}
-	return annotation.RequiredTogether(f.flag)
+	return argdef.RequiredTogether(f.flag)
 }
 
 // OneRequiredWith returns the sorted names of the flags of which at least one
@@ -182,7 +181,7 @@ func (f *FlagArg) OneRequiredWith() []string {
 	if f.Flag() == nil {
 		return nil
 	}
-	return annotation.OneRequired(f.flag)
+	return argdef.OneRequired(f.flag)
 }
 
 // Equal reports whether f and other describe the same flag, comparing every
@@ -227,16 +226,16 @@ func newFlagArg[T any](val *value, name string, cfg *flagConfig) *FlagArg {
 	}
 	f.Hidden = cfg.hidden
 	if cfg.required {
-		annotation.MarkRequired(f)
+		argdef.MarkRequired(f)
 	}
 	if isBuiltin[T]() && reflect.TypeFor[T]().Kind() == reflect.Bool {
 		f.NoOptDefVal = "true"
 	}
 	for _, env := range cfg.envs {
-		annotation.AddEnvFallback(f, env)
+		argdef.AddEnvFallback(f, env)
 	}
 	for _, fn := range cfg.custom {
-		annotation.AddFuncFallback(f, fn)
+		argdef.AddFuncFallback(f, fn)
 	}
 	if cfg.completer != nil {
 		completion.AddFlag(f, cfg.completer)
@@ -247,7 +246,7 @@ func newFlagArg[T any](val *value, name string, cfg *flagConfig) *FlagArg {
 // MarkRequired marks that all of the specified flags must be required when
 // parsing command lines.
 func MarkRequired(flags ...*FlagArg) {
-	annotation.MarkRequired(pflags(flags)...)
+	argdef.MarkRequired(pflags(flags)...)
 }
 
 // MarkRequiredTogether marks that all flags must be specified together when any
@@ -255,19 +254,19 @@ func MarkRequired(flags ...*FlagArg) {
 // required; it's all or none. If all flags are always required, then
 // [MarkRequired] should be used.
 func MarkRequiredTogether(flags ...*FlagArg) {
-	annotation.MarkRequiredTogether(pflags(flags)...)
+	argdef.MarkRequiredTogether(pflags(flags)...)
 }
 
 // MarkMutuallyExclusive marks that all flags must be mutually exclusive with
 // each other, and will generate an error when parsing flags that have both set.
 func MarkMutuallyExclusive(flags ...*FlagArg) {
-	annotation.MarkMutuallyExclusive(pflags(flags)...)
+	argdef.MarkMutuallyExclusive(pflags(flags)...)
 }
 
 // MarkOneRequired marks that at least one of the specified flags is required
 // when parsing command lines.
 func MarkOneRequired(flags ...*FlagArg) {
-	annotation.MarkOneRequired(pflags(flags)...)
+	argdef.MarkOneRequired(pflags(flags)...)
 }
 
 // pflags unwraps flags into the representation the annotations are recorded on.

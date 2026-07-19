@@ -21,19 +21,19 @@ var configYAML []byte
 
 func main() {
 	cli.FromBytes(configYAML,
-		cli.BindRunner("root", &rootRunner{}),
-		cli.BindRunner("init", &initRunner{path: "."}),
-		cli.BindRunner("status", &statusRunner{}),
-		cli.BindRunner("panic", &panicRunner{}),
-		cli.BindRunner("item-add", &itemAddRunner{}),
-		cli.BindRunner("item-list", &itemListRunner{}),
-		cli.BindRunner("item-remove", &itemRemoveRunner{}),
-		cli.BindRunner("config-get", &configGetRunner{}),
-		cli.BindRunner("config-set", &configSetRunner{}),
-		cli.BindRunner("config-list", &configListRunner{}),
-		cli.BindRunner("remote-add", &remoteAddRunner{}),
-		cli.BindRunner("remote-list", &remoteListRunner{}),
-		cli.BindRunner("remote-remove", &remoteRemoveRunner{}),
+		cli.BindRunner("example-cli", &rootRunner{}),
+		cli.BindRunner("example-cli.init", &initRunner{path: "."}),
+		cli.BindRunner("example-cli.status", &statusRunner{}),
+		cli.BindRunner("example-cli.panic", &panicRunner{}),
+		cli.BindRunner("example-cli.add", &itemAddRunner{}),
+		cli.BindRunner("example-cli.list", &itemListRunner{}),
+		cli.BindRunner("example-cli.remove", &itemRemoveRunner{}),
+		cli.BindRunner("example-cli.config.get", &configGetRunner{}),
+		cli.BindRunner("example-cli.config.set", &configSetRunner{}),
+		cli.BindRunner("example-cli.config.list", &configListRunner{}),
+		cli.BindRunner("example-cli.remote.add", &remoteAddRunner{}),
+		cli.BindRunner("example-cli.remote.list", &remoteListRunner{}),
+		cli.BindRunner("example-cli.remote.remove", &remoteRemoveRunner{}),
 	).Execute()
 }
 
@@ -177,7 +177,7 @@ type itemRemoveRunner struct {
 
 func (irr *itemRemoveRunner) RegisterArgs(cl *arg.CommandLine) {
 	cl.Add(
-		arg.Unmatched(&irr.names,
+		arg.Unmatched("names", &irr.names,
 			arg.Usage("names of the items to remove"),
 			arg.Type("name"),
 			arg.CompleteFrom("alpha", "beta", "gamma"),

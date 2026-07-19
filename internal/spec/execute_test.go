@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/bitwizeshift/go-cli/arg"
-	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/bitwizeshift/go-cli/internal/clictx"
 	"github.com/bitwizeshift/go-cli/internal/spec"
 	"github.com/bitwizeshift/go-cli/internal/spec/spectest"
@@ -123,7 +123,7 @@ func TestExecute_FallbackError_ShowsUsage(t *testing.T) {
 	var stderr strings.Builder
 	sut := newRootCommand(t, spectest.NoOpRunner(), &stderr)
 	sut.Flags().String("token", "", "")
-	annotation.AddFuncFallback(sut.Flags().Lookup("token"), func(context.Context) (string, error) {
+	argdef.AddFuncFallback(sut.Flags().Lookup("token"), func(context.Context) (string, error) {
 		return "", fallbackErr
 	})
 	ctx := context.Background()
@@ -155,24 +155,28 @@ func TestExecute_InjectsStorage(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name string
-		spec string
-		want bool
+		name    string
+		spec    string
+		binding string
+		want    bool
 	}{
 		{
-			name: "ExplicitAppID",
-			spec: "id: root\nuse: root\napp-id: com.example.app\n",
-			want: true,
+			name:    "ExplicitAppID",
+			spec:    "name: root\napp-id: com.example.app\n",
+			binding: "root",
+			want:    true,
 		},
 		{
-			name: "AppIDFromUse",
-			spec: "id: root\nuse: mytool\n",
-			want: true,
+			name:    "AppIDFromName",
+			spec:    "name: mytool\n",
+			binding: "mytool",
+			want:    true,
 		},
 		{
-			name: "AppIDFromBinary",
-			spec: "id: root\nuse: \"\"\n",
-			want: true,
+			name:    "AppIDFromBinary",
+			spec:    "name: \"\"\n",
+			binding: "",
+			want:    true,
 		},
 	}
 
@@ -183,7 +187,7 @@ func TestExecute_InjectsStorage(t *testing.T) {
 			// Arrange
 			runner := &storageCapture{}
 			sut := build(t, tc.spec, spec.Options{
-				Builders: toBuilders(map[string]spec.Runner{"root": runner}),
+				Builders: toBuilders(map[string]spec.Runner{tc.binding: runner}),
 				Stdout:   io.Discard,
 				Stderr:   io.Discard,
 			})
@@ -213,7 +217,7 @@ type positionalCapture struct {
 func (pc *positionalCapture) RegisterArgs(cl *arg.CommandLine) {
 	cl.Add(
 		arg.Positional("first", 0, &pc.first),
-		arg.Unmatched(&pc.rest),
+		arg.Unmatched("rest", &pc.rest),
 	)
 }
 
@@ -226,7 +230,7 @@ func TestExecute_BindsPositionalArguments(t *testing.T) {
 
 	// Arrange
 	runner := &positionalCapture{}
-	sut := build(t, "id: root\nuse: root\n", spec.Options{
+	sut := build(t, "name: root\n", spec.Options{
 		Builders: toBuilders(map[string]spec.Runner{"root": runner}),
 		Stdout:   io.Discard,
 		Stderr:   io.Discard,
@@ -268,7 +272,7 @@ func TestExecute_PositionalBindError_ShowsUsage(t *testing.T) {
 
 	// Arrange
 	var stderr strings.Builder
-	sut := build(t, "id: root\nuse: root\n", spec.Options{
+	sut := build(t, "name: root\n", spec.Options{
 		Builders: toBuilders(map[string]spec.Runner{"root": &positionalFailure{}}),
 		Stdout:   io.Discard,
 		Stderr:   &stderr,
@@ -292,7 +296,7 @@ func TestExecute_PositionalBindError_ShowsUsage(t *testing.T) {
 // its output streams to w.
 func newRootCommand(t testing.TB, runner spec.Runner, w io.Writer) *cobra.Command {
 	t.Helper()
-	cmd, err := spec.Build(strings.NewReader("id: root\nuse: root\n"), spec.Options{
+	cmd, err := spec.Build(strings.NewReader("name: root\n"), spec.Options{
 		Builders: toBuilders(map[string]spec.Runner{"root": runner}),
 		Stdout:   w,
 		Stderr:   w,

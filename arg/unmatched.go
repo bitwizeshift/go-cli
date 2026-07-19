@@ -22,13 +22,14 @@ type UnmatchedArg struct {
 // values. A [DefaultFromEnv] or [DefaultFromFunc] fallback supplies the whole
 // set as comma-separated fields, and so applies only when no argument went
 // unclaimed. out is left unchanged if any argument fails to decode.
-func Unmatched[T any](out *[]T, options ...Option) *UnmatchedArg {
+func Unmatched[T any](name string, out *[]T, options ...Option) *UnmatchedArg {
 	cfg := newConfig(options...)
 	fallbackFuncs := make([]argdef.FallbackFunc, 0, len(cfg.custom))
 	for _, f := range cfg.custom {
 		fallbackFuncs = append(fallbackFuncs, f)
 	}
 	return &UnmatchedArg{unmatched: &argdef.Unmatched{
+		Name:          name,
 		Type:          cfg.typeName(new(T)),
 		Usage:         cfg.usage,
 		Required:      cfg.required,

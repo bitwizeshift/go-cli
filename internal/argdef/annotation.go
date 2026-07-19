@@ -1,4 +1,4 @@
-package annotation
+package argdef
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/bitwizeshift/go-cli/internal/argdef"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -238,7 +237,7 @@ func collectGroups(f *pflag.Flag, key string, groups map[string][]string) {
 var (
 	mu        sync.RWMutex
 	current   int
-	flagFuncs = map[string]argdef.FallbackFunc{}
+	flagFuncs = map[string]FallbackFunc{}
 )
 
 // AddEnvFallback records env as an environment variable that may source a
@@ -251,7 +250,7 @@ func AddEnvFallback(f *pflag.Flag, env string) {
 // as consumed by [SetFlagFallbacks]. The function is held in a process-wide
 // registry; a best-effort [runtime.AddCleanup] removes it if f is collected,
 // though this cleanup may never run.
-func AddFuncFallback(f *pflag.Flag, fallback argdef.FallbackFunc) {
+func AddFuncFallback(f *pflag.Flag, fallback FallbackFunc) {
 	mu.Lock()
 	id := fmt.Sprintf("%d", current)
 	current++
@@ -301,7 +300,7 @@ func runEnvFlagFallback(f *pflag.Flag) (visited bool, err error) {
 			err = f.Value.Set(value)
 			visited = true
 			if err != nil {
-				err = fmt.Errorf("%w: $%v: %w", argdef.ErrSettingEnvFlag, key, err)
+				err = fmt.Errorf("%w: $%v: %w", ErrSettingEnvFlag, key, err)
 			}
 			return
 		}
@@ -323,7 +322,7 @@ func runFuncFlagFallback(ctx context.Context, f *pflag.Flag) (visited bool, err 
 		}
 		value, ferr := fn(ctx)
 		if ferr != nil {
-			return true, fmt.Errorf("%w: %w", argdef.ErrComputingFuncFlag, ferr)
+			return true, fmt.Errorf("%w: %w", ErrComputingFuncFlag, ferr)
 		}
 		if value == "" {
 			continue
@@ -331,7 +330,7 @@ func runFuncFlagFallback(ctx context.Context, f *pflag.Flag) (visited bool, err 
 		err = f.Value.Set(value)
 		visited = true
 		if err != nil {
-			err = fmt.Errorf("%w: %w", argdef.ErrSettingFuncFlag, err)
+			err = fmt.Errorf("%w: %w", ErrSettingFuncFlag, err)
 		}
 		return
 	}

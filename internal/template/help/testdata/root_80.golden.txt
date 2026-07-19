@@ -5,7 +5,7 @@ custom help renderer, including coloured sections, wrapped prose, and flags and
 commands organised into named groups.
 
 USAGE
-  example-cli <command> [flags]
+  example-cli <command>
 
 EXAMPLES
   example-cli init

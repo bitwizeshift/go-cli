@@ -1,4 +1,4 @@
-package annotation_test
+package argdef_test
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/bitwizeshift/go-cli/internal/annotation"
 	"github.com/bitwizeshift/go-cli/internal/argdef"
 )
 
@@ -70,12 +69,12 @@ func TestIsRequired(t *testing.T) {
 
 			// Arrange
 			fs := newFlagSet()
-			annotation.MarkRequiredTogether(lookupAll(fs, tc.requiredTogether)...)
-			annotation.MarkRequired(lookupAll(fs, tc.required)...)
+			argdef.MarkRequiredTogether(lookupAll(fs, tc.requiredTogether)...)
+			argdef.MarkRequired(lookupAll(fs, tc.required)...)
 			target := fs.Lookup(tc.flag)
 
 			// Act
-			required := annotation.IsRequired(target)
+			required := argdef.IsRequired(target)
 
 			// Assert
 			if got, want := required, tc.want; !cmp.Equal(got, want) {
@@ -121,12 +120,12 @@ func TestRequiredTogether(t *testing.T) {
 			// Arrange
 			fs := newFlagSet()
 			for _, group := range tc.groups {
-				annotation.MarkRequiredTogether(lookupAll(fs, group)...)
+				argdef.MarkRequiredTogether(lookupAll(fs, group)...)
 			}
 			target := fs.Lookup(tc.flag)
 
 			// Act
-			requiredWith := annotation.RequiredTogether(target)
+			requiredWith := argdef.RequiredTogether(target)
 
 			// Assert
 			if got, want := requiredWith, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
@@ -165,11 +164,11 @@ func TestMutuallyExclusive(t *testing.T) {
 
 			// Arrange
 			fs := newFlagSet()
-			annotation.MarkMutuallyExclusive(lookupAll(fs, tc.group)...)
+			argdef.MarkMutuallyExclusive(lookupAll(fs, tc.group)...)
 			target := fs.Lookup(tc.flag)
 
 			// Act
-			exclusiveWith := annotation.MutuallyExclusive(target)
+			exclusiveWith := argdef.MutuallyExclusive(target)
 
 			// Assert
 			if got, want := exclusiveWith, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
@@ -208,11 +207,11 @@ func TestOneRequired(t *testing.T) {
 
 			// Arrange
 			fs := newFlagSet()
-			annotation.MarkOneRequired(lookupAll(fs, tc.group)...)
+			argdef.MarkOneRequired(lookupAll(fs, tc.group)...)
 			target := fs.Lookup(tc.flag)
 
 			// Act
-			oneRequiredWith := annotation.OneRequired(target)
+			oneRequiredWith := argdef.OneRequired(target)
 
 			// Assert
 			if got, want := oneRequiredWith, tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
@@ -301,11 +300,11 @@ func TestConfigureFlags(t *testing.T) {
 
 			// Arrange
 			cmd := newCommand()
-			annotation.MarkRequired(lookupAll(cmd.Flags(), tc.required)...)
-			annotation.MarkRequiredTogether(lookupAll(cmd.Flags(), tc.requiredTogether)...)
-			annotation.MarkMutuallyExclusive(lookupAll(cmd.Flags(), tc.mutuallyExclusive)...)
-			annotation.MarkOneRequired(lookupAll(cmd.Flags(), tc.oneRequired)...)
-			annotation.ConfigureFlags(cmd)
+			argdef.MarkRequired(lookupAll(cmd.Flags(), tc.required)...)
+			argdef.MarkRequiredTogether(lookupAll(cmd.Flags(), tc.requiredTogether)...)
+			argdef.MarkMutuallyExclusive(lookupAll(cmd.Flags(), tc.mutuallyExclusive)...)
+			argdef.MarkOneRequired(lookupAll(cmd.Flags(), tc.oneRequired)...)
+			argdef.ConfigureFlags(cmd)
 			cmd.SetArgs(tc.args)
 
 			// Act
@@ -319,7 +318,7 @@ func TestConfigureFlags(t *testing.T) {
 	}
 }
 
-// groupAssignment records a single [annotation.AddToGroup] call to perform
+// groupAssignment records a single [argdef.AddToGroup] call to perform
 // during arrangement.
 type groupAssignment struct {
 	group string
@@ -377,12 +376,12 @@ func TestGroup(t *testing.T) {
 			// Arrange
 			fs := newFlagSet()
 			for _, a := range tc.assignments {
-				annotation.AddToGroup(a.group, lookupAll(fs, a.flags)...)
+				argdef.AddToGroup(a.group, lookupAll(fs, a.flags)...)
 			}
 			target := fs.Lookup(tc.flag)
 
 			// Act
-			group := annotation.Group(target)
+			group := argdef.Group(target)
 
 			// Assert
 			if got, want := group, tc.want; !cmp.Equal(got, want) {
@@ -419,7 +418,7 @@ func TestIssueURL(t *testing.T) {
 	}{
 		{
 			name:        "IssueURLSetReturnsURL",
-			annotations: map[string]string{annotation.AnnotationIssueURL: "https://example.test/issues"},
+			annotations: map[string]string{argdef.AnnotationIssueURL: "https://example.test/issues"},
 			want:        "https://example.test/issues",
 		},
 		{
@@ -442,7 +441,7 @@ func TestIssueURL(t *testing.T) {
 			cmd := &cobra.Command{Use: "test", Annotations: tc.annotations}
 
 			// Act
-			url := annotation.IssueURL(cmd)
+			url := argdef.IssueURL(cmd)
 
 			// Assert
 			if got, want := url, tc.want; !cmp.Equal(got, want) {
@@ -466,14 +465,14 @@ func TestAddIssueURL(t *testing.T) {
 	right.AddCommand(shared)
 
 	// Act
-	annotation.AddIssueURL(root, url)
+	argdef.AddIssueURL(root, url)
 
 	// Assert
 	urls := map[string]string{
-		"root":   annotation.IssueURL(root),
-		"left":   annotation.IssueURL(left),
-		"right":  annotation.IssueURL(right),
-		"shared": annotation.IssueURL(shared),
+		"root":   argdef.IssueURL(root),
+		"left":   argdef.IssueURL(left),
+		"right":  argdef.IssueURL(right),
+		"shared": argdef.IssueURL(shared),
 	}
 	want := map[string]string{"root": url, "left": url, "right": url, "shared": url}
 	if got, want := urls, want; !cmp.Equal(got, want) {
@@ -510,11 +509,11 @@ func TestAddENVFallback(t *testing.T) {
 
 			// Act
 			for _, env := range tc.envs {
-				annotation.AddEnvFallback(target, env)
+				argdef.AddEnvFallback(target, env)
 			}
 
 			// Assert
-			if got, want := target.Annotations[annotation.AnnotationENVFallback], tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
+			if got, want := target.Annotations[argdef.AnnotationENVFallback], tc.want; !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 				t.Errorf("AddENVFallback(...) = %v, want %v", got, want)
 			}
 		})
@@ -550,11 +549,11 @@ func TestAddFuncFallback(t *testing.T) {
 
 			// Act
 			for range tc.count {
-				annotation.AddFuncFallback(target, func(context.Context) (string, error) { return "", nil })
+				argdef.AddFuncFallback(target, func(context.Context) (string, error) { return "", nil })
 			}
 
 			// Assert
-			if got, want := len(target.Annotations[annotation.AnnotationFuncFallback]), tc.want; got != want {
+			if got, want := len(target.Annotations[argdef.AnnotationFuncFallback]), tc.want; got != want {
 				t.Errorf("AddFuncFallback(...) recorded %d ids, want %d", got, want)
 			}
 		})
@@ -562,7 +561,7 @@ func TestAddFuncFallback(t *testing.T) {
 }
 
 // funcResult declares the return values of a fallback function registered
-// during a [annotation.SetFlagFallbacks] test case.
+// during a [argdef.SetFlagFallbacks] test case.
 type funcResult struct {
 	value string
 	err   error
@@ -627,10 +626,10 @@ func TestSetFlagFallbacks(t *testing.T) {
 			fs.String("flag", "", "")
 			target := fs.Lookup("flag")
 			for _, env := range tc.envs {
-				annotation.AddEnvFallback(target, env)
+				argdef.AddEnvFallback(target, env)
 			}
 			for _, fn := range tc.funcs {
-				annotation.AddFuncFallback(target, func(context.Context) (string, error) {
+				argdef.AddFuncFallback(target, func(context.Context) (string, error) {
 					return fn.value, fn.err
 				})
 			}
@@ -640,7 +639,7 @@ func TestSetFlagFallbacks(t *testing.T) {
 			ctx := context.Background()
 
 			// Act
-			err := annotation.SetFlagFallbacks(ctx, fs)
+			err := argdef.SetFlagFallbacks(ctx, fs)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -681,10 +680,10 @@ func TestSetFlagFallbacks_SetError(t *testing.T) {
 			fs.Int("flag", 0, "")
 			target := fs.Lookup("flag")
 			for _, env := range tc.envs {
-				annotation.AddEnvFallback(target, env)
+				argdef.AddEnvFallback(target, env)
 			}
 			for _, fn := range tc.funcs {
-				annotation.AddFuncFallback(target, func(context.Context) (string, error) {
+				argdef.AddFuncFallback(target, func(context.Context) (string, error) {
 					return fn.value, fn.err
 				})
 			}
@@ -694,7 +693,7 @@ func TestSetFlagFallbacks_SetError(t *testing.T) {
 			ctx := context.Background()
 
 			// Act
-			err := annotation.SetFlagFallbacks(ctx, fs)
+			err := argdef.SetFlagFallbacks(ctx, fs)
 
 			// Assert
 			if got, want := err, tc.wantErr; !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -712,8 +711,8 @@ func TestSetFlagFallbacks_SkipsChangedFlag(t *testing.T) {
 	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	fs.String("flag", "", "")
 	target := fs.Lookup("flag")
-	annotation.AddEnvFallback(target, "FLAG_ENV")
-	annotation.AddFuncFallback(target, func(context.Context) (string, error) { return "from-func", nil })
+	argdef.AddEnvFallback(target, "FLAG_ENV")
+	argdef.AddFuncFallback(target, func(context.Context) (string, error) { return "from-func", nil })
 	t.Setenv("FLAG_ENV", "from-env")
 	if err := fs.Set("flag", "from-user"); err != nil {
 		t.Fatalf("fs.Set(...) = %v, want nil", err)
@@ -721,7 +720,7 @@ func TestSetFlagFallbacks_SkipsChangedFlag(t *testing.T) {
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, fs)
+	err := argdef.SetFlagFallbacks(ctx, fs)
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -738,12 +737,12 @@ func TestSetFlagFallbacks_UnregisteredFuncFallback_SkipsFlag(t *testing.T) {
 	fs.String("flag", "", "")
 	target := fs.Lookup("flag")
 	target.Annotations = map[string][]string{
-		annotation.AnnotationFuncFallback: {"not-a-registered-id"},
+		argdef.AnnotationFuncFallback: {"not-a-registered-id"},
 	}
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, fs)
+	err := argdef.SetFlagFallbacks(ctx, fs)
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -759,16 +758,16 @@ func TestSetFlagFallbacks_JoinsErrors(t *testing.T) {
 	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	fs.Int("first", 0, "")
 	fs.Int("second", 0, "")
-	annotation.AddFuncFallback(fs.Lookup("first"), func(context.Context) (string, error) {
+	argdef.AddFuncFallback(fs.Lookup("first"), func(context.Context) (string, error) {
 		return "", errors.New("first failed")
 	})
-	annotation.AddFuncFallback(fs.Lookup("second"), func(context.Context) (string, error) {
+	argdef.AddFuncFallback(fs.Lookup("second"), func(context.Context) (string, error) {
 		return "not-an-int", nil
 	})
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, fs)
+	err := argdef.SetFlagFallbacks(ctx, fs)
 
 	// Assert
 	if got, want := errors.Is(err, argdef.ErrComputingFuncFlag), true; got != want {
@@ -783,12 +782,12 @@ func TestSetFlagFallbacks_EnvErrorNamesKey(t *testing.T) {
 	// Arrange
 	fs := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	fs.Int("flag", 0, "")
-	annotation.AddEnvFallback(fs.Lookup("flag"), "FLAG_ENV")
+	argdef.AddEnvFallback(fs.Lookup("flag"), "FLAG_ENV")
 	t.Setenv("FLAG_ENV", "not-an-int")
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, fs)
+	err := argdef.SetFlagFallbacks(ctx, fs)
 
 	// Assert
 	if got, want := err, argdef.ErrSettingEnvFlag; !cmp.Equal(got, want, cmpopts.EquateErrors()) {

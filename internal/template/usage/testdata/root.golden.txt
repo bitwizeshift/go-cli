@@ -1,6 +1,6 @@
 app
 
 USAGE
-  app [flags]
+  app
 
 Run app --help for more details.

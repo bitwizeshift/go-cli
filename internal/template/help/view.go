@@ -27,13 +27,14 @@ type View struct {
 	Hint          Hint
 }
 
-// ArgumentInfo is a single argument entry in a help listing. Name is empty for
-// an unmatched-argument binding, which is identified by its type alone.
+// ArgumentInfo is a single argument entry in a help listing. A variadic
+// argument claims every remaining argument rather than a single slot.
 type ArgumentInfo struct {
 	Name     string
 	Type     string
 	Usage    string
 	Required bool
+	Variadic bool
 }
 
 // CommandGroup is a titled list of subcommands.
@@ -106,17 +107,13 @@ func descriptionOf(cmd *cobra.Command) string {
 	return cmd.Short
 }
 
-// usageLineOf returns the usage line for cmd, always terminated with a "[flags]"
-// placeholder.
+// usageLineOf returns the usage line for cmd, qualified by the path of the
+// command it is reached through.
 func usageLineOf(cmd *cobra.Command) string {
-	use := cmd.Use
 	if cmd.HasParent() {
-		use = cmd.Parent().CommandPath() + " " + cmd.Use
+		return cmd.Parent().CommandPath() + " " + cmd.Use
 	}
-	if !strings.Contains(use, "[flags]") {
-		use += " [flags]"
-	}
-	return use
+	return cmd.Use
 }
 
 // examplesOf returns the non-blank example lines of cmd, in order.
@@ -172,8 +169,8 @@ func visibleCommand(c *cobra.Command) bool {
 
 // argumentsOf returns the arguments registered on cl: the positionals in
 // registration order, followed by the unmatched-argument binding when one is
-// registered. The unmatched entry is unnamed, reporting its element type
-// suffixed with "..." to mark that it claims every remaining argument.
+// registered. The unmatched entry is variadic, since it claims every remaining
+// argument rather than a single slot.
 func argumentsOf(cl *arg.CommandLine) []ArgumentInfo {
 	var arguments []ArgumentInfo
 	for _, p := range argdef.Positionals((*argdef.CommandLine)(cl)) {
@@ -186,9 +183,11 @@ func argumentsOf(cl *arg.CommandLine) []ArgumentInfo {
 	}
 	if u := argdef.GetUnmatched((*argdef.CommandLine)(cl)); u != nil {
 		arguments = append(arguments, ArgumentInfo{
-			Type:     u.Type + "...",
+			Name:     u.Name,
+			Type:     u.Type,
 			Usage:    u.Usage,
 			Required: u.Required,
+			Variadic: true,
 		})
 	}
 	return arguments

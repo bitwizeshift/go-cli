@@ -83,10 +83,9 @@ func flagGrid(flags []FlagInfo, columns int) string {
 	return format.Grid(rows, columns, sectionIndent, gridGap, 0)
 }
 
-// argumentGrid renders arguments as an aligned grid, styling names and their
-// type arguments distinctly, matching the flag grid's layout. An unnamed
-// argument shows its type alone, occupying the column a name would, and an
-// optional argument is bracketed.
+// argumentGrid renders arguments as an aligned grid, matching the flag grid's
+// layout. A variadic argument trails an ellipsis, and an optional argument is
+// bracketed.
 func argumentGrid(arguments []ArgumentInfo, columns int) string {
 	rows := make([]format.Row, 0, len(arguments))
 	for _, a := range arguments {
@@ -95,8 +94,8 @@ func argumentGrid(arguments []ArgumentInfo, columns int) string {
 			s.addPlain("[")
 		}
 		s.add(a.Name, "label")
-		if a.Type != "" {
-			s.add(typeSeparator(a)+a.Type, "value")
+		if a.Variadic {
+			s.addPlain("...")
 		}
 		if !a.Required {
 			s.addPlain("]")
@@ -104,15 +103,6 @@ func argumentGrid(arguments []ArgumentInfo, columns int) string {
 		rows = append(rows, s.row(a.Usage))
 	}
 	return format.Grid(rows, columns, sectionIndent, gridGap, 0)
-}
-
-// typeSeparator returns the spacing between an argument's name and its type,
-// which an unnamed argument omits so its type starts the column.
-func typeSeparator(a ArgumentInfo) string {
-	if a.Name == "" {
-		return ""
-	}
-	return " "
 }
 
 // flagMarker renders the name column of a flag, aligning long-only flags beneath

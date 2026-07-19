@@ -12,7 +12,7 @@ import (
 
 	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/arg/argtest"
-	"github.com/bitwizeshift/go-cli/internal/annotation"
+	"github.com/bitwizeshift/go-cli/internal/argdef"
 )
 
 // opCode is a defined multi-word type used to exercise the default kebab-case
@@ -935,7 +935,7 @@ func TestDefaultFromEnv(t *testing.T) {
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, cl.FlagSet())
+	err := argdef.SetFlagFallbacks(ctx, cl.FlagSet())
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {
@@ -957,7 +957,7 @@ func TestDefaultFromFunc(t *testing.T) {
 	ctx := context.Background()
 
 	// Act
-	err := annotation.SetFlagFallbacks(ctx, cl.FlagSet())
+	err := argdef.SetFlagFallbacks(ctx, cl.FlagSet())
 
 	// Assert
 	if got, want := err, error(nil); !cmp.Equal(got, want, cmpopts.EquateErrors()) {

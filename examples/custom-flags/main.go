@@ -155,7 +155,7 @@ var configYAML []byte
 func main() {
 	flags := &GitHubFlags{}
 	cli.FromBytes(configYAML,
-		cli.BindRunner("root", &rootRunner{
+		cli.BindRunner("flags-demo", &rootRunner{
 			ClientSource: flags,
 			RepoSource:   flags,
 			PRSource:     flags,
