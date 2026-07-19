@@ -5,18 +5,10 @@
   "description": "Declarative specification of a cobra command hierarchy consumed by the go-cli library.",
   "allOf": [
     {
-      "$ref": "#/$defs/command"
+      "$ref": "#/$defs/commandInfo"
     }
   ],
   "properties": {
-    "name": true,
-    "aliases": true,
-    "examples": true,
-    "summary": true,
-    "description": true,
-    "hidden": true,
-    "deprecated": true,
-    "commands": true,
     "issue-url": {
       "type": "string",
       "description": "URL users are directed to for filing bugs, propagated to every command in the hierarchy.",
@@ -25,11 +17,19 @@
     "app-id": {
       "type": "string",
       "description": "Identifier used to scope the application's on-disk storage (config, cache, data, runtime). When omitted, it is derived from the root command's `name`, then the running binary's name."
+    },
+    "update-sources": {
+      "type": "object",
+      "description": "Per-source configuration for update checking, keyed by source name. Each key must match a provider registered with cli.UpdateProvider, and its value is decoded into that provider. The active source is selected by cli.BuildSource.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Configuration decoded into the provider registered under this name."
+      }
     }
   },
   "unevaluatedProperties": false,
   "$defs": {
-    "command": {
+    "commandInfo": {
       "type": "object",
       "required": [
         "name"
@@ -71,14 +71,15 @@
         },
         "commands": {
           "$ref": "#/$defs/groupCommands"
-        },
-        "issue-url": {
-          "description": "Only meaningful on the root command, which propagates it to the whole hierarchy. Ignored elsewhere."
-        },
-        "app-id": {
-          "description": "Only meaningful on the root command. Ignored elsewhere."
         }
-      },
+      }
+    },
+    "command": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/commandInfo"
+        }
+      ],
       "unevaluatedProperties": false
     },
     "groupCommands": {
