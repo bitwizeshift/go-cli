@@ -1,6 +1,7 @@
 package argtest
 
 import (
+	"cmp"
 	"context"
 	"slices"
 	"strings"
@@ -93,30 +94,38 @@ func ShortFlags(cl *arg.CommandLine) []string {
 // Positional is a small wrapper around a registered positional argument, for
 // property-testing purposes.
 type Positional struct {
-	Index int
-	Name  string
-	Usage string
+	Index    int
+	Name     string
+	Usage    string
+	Required bool
 }
 
 // AllPositionals returns a [Positional] for every positional argument registered
 // in cl, in registration order.
 func AllPositionals(cl *arg.CommandLine) []*Positional {
-	var result []*Positional
-	for _, p := range argdef.Positionals((*argdef.CommandLine)(cl)) {
+	positionals := argdef.Positionals((*argdef.CommandLine)(cl))
+	result := make([]*Positional, 0, len(positionals))
+
+	for _, p := range positionals {
 		result = append(result, &Positional{
-			Index: p.Index,
-			Name:  p.Name,
-			Usage: p.Usage,
+			Index:    p.Index,
+			Name:     p.Name,
+			Usage:    p.Usage,
+			Required: p.Required,
 		})
 	}
+	slices.SortFunc(result, func(lhs, rhs *Positional) int {
+		return cmp.Compare(lhs.Index, rhs.Index)
+	})
 	return result
 }
 
 // Unmatched is a small wrapper around a registered unmatched-argument binding,
 // for property-testing purposes.
 type Unmatched struct {
-	Name  string
-	Usage string
+	Name     string
+	Usage    string
+	Required bool
 }
 
 // GetUnmatched returns the [Unmatched] binding registered in cl, or nil if cl
@@ -127,7 +136,8 @@ func GetUnmatched(cl *arg.CommandLine) *Unmatched {
 		return nil
 	}
 	return &Unmatched{
-		Name:  u.Name,
-		Usage: u.Usage,
+		Name:     u.Name,
+		Usage:    u.Usage,
+		Required: u.Required,
 	}
 }
