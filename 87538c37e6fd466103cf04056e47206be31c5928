@@ -1,0 +1,88 @@
+Create a plan
+
+**Persona:** You are a principal engineer with a history of developing high-quality
+scalable and readable software. You follow SOLID principles, and have an excellent
+background in XUnit-style unit-testing, and are a strong believer of only high-value
+quality testing and design practices.
+
+**Background:** This project wraps pflag and cobra so that very little of these
+libraries are visible or usable on the seam.
+
+We wrap `cobra.Command` objects by defining most things up-front in a yaml
+file. Recently we added support for named positional arguments and unmatched
+arguments, and now we want to use it.
+
+In the past, we used a custom `arity` DSL to handle this, and it's defined in
+the YAML. However, now we have access to `Arg` types that convey this information
+and we should let this drive the real requirements.
+
+## Goal
+
+Remove the `arity` logic and field from the YAML, and instead compute this from
+all `Arg` definitions defined in the `arg.CommandLine`.
+
+`examples` and `docs` need updating to reflect this new change.
+
+### Implementation
+
+Do this in the following way:
+
+* Change `arg.Required` to be an `arg.Option` so it applies to flags, positionals,
+  and unmatched values. Currently it only works for flags.
+
+* Compute the range of required arguments from the positional and unmatched args
+  that are required. We can determine this by taking the highest index positional
+  that is required and setting this as the minimal, _or_ the highest index
+  positional + 1 for the unmatched requirement. We will assume a required positional
+  always requires at least 1, but an unbounded amount of inputs.
+
+* Remove the `arity` DSL logic. If there's value in reusing the range logic, we
+  can continue to use it.
+
+* Update the `examples` to not use `arity` anymore, but to leverage the
+  `arg.Required` option
+
+* Update the `docs/` section so that tutorials no longer reference the arity DSL,
+  and instead reference how required args are leveraged.
+
+## Resources
+
+- @arg/ - the package that defines `arg.Unmatched`
+- @internal/argdef/ - where the detailed `CommandLine` object is defined,
+  kept separate from the public interface so users can't access it.
+- @internal/arity/ - the internal package we're going to either modify or remove
+- @internal/spec/ - where the arity logic gets joined (now will be deduced from
+  the `CommandLine`)
+
+## Requirements
+
+* Development MUST use Skill(go:general)
+* Testing MUST use Skill(go:table-testing), Skill(go:unit-testing), Skill(go:testing-errors)
+* Coverage MUST be evaluated using Skill(go:coverage)
+
+All of the rules defined in the skills above are binding and MUST be followed.
+It is ILLEGAL to deviate from any of the rules. You are not allowed to
+rationalize or ignore any rule listed above. Missing even one rule is considered
+failure of the project. It is CRITICAL that these rules are aligned.
+
+Any problems with the design, judgment calls, uncertainties, or ambiguities MUST
+be resolved by the user. You are NOT to resolve any of these yourself. Use the
+Tool(AskUserQuestion) to raise any such problems to the user and suggest paths
+forward. Mark one of the options as the recommended path to allow the user to
+know your leaning.
+
+DO NOT make a judgment call on your own.
+
+## Important
+
+DO NOT SUMMARIZE EVERY TYPE OR FUNCTION IN PACKAGE DOCS. You have a horrible
+habit of doing this and no human in existance writes code like this.
+DO NOT SUMMARIZE IMPLEMENTATIONS OF FUNCTIONS IN DOCUMENTS, OR IN TYPES. Give
+high-level descriptions of how things work, optionally with examples where
+reasonable. But do NOT summarize the actual implementaiton.
+
+DO NOT EXPOSE ANY TYPE FROM AN `internal` PACKAGE ON AN EXPORTED PACKAGE.
+
+Do not use the explore agent for this; inspect the files yourself for this plan.
+
+Include the contents from "# Requirements" and "# Important" verbatim in the plan.
