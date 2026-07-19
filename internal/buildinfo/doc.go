@@ -1,4 +1,4 @@
-// package buildinfo reads facts about the running binary that the Go toolchain
+// Package buildinfo reads facts about the running binary that the Go toolchain
 // embeds at link time.
 //
 // The information is read through injectable hooks rather than the runtime

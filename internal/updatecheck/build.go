@@ -1,4 +1,4 @@
-package update
+package updatecheck
 
 // BuildInfo describes how the running binary was built and distributed.
 type BuildInfo struct {

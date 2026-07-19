@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 	"github.com/bitwizeshift/go-cli/update"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -41,7 +42,7 @@ func TestGoProxyProvider_LatestVersion(t *testing.T) {
 			name:    "InvalidVersion",
 			status:  http.StatusOK,
 			body:    `{"Version":"tip"}`,
-			wantErr: update.ErrInvalidVersion,
+			wantErr: updatecheck.ErrInvalidVersion,
 		},
 	}
 

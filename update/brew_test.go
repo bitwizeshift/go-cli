@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 	"github.com/bitwizeshift/go-cli/update"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -41,12 +42,12 @@ func TestBrewProvider_LatestVersion(t *testing.T) {
 			name:    "InvalidStable",
 			status:  http.StatusOK,
 			body:    `{"versions":{"stable":"HEAD"}}`,
-			wantErr: update.ErrInvalidVersion,
+			wantErr: updatecheck.ErrInvalidVersion,
 		}, {
 			name:    "EmptyStable",
 			status:  http.StatusOK,
 			body:    `{"versions":{"stable":""}}`,
-			wantErr: update.ErrInvalidVersion,
+			wantErr: updatecheck.ErrInvalidVersion,
 		},
 	}
 

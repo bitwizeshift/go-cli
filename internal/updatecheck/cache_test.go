@@ -1,4 +1,4 @@
-package update_test
+package updatecheck_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitwizeshift/go-cli/update"
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 	"github.com/bitwizeshift/go-cli/update/updatetest"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -29,8 +29,8 @@ func TestCacheProvider_LatestVersion(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		cache    update.Cache
-		provider update.Provider
+		cache    updatecheck.Cache
+		provider updatecheck.Provider
 		want     string
 		wantErr  error
 	}{
@@ -73,7 +73,7 @@ func TestCacheProvider_LatestVersion(t *testing.T) {
 			t.Parallel()
 
 			// Arrange
-			sut := &update.CacheProvider{
+			sut := &updatecheck.CacheProvider{
 				Provider: tc.provider,
 				Source:   "github",
 				TTL:      time.Hour,
@@ -101,7 +101,7 @@ func TestCacheProvider_LatestVersion_OnMiss_PersistsResult(t *testing.T) {
 
 	// Arrange
 	cache := fakeCache{}
-	sut := &update.CacheProvider{
+	sut := &updatecheck.CacheProvider{
 		Provider: updatetest.Provider("v4.5.6"),
 		Source:   "github",
 		TTL:      time.Hour,
@@ -127,7 +127,7 @@ func TestCacheProvider_LatestVersion_OnMiss_PersistsResult(t *testing.T) {
 	}
 }
 
-// fakeCache is an in-memory [update.Cache] keyed by entry name, standing in for
+// fakeCache is an in-memory [updatecheck.Cache] keyed by entry name, standing in for
 // the application's cache root so tests can seed entries and read them back.
 type fakeCache map[string][]byte
 
@@ -144,9 +144,9 @@ func (c fakeCache) WriteFile(name string, data []byte) error {
 	return nil
 }
 
-var _ update.Cache = (fakeCache)(nil)
+var _ updatecheck.Cache = (fakeCache)(nil)
 
-// errCache is an [update.Cache] whose reads and writes always fail, modelling a
+// errCache is an [updatecheck.Cache] whose reads and writes always fail, modelling a
 // cache root that cannot be reached.
 type errCache struct {
 	err error
@@ -155,7 +155,7 @@ type errCache struct {
 func (c errCache) ReadFile(string) ([]byte, error) { return nil, c.err }
 func (c errCache) WriteFile(string, []byte) error  { return c.err }
 
-var _ update.Cache = errCache{}
+var _ updatecheck.Cache = errCache{}
 
 // cacheJSON mirrors the on-disk representation of a memoized lookup, so tests can
 // assert the persisted record without reaching into unexported types.

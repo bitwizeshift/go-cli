@@ -3,6 +3,8 @@ package update
 import (
 	"context"
 	"fmt"
+
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 )
 
 // githubBaseURL is the default host for the GitHub REST API.
@@ -30,7 +32,7 @@ func (p *GitHubProvider) LatestVersion(ctx context.Context) (string, error) {
 	if err := fetchJSON(ctx, url, &release); err != nil {
 		return "", err
 	}
-	return canonicalVersion(release.TagName)
+	return updatecheck.CanonicalVersion(release.TagName)
 }
 
 var _ Provider = (*GitHubProvider)(nil)

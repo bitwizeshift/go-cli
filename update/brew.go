@@ -3,6 +3,8 @@ package update
 import (
 	"context"
 	"fmt"
+
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 )
 
 // brewBaseURL is the default host for the Homebrew formulae API.
@@ -31,7 +33,7 @@ func (p *BrewProvider) LatestVersion(ctx context.Context) (string, error) {
 	if err := fetchJSON(ctx, url, &formula); err != nil {
 		return "", err
 	}
-	return canonicalVersion(formula.Versions.Stable)
+	return updatecheck.CanonicalVersion(formula.Versions.Stable)
 }
 
 var _ Provider = (*BrewProvider)(nil)

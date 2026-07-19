@@ -1,11 +1,11 @@
-package update_test
+package updatecheck_test
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"github.com/bitwizeshift/go-cli/update"
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 	"github.com/bitwizeshift/go-cli/update/updatetest"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -18,24 +18,24 @@ func TestProviderRegistry_LatestVersion(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		registry update.ProviderRegistry
+		registry updatecheck.ProviderRegistry
 		source   string
 		want     string
 		wantErr  error
 	}{
 		{
 			name:     "RegisteredSource",
-			registry: update.ProviderRegistry{"github": updatetest.Provider("v1.0.0")},
+			registry: updatecheck.ProviderRegistry{"github": updatetest.Provider("v1.0.0")},
 			source:   "github",
 			want:     "v1.0.0",
 		}, {
 			name:     "UnregisteredSource",
-			registry: update.ProviderRegistry{"github": updatetest.Provider("v1.0.0")},
+			registry: updatecheck.ProviderRegistry{"github": updatetest.Provider("v1.0.0")},
 			source:   "brew",
 			want:     "",
 		}, {
 			name:     "ProviderError",
-			registry: update.ProviderRegistry{"github": updatetest.ErrProvider(errLookup)},
+			registry: updatecheck.ProviderRegistry{"github": updatetest.ErrProvider(errLookup)},
 			source:   "github",
 			want:     "",
 			wantErr:  errLookup,

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 	"github.com/bitwizeshift/go-cli/update"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -51,12 +52,12 @@ func TestGitHubProvider_LatestVersion(t *testing.T) {
 			name:    "InvalidTag",
 			status:  http.StatusOK,
 			body:    `{"tag_name":"nightly"}`,
-			wantErr: update.ErrInvalidVersion,
+			wantErr: updatecheck.ErrInvalidVersion,
 		}, {
 			name:    "EmptyTag",
 			status:  http.StatusOK,
 			body:    `{"tag_name":""}`,
-			wantErr: update.ErrInvalidVersion,
+			wantErr: updatecheck.ErrInvalidVersion,
 		},
 	}
 

@@ -3,6 +3,8 @@ package update
 import (
 	"context"
 	"fmt"
+
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 )
 
 // goProxyBaseURL is the default host for the Go module proxy.
@@ -29,7 +31,7 @@ func (p *GoProxyProvider) LatestVersion(ctx context.Context) (string, error) {
 	if err := fetchJSON(ctx, url, &info); err != nil {
 		return "", err
 	}
-	return canonicalVersion(info.Version)
+	return updatecheck.CanonicalVersion(info.Version)
 }
 
 var _ Provider = (*GoProxyProvider)(nil)

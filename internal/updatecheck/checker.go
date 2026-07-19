@@ -1,4 +1,4 @@
-package update
+package updatecheck
 
 import "context"
 
@@ -45,11 +45,11 @@ func (c *Checker) Check(ctx context.Context) (Result, error) {
 		return Result{}, err
 	}
 	current := c.build.Version
-	if canonical, err := canonicalVersion(current); err == nil {
+	if canonical, err := CanonicalVersion(current); err == nil {
 		current = canonical
 	}
 	return Result{
-		Available: latest != "" && isNewer(latest, current),
+		Available: latest != "" && IsNewer(latest, current),
 		Current:   current,
 		Latest:    latest,
 	}, nil

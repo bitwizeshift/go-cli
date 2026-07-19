@@ -3,6 +3,8 @@ package update
 import (
 	"context"
 	"fmt"
+
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 )
 
 // gitlabBaseURL is the default host for the GitLab API.
@@ -35,7 +37,7 @@ func (p *GitLabProvider) LatestVersion(ctx context.Context) (string, error) {
 	if len(releases) == 0 {
 		return "", nil
 	}
-	return canonicalVersion(releases[0].TagName)
+	return updatecheck.CanonicalVersion(releases[0].TagName)
 }
 
 var _ Provider = (*GitLabProvider)(nil)

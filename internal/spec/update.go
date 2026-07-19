@@ -7,6 +7,7 @@ import (
 	"github.com/bitwizeshift/go-cli/arg"
 	"github.com/bitwizeshift/go-cli/internal/template"
 	"github.com/bitwizeshift/go-cli/internal/template/help"
+	"github.com/bitwizeshift/go-cli/internal/updatecheck"
 	"github.com/bitwizeshift/go-cli/update"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +46,7 @@ func (o UpdateOptions) enabled() bool {
 // checker builds the update [update.Checker] for app, memoizing lookups through
 // cache, or nil when checking is not enabled. It returns a decoding error when an
 // update-source configuration cannot be decoded into its provider.
-func (o UpdateOptions) checker(app *Application, cache update.Cache) (*update.Checker, error) {
+func (o UpdateOptions) checker(app *Application, cache updatecheck.Cache) (*updatecheck.Checker, error) {
 	if !o.enabled() {
 		return nil, nil
 	}
@@ -53,14 +54,14 @@ func (o UpdateOptions) checker(app *Application, cache update.Cache) (*update.Ch
 	if ttl <= 0 {
 		ttl = defaultUpdateTTL
 	}
-	registry := update.ProviderRegistry{}
+	registry := updatecheck.ProviderRegistry{}
 	for name, provider := range o.Providers {
 		if node, ok := app.UpdateSources[name]; ok {
 			if err := node.Decode(provider); err != nil {
 				return nil, err
 			}
 		}
-		registry[name] = &update.CacheProvider{
+		registry[name] = &updatecheck.CacheProvider{
 			Provider: provider,
 			Source:   name,
 			TTL:      ttl,
@@ -68,15 +69,15 @@ func (o UpdateOptions) checker(app *Application, cache update.Cache) (*update.Ch
 			Now:      time.Now,
 		}
 	}
-	build := update.BuildInfo{Version: o.Version, Source: o.Source}
-	return update.NewChecker(build, &registry), nil
+	build := updatecheck.BuildInfo{Version: o.Version, Source: o.Source}
+	return updatecheck.NewChecker(build, &registry), nil
 }
 
 // installUpdateHelp replaces cmd's help function with one that appends an update
 // advisory when a newer version is available. cl supplies cmd's positional
 // arguments for the rendered help. The check runs under a short timeout and
 // contributes nothing on error.
-func installUpdateHelp(cmd *cobra.Command, checker *update.Checker, cl *arg.CommandLine) {
+func installUpdateHelp(cmd *cobra.Command, checker *updatecheck.Checker, cl *arg.CommandLine) {
 	cmd.SetHelpFunc(func(cmd *cobra.Command, _ []string) {
 		stdout := cmd.OutOrStdout()
 		renderer := template.DefaultRenderEngine.HelpRenderer(stdout)
@@ -87,7 +88,7 @@ func installUpdateHelp(cmd *cobra.Command, checker *update.Checker, cl *arg.Comm
 
 // updateNotice runs checker under a short timeout and returns a help notice when
 // a newer version is available, or nil on no update or any error.
-func updateNotice(ctx context.Context, checker *update.Checker) *help.Notice {
+func updateNotice(ctx context.Context, checker *updatecheck.Checker) *help.Notice {
 	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
