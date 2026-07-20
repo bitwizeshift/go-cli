@@ -12,12 +12,12 @@
 </div>
 <!-- markdownlint-enable MD033 -->
 
-This library is an **opinionated** framework built around the [cobra] and [pflag]
+This library is an **opinionated** framework built around the [`cobra`] and [`pflag`]
 libraries to provide a simple and easy way to build **testable** command-line
 applications.
 
-[cobra]: https://github.com/spf13/cobra
-[pflag]: https://github.com/spf13/pflag
+[`cobra`]: https://github.com/spf13/cobra
+[`pflag`]: https://github.com/spf13/pflag
 [ci-badge]: https://github.com/bitwizeshift/go-cli/actions/workflows/continuous-integration.yaml/badge.svg
 [ci-link]: https://github.com/bitwizeshift/go-cli/actions/workflows/continuous-integration.yaml
 [go-doc-badge]: https://godoc.org/github.com/bitwizeshift/go-cli?status.svg
