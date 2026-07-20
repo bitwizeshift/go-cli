@@ -46,6 +46,28 @@ field of [Command nodes](#command), as well as some additional settings.
   context. When omitted, it is derived from the root command's `name`, and
   failing that from the running binary's name.
 
+  A plain string applies to every host:
+
+  ```yaml
+  app-id: com.rodusek.example-cli
+  ```
+
+  Host operating systems disagree on what an application identifier looks like,
+  though: macOS wants a reverse-DNS bundle identifier, Windows an application
+  name, and Linux a lowercase system name. A mapping gives each host the form its
+  conventions call for, using `default` for the rest:
+
+  ```yaml
+  app-id:
+    default: example-cli
+    macos:   com.rodusek.example-cli
+    windows: ExampleCLI
+  ```
+
+  The accepted keys are `default`, `windows`, `macos`, `linux`, `freebsd`,
+  `openbsd`, `netbsd`, `ios`, `android`, `solaris`, and `plan9`. Any other key is
+  rejected when the specification is loaded.
+
 For the rest of the fields, read below.
 
 ### Command

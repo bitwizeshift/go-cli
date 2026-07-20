@@ -21,6 +21,14 @@ var (
 	// ErrNotMapping indicates the commands node was not a YAML mapping of group
 	// name to command list.
 	ErrNotMapping = errors.New("commands must be a mapping of group name to commands")
+
+	// ErrInvalidAppID indicates the app-id node was neither a string nor a
+	// mapping of host operating system to identifier.
+	ErrInvalidAppID = errors.New("app-id must be a string or a mapping of host os to id")
+
+	// ErrUnknownHostOS indicates an app-id mapping was keyed by a host operating
+	// system that is not recognized.
+	ErrUnknownHostOS = errors.New("unknown host os")
 )
 
 // PanicError is the error produced when a [Runner] terminates by panicking. It

@@ -20,9 +20,10 @@ type Application struct {
 	// every command in the hierarchy.
 	IssueURL string `yaml:"issue-url"`
 
-	// AppID scopes the application's on-disk storage. When empty, it is derived
-	// from the command's Name, and failing that the running binary's name.
-	AppID string `yaml:"app-id,omitempty"`
+	// AppID scopes the application's on-disk storage, selected for the host the
+	// application runs on. It is derived from the command's Name, and failing
+	// that the running binary's name, when the host resolves no identifier.
+	AppID AppID `yaml:"app-id,omitempty"`
 
 	// UpdateSources holds per-source configuration for update checking, keyed by
 	// the source name. Each value is decoded into the update provider registered
@@ -30,12 +31,12 @@ type Application struct {
 	UpdateSources map[string]yaml.Node `yaml:"update-sources"`
 }
 
-// resolveAppID returns the effective application id used to scope storage: the
-// configured [Application.AppID], else the command's Name, else the base name of
-// the running binary.
-func (a *Application) resolveAppID() string {
-	if a.AppID != "" {
-		return a.AppID
+// resolveAppID returns the effective application id used to scope storage on
+// goos: the [Application.AppID] selected for that host, else the command's Name,
+// else the base name of the running binary.
+func (a *Application) resolveAppID(goos string) string {
+	if appID := a.AppID.For(goos); appID != "" {
+		return appID
 	}
 	if a.Name != "" {
 		return a.Name

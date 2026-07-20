@@ -15,8 +15,16 @@
       "format": "uri"
     },
     "app-id": {
-      "type": "string",
-      "description": "Identifier used to scope the application's on-disk storage (config, cache, data, runtime). When omitted, it is derived from the root command's `name`, then the running binary's name."
+      "description": "Identifier used to scope the application's on-disk storage (config, cache, data, runtime). A string applies to every host. A mapping selects the identifier per host operating system, falling back to its `default` entry, then to the root command's `name`, then to the running binary's name.",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Identifier applied on every host."
+        },
+        {
+          "$ref": "#/$defs/appIDByHost"
+        }
+      ]
     },
     "update-sources": {
       "type": "object",
@@ -29,6 +37,57 @@
   },
   "unevaluatedProperties": false,
   "$defs": {
+    "appIDByHost": {
+      "type": "object",
+      "description": "Identifiers keyed by host operating system, so each host can use the form its conventions call for.",
+      "properties": {
+        "default": {
+          "type": "string",
+          "description": "Identifier used on any host without its own entry."
+        },
+        "windows": {
+          "type": "string",
+          "description": "Identifier used on Windows, conventionally an application name such as `ExampleCLI`."
+        },
+        "macos": {
+          "type": "string",
+          "description": "Identifier used on macOS, conventionally a reverse-DNS bundle identifier such as `com.example.foo`."
+        },
+        "linux": {
+          "type": "string",
+          "description": "Identifier used on Linux, conventionally a lowercase system name such as `example-cli`."
+        },
+        "freebsd": {
+          "type": "string",
+          "description": "Identifier used on FreeBSD."
+        },
+        "openbsd": {
+          "type": "string",
+          "description": "Identifier used on OpenBSD."
+        },
+        "netbsd": {
+          "type": "string",
+          "description": "Identifier used on NetBSD."
+        },
+        "ios": {
+          "type": "string",
+          "description": "Identifier used on iOS."
+        },
+        "android": {
+          "type": "string",
+          "description": "Identifier used on Android."
+        },
+        "solaris": {
+          "type": "string",
+          "description": "Identifier used on Solaris."
+        },
+        "plan9": {
+          "type": "string",
+          "description": "Identifier used on Plan 9."
+        }
+      },
+      "additionalProperties": false
+    },
     "commandInfo": {
       "type": "object",
       "required": [

@@ -1,6 +1,9 @@
 # yaml-language-server: $schema=../../command.schema.json
 name: example-cli
-app-id: com.rodusek.example-cli
+app-id:
+  default: example-cli
+  macos: com.rodusek.example-cli
+  windows: ExampleCLI
 summary: A fictional workspace manager that showcases the go-cli library
 description: |
   example-cli manages a local "vault" of items and the remotes they synchronize

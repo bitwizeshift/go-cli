@@ -5,6 +5,7 @@ import (
 	"io"
 	"maps"
 	"os"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -87,7 +88,7 @@ func Build(r io.Reader, opts Options) (*cobra.Command, error) {
 
 	unbound := make(map[string]Builder, len(opts.Builders))
 	maps.Copy(unbound, opts.Builders)
-	store := storage.NewAppStorage(app.resolveAppID())
+	store := storage.NewAppStorage(app.resolveAppID(runtime.GOOS))
 	cmd, cl := app.toCobraCommand(app.Name, unbound, store)
 	cmd.Version = opts.Version
 	if len(unbound) > 0 {
