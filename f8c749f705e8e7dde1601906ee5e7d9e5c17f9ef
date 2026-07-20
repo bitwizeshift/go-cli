@@ -1,0 +1,99 @@
+Create a plan
+
+**Persona:** You are a principal engineer with a history of developing high-quality
+scalable and readable software. You follow SOLID principles, and have an excellent
+background in XUnit-style unit-testing, and are a strong believer of only high-value
+quality testing and design practices.
+
+**Background:** This project wraps pflag and cobra so that very little of these
+libraries are visible or usable on the seam.
+
+We accept an "app ID" through a YAML file that we use to determine custom
+application folders on the host OS system. Different systems use different
+structures for this though; macOS uses reverse-DNS names like `com.example.foo`,
+whereas Windows normally throws just an application name, and Linux frequently
+uses a lowercase system name.
+
+## Goal
+
+Align the `app-id` so it's configurable for different systems.
+
+### Implementation
+
+Currently we just have `app-id: "string"`
+
+The new plan is to make this `app-id: "string"` as a default for all, OR
+
+```yaml
+app-id:
+  default: fallback-for-any-system
+  macos: mac-id
+  windows: windows-id
+  ...
+```
+
+Do this in the following way:
+
+* Update the schema so that the `app-id` field is its own type, something like
+
+  ```go
+  type HostOS string
+  const (
+    HostOSDefault HostOS = "default"
+    HostOSWindows HostOS = "windows"
+    ...
+  )
+  func (os *HostOS) UnmarshalText(s []byte) error { ... }
+
+  type AppID map[HostOS]string
+
+  func (id AppID) For(goos string) string { /* ... */ }
+  ```
+
+* This is going to require a custom `yaml.Unmarshaler` implementation so that
+  `AppID` is capable of unmarshaling from either a string, in which case it's
+  equivalent to setting `default: <value>`, or from a map.
+
+* When deciding the AppID for storage construction, leverage this configuration
+  and pass in the GOOS value.
+
+## Resources
+
+- @internal/storage/ - Where storage is defined
+- @internal/spec/ - where the YAML is defined, and where the storage is built
+
+## Requirements
+
+* Development MUST use Skill(go:general)
+* Testing MUST use Skill(go:table-testing), Skill(go:unit-testing), Skill(go:testing-errors)
+* Coverage MUST be evaluated using Skill(go:coverage)
+
+All of the rules defined in the skills above are binding and MUST be followed.
+It is ILLEGAL to deviate from any of the rules. You are not allowed to
+rationalize or ignore any rule listed above. Missing even one rule is considered
+failure of the project. It is CRITICAL that these rules are aligned.
+
+Any problems with the design, judgment calls, uncertainties, or ambiguities MUST
+be resolved by the user. You are NOT to resolve any of these yourself. Use the
+Tool(AskUserQuestion) to raise any such problems to the user and suggest paths
+forward. Mark one of the options as the recommended path to allow the user to
+know your leaning.
+
+DO NOT make a judgment call on your own.
+
+Under NO circumstances should ANYTHING indicate that the version is "not in the
+YAML", or any variation thereof. DO NOT indicate the ABSENCE of something.
+
+## Important
+
+DO NOT SUMMARIZE EVERY TYPE OR FUNCTION IN PACKAGE DOCS. You have a horrible
+habit of doing this and no human in existance writes code like this.
+DO NOT SUMMARIZE IMPLEMENTATIONS OF FUNCTIONS IN DOCUMENTS, OR IN TYPES. Give
+high-level descriptions of how things work, optionally with examples where
+reasonable. But do NOT summarize the actual implementaiton.
+
+DO NOT EXPOSE ANY TYPE FROM AN `internal` PACKAGE ON AN EXPORTED PACKAGE.
+
+Do not use the explore agent for this; inspect the files yourself for this plan.
+
+Include the contents from "# Requirements" and "# Important" verbatim in the plan.
