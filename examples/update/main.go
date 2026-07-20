@@ -19,11 +19,24 @@ import (
 //go:embed app.yaml
 var configYAML []byte
 
+// version is the application version.
+// In real code, this is linked in with '-X main.version=...'
+var version string
+
+// source is the system this binary was installed through.
+// In real code, this is linked in with '-X main.source=...'
+var source string
+
+func init() {
+	version = "v1.0.0"
+	source = "demo"
+}
+
 func main() {
 	cli.FromBytes(configYAML,
 		cli.BindRunner("update-demo.greet", &greetRunner{}),
-		cli.Version("v1.0.0"),
-		cli.BuildSource("demo"),
+		cli.Version(version),
+		cli.BuildSource(source),
 		cli.UpdateProvider("demo", &fixedProvider{version: "v2.5.0"}),
 	).Execute()
 }
